@@ -1226,7 +1226,8 @@ class Runtime extends EventEmitter {
                     ScratchBlocksConstants.OUTPUT_SHAPE_ROUND : ScratchBlocksConstants.OUTPUT_SHAPE_SQUARE,
                 args0: [
                     {   // to do: we could reimplement field_numberdropdown here really easily
-                        type: menuInfo.acceptText ? 'field_textdropdown' : 'field_dropdown',
+                        type: menuInfo.acceptText ? 
+                            'field_textdropdown' : 'field_dropdown',
                         name: menuName,
                         options: menuItems
                     }
@@ -1633,7 +1634,6 @@ class Runtime extends EventEmitter {
             let valueName;
             let shadowType;
             let fieldName;
-            let allowText;
             if (argInfo.menu) {
                 const menuInfo = context.categoryInfo.menuInfo[argInfo.menu];
                 if (menuInfo.acceptReporters) {
