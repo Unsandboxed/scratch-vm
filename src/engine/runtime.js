@@ -1225,7 +1225,7 @@ class Runtime extends EventEmitter {
                 outputShape: menuInfo.acceptReporters ?
                     ScratchBlocksConstants.OUTPUT_SHAPE_ROUND : ScratchBlocksConstants.OUTPUT_SHAPE_SQUARE,
                 args0: [
-                    {   // to do: we could reimplement field_numberdropdown here really easily
+                    {// to do: we could reimplement field_numberdropdown here really easily
                         type: menuInfo.acceptText ? 
                             'field_textdropdown' : 'field_dropdown',
                         name: menuName,
