@@ -487,7 +487,8 @@ class ExtensionManager {
             });
 
         if (!menuItems || menuItems.length < 1) {
-            throw new Error(`Extension menu returned no items: ${menuItemFunctionName}`);
+            console.warn(`Extension menu returned no items: ${menuItemFunctionName}`);
+            return [''];
         }
         return menuItems;
     }
