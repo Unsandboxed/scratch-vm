@@ -193,13 +193,13 @@ class Scratch3ControlBlocks {
     }
 
     allAtOnce (args, util) {
-        // Since the "all at once" block is implemented for compatiblity with
-        // Scratch 2.0 projects, it behaves the same way it did in 2.0, which
-        // is to simply run the contained script (like "if 1 = 1").
-        // (In early versions of Scratch 2.0, it would work the same way as
-        // "run without screen refresh" custom blocks do now, but this was
-        // removed before the release of 2.0.)
+        // In Scratch 3.0 and TurboWarp, this would simply
+        // run the contained substack. In Unsandboxed, 
+        // we've reimplemented the intended functionality 
+        // of running the stack all in one frame.
+        util.thread.peekStackFrame().warpMode = false;
         util.startBranch(1, false);
+        util.thread.peekStackFrame().warpMode = true;
     }
 }
 
