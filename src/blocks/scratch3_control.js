@@ -194,8 +194,8 @@ class Scratch3ControlBlocks {
 
     allAtOnce (args, util) {
         // In Scratch 3.0 and TurboWarp, this would simply
-        // run the contained substack. In Unsandboxed, 
-        // we've reimplemented the intended functionality 
+        // run the contained substack. In Unsandboxed,
+        // we've reimplemented the intended functionality
         // of running the stack all in one frame.
         util.thread.peekStackFrame().warpMode = false;
         util.startBranch(1, false);
