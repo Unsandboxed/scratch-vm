@@ -1606,7 +1606,8 @@ class Runtime extends EventEmitter {
             variableTypes:
                 // eslint-disable-next-line max-len
                 argInfo.variableTypes ? (Array.isArray(argInfo.variableTypes) ? argInfo.variableTypes : [argInfo.variableTypes]) : [''],
-            variable: (argInfo.variableTypes === 'broadcast_msg') ? 'message1' : null,
+            // TO DO: default to an existing variable.
+            variable: argInfo.variable ?? (argInfo.variableTypes === 'broadcast_msg') ? 'message1' : null,
             filter: argInfo.filter ?? []
         };
     }
