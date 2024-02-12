@@ -123,6 +123,10 @@ const ArgumentTypeMap = (() => {
             fieldName: 'SOUND_MENU'
         }
     };
+    map[ArgumentType.VARIABLE] = {
+        fieldType: 'field_variable',
+        fieldName: 'VARIABLE'
+    };
     return map;
 })();
 
@@ -1590,6 +1594,24 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Helper for _convertPlaceholdes which handles variable fields which are a specialized case of block "arguments".
+     * @param {object} argInfo Metadata about the inline image as specified by the extension
+     * @return {object} JSON blob for a scratch-blocks variable field.
+     * @private
+     */
+    _constructVariableJson (argInfo, placeholder) {
+        return {
+            type: 'field_variable',
+            name: placeholder,
+            variableTypes:
+                // eslint-disable-next-line max-len
+                argInfo.variableTypes ? (Array.isArray(argInfo.variableTypes) ? argInfo.variableTypes : [argInfo.variableTypes]) : [''],
+            variable: (argInfo.variableTypes === 'broadcast_msg') ? 'message1' : null,
+            filter: argInfo.filter ?? []
+        };
+    }
+
+    /**
      * Helper for _convertForScratchBlocks which handles linearization of argument placeholders. Called as a callback
      * from string#replace. In addition to the return value the JSON and XML items in the context will be filled.
      * @param {object} context - information shared with _convertForScratchBlocks about the block, etc.
@@ -1616,6 +1638,8 @@ class Runtime extends EventEmitter {
         // check if this is not one of those cases. E.g. an inline image on a block.
         if (argTypeInfo.fieldType === 'field_image') {
             argJSON = this._constructInlineImageJson(argInfo);
+        } else if (argTypeInfo.fieldType === 'field_variable') {
+            argJSON = this._constructVariableJson(argInfo, placeholder);
         } else {
             // Construct input value
 
