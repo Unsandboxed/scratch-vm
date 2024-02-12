@@ -51,10 +51,10 @@ const ArgumentType = {
     /**
      * Name of sound in the current target
      */
-    SOUND: 'sound'.
+    SOUND: 'sound',
 
     /**
-     * Name of variable in the current specified target
+     * Name of variable in the current specified target(s)
      */
     VARIABLE: 'variable'
 };
