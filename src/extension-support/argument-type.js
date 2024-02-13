@@ -56,7 +56,12 @@ const ArgumentType = {
     /**
      * Name of variable in the current specified target(s)
      */
-    VARIABLE: 'variable'
+    VARIABLE: 'variable',
+
+    /**
+     * A label text that can be dynamically changed
+     */
+    LABEL: 'label'
 };
 
 module.exports = ArgumentType;
