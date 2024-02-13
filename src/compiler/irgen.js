@@ -366,6 +366,13 @@ class ScriptTreeGenerator {
                 letter: this.descendInputOfBlock(block, 'LETTER'),
                 string: this.descendInputOfBlock(block, 'STRING')
             };
+        case 'operator_letters_of':
+            return {
+                kind: 'op.lettersOf',
+                left: this.descendInputOfBlock(block, 'LETTER1'),
+                right: this.descendInputOfBlock(block, 'LETTER2'),
+                string: this.descendInputOfBlock(block, 'STRING')
+            };
         case 'operator_lt':
             return {
                 kind: 'op.less',
@@ -458,6 +465,12 @@ class ScriptTreeGenerator {
         case 'operator_or':
             return {
                 kind: 'op.or',
+                left: this.descendInputOfBlock(block, 'OPERAND1'),
+                right: this.descendInputOfBlock(block, 'OPERAND2')
+            };
+        case 'operator_xor':
+            return {
+                kind: 'op.xor',
                 left: this.descendInputOfBlock(block, 'OPERAND1'),
                 right: this.descendInputOfBlock(block, 'OPERAND2')
             };
