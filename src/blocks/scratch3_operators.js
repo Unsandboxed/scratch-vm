@@ -25,10 +25,12 @@ class Scratch3OperatorsBlocks {
             operator_gt: this.gt,
             operator_and: this.and,
             operator_or: this.or,
+            operator_xor: this.xor,
             operator_not: this.not,
             operator_random: this.random,
             operator_join: this.join,
             operator_letter_of: this.letterOf,
+            operator_letters_of: this.lettersOf,
             operator_length: this.length,
             operator_contains: this.contains,
             operator_mod: this.mod,
@@ -73,6 +75,10 @@ class Scratch3OperatorsBlocks {
         return Cast.toBoolean(args.OPERAND1) || Cast.toBoolean(args.OPERAND2);
     }
 
+    xor (args) {
+        return Cast.toBoolean(args.OPERAND1) !== Cast.toBoolean(args.OPERAND2);
+    }
+
     not (args) {
         return !Cast.toBoolean(args.OPERAND);
     }
@@ -105,6 +111,12 @@ class Scratch3OperatorsBlocks {
             return '';
         }
         return str.charAt(index);
+    }
+
+    lettersOf (args) {
+        const index1 = Cast.toNumber(args.LETTER1) - 1;
+        const index2 = Cast.toNumber(args.LETTER2) - 1;
+        return str.slice(Math.max(index1, 1), Math.min(str.length, index2));
     }
 
     length (args) {
