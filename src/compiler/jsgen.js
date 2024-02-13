@@ -593,6 +593,8 @@ class JSGenerator {
         }
         case 'op.letterOf':
             return new TypedInput(`((${this.descendInput(node.string).asString()})[(${this.descendInput(node.letter).asNumber()} | 0) - 1] || "")`, TYPE_STRING);
+        case 'op.lettersOf':
+            return new TypedInput(`((${this.descendInput(node.string).asString()}).substring(${this.descendInput(node.letter1).asNumber()}, ${this.descendInput(node.letter2).asNumber()}) || "")`, TYPE_STRING);
         case 'op.ln':
             // Needs to be marked as NaN because Math.log(-1) == NaN
             return new TypedInput(`Math.log(${this.descendInput(node.value).asNumber()})`, TYPE_NUMBER_NAN);
@@ -610,6 +612,8 @@ class JSGenerator {
             return new TypedInput(`!${this.descendInput(node.operand).asBoolean()}`, TYPE_BOOLEAN);
         case 'op.or':
             return new TypedInput(`(${this.descendInput(node.left).asBoolean()} || ${this.descendInput(node.right).asBoolean()})`, TYPE_BOOLEAN);
+        case 'op.xor':
+            return new TypedInput(`(${this.descendInput(node.left).asBoolean()} !== ${this.descendInput(node.right).asBoolean()})`, TYPE_BOOLEAN);
         case 'op.random':
             if (node.useInts) {
                 // Both inputs are ints, so we know neither are NaN
