@@ -116,6 +116,7 @@ class Scratch3OperatorsBlocks {
     lettersOf (args) {
         const index1 = Cast.toNumber(args.LETTER1) - 1;
         const index2 = Cast.toNumber(args.LETTER2) - 1;
+        const str = Cast.toString(args.STRING);
         return str.slice(Math.max(index1, 1), Math.min(str.length, index2));
     }
 
