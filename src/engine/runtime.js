@@ -1243,8 +1243,7 @@ class Runtime extends EventEmitter {
                 colour: menuInfo.acceptText ? '#FFFFFF' : categoryInfo.color1,
                 colourSecondary: menuInfo.acceptText ? '#FFFFFF' : categoryInfo.color2,
                 colourTertiary: menuInfo.acceptText ? '#FFFFFF' : categoryInfo.color3,
-                outputShape: menuInfo.acceptReporters ?
-                    ScratchBlocksConstants.OUTPUT_SHAPE_ROUND : ScratchBlocksConstants.OUTPUT_SHAPE_SQUARE,
+                outputShape: ScratchBlocksConstants.OUTPUT_SHAPE_ROUND,
                 args0: [
                     {// to do: we could reimplement field_numberdropdown here really easily
                         type: menuInfo.acceptText ?
