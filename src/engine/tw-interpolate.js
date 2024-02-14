@@ -47,7 +47,7 @@ const interpolate = (runtime, time) => {
         // the state on the target itself is the state at the end of the frame (time 1)
         const interpolationData = target.interpolationData;
         const interpolationEnabled = target.interpolation;
-        if (!interpolationData || !interpolationEnabled) {
+        if !(interpolationData || interpolationEnabled) {
             continue;
         }
 
