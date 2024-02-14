@@ -1067,6 +1067,12 @@ class RenderedTarget extends Target {
         this.dragging = false;
     }
 
+    /**
+     * Set whether the sprite is interpolated.
+     */
+    setInterpolation(interpolated) {
+        this.interpolation = interpolated;
+    }
 
     /**
      * Serialize sprite info, used when emitting events about the sprite
