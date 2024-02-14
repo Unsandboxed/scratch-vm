@@ -2520,7 +2520,12 @@ class Runtime extends EventEmitter {
      * inactive threads after each iteration.
      */
     _step () {
-        if (this.interpolationEnabled) {
+        let targetHasInterpolation = false;
+        for (const target of this.targets) {
+            if (target.interpolation) targetHasInterpolation = true;
+        }
+
+        if (this.interpolationEnabled || targetHasInterpolation) {
             interpolate.setupInitialState(this);
         }
 
@@ -2600,7 +2605,7 @@ class Runtime extends EventEmitter {
             this.profiler.reportFrames();
         }
 
-        if (this.interpolationEnabled) {
+        if (this.interpolationEnabled || targetHasInterpolation) {
             this._lastStepTime = Date.now();
         }
     }
