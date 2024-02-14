@@ -167,6 +167,7 @@ class RenderedTarget extends Target {
         this.onTargetMoved = null;
         this.onTargetVisualChange = null;
 
+        this.interpolation = false;
         this.interpolationData = null;
     }
 
