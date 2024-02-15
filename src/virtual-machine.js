@@ -187,6 +187,9 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.STAGE_SIZE_CHANGED, (width, height) => {
             this.emit(Runtime.STAGE_SIZE_CHANGED, width, height);
         });
+        this.runtime.on(Runtime.CAMERA_MOVED, (x, y) => {
+            this.emit(Runtime.CAMERA_MOVED, x, y);
+        });
         this.runtime.on(Runtime.COMPILE_ERROR, (target, error) => {
             this.emit(Runtime.COMPILE_ERROR, target, error);
         });
@@ -304,6 +307,10 @@ class VirtualMachine extends EventEmitter {
 
     setStageSize (width, height) {
         this.runtime.setStageSize(width, height);
+    }
+
+    setCameraXY (x, y) {
+        this.runtime.setCameraXY(x, y);
     }
 
     setInEditor (inEditor) {
@@ -508,6 +515,9 @@ class VirtualMachine extends EventEmitter {
                 log.error(`Failed to fetch project with id: ${id}`);
                 return null;
             }
+            // usb: switch to 480 when loading from Scratch
+            // (will change automatically if options tell otherwise)
+            vm.setStageSize(480, 360);
             return vm.loadProject(projectAsset.data);
         });
     }
