@@ -24,6 +24,7 @@ class Scratch3EventBlocks {
      */
     getPrimitives () {
         return {
+            event_when: this.when,
             event_whentouchingobject: this.touchingObject,
             event_broadcast: this.broadcast,
             event_broadcastandwait: this.broadcastAndWait,
@@ -60,6 +61,11 @@ class Scratch3EventBlocks {
                 restartExistingThreads: true
             }
         };
+    }
+
+    when (args, util) {
+        const condition = Cast.toBoolean(args.CONDITION);
+        return condition;
     }
 
     touchingObject (args, util) {
