@@ -69,7 +69,7 @@ class Mouse {
                 this.runtime.stageWidth * ((data.x / data.canvasWidth) - 0.5),
                 -(this.runtime.stageWidth / 2),
                 (this.runtime.stageWidth / 2)
-            );
+            ) + this.runtime.cameraX;
         }
         if (typeof data.y === 'number') {
             this._clientY = data.y;
@@ -77,7 +77,7 @@ class Mouse {
                 -this.runtime.stageHeight * ((data.y / data.canvasHeight) - 0.5),
                 -(this.runtime.stageHeight / 2),
                 (this.runtime.stageHeight / 2)
-            );
+            ) + this.runtime.cameraY;
         }
         if (typeof data.isDown !== 'undefined') {
             // If no button specified, default to left button for compatibility
@@ -137,9 +137,9 @@ class Mouse {
      */
     getScratchX () {
         if (this.runtime.runtimeOptions.miscLimits) {
-            return Math.round(this._scratchX + this.cameraX);
+            return Math.round(this._scratchX);
         }
-        return roundToThreeDecimals(this._scratchX + this.cameraX);
+        return roundToThreeDecimals(this._scratchX);
     }
 
     /**
@@ -148,9 +148,9 @@ class Mouse {
      */
     getScratchY () {
         if (this.runtime.runtimeOptions.miscLimits) {
-            return Math.round(this._scratchY + this.cameraY);
+            return Math.round(this._scratchY);
         }
-        return roundToThreeDecimals(this._scratchY + this.cameraY);
+        return roundToThreeDecimals(this._scratchY);
     }
 
     /**
