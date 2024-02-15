@@ -299,6 +299,11 @@ class ScriptTreeGenerator {
             return {
                 kind: 'looks.size'
             };
+        case 'looks_effect':
+            return {
+                kind: 'looks.effect',
+                left: this.descendInputOfBlock(block, 'EFFECT')
+            };
 
         case 'motion_rotationstyle':
             return {
