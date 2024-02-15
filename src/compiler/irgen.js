@@ -300,6 +300,10 @@ class ScriptTreeGenerator {
                 kind: 'looks.size'
             };
 
+        case 'motion_rotationstyle':
+            return {
+                kind: 'motion.rotationStyle'
+            };
         case 'motion_direction':
             return {
                 kind: 'motion.direction'
