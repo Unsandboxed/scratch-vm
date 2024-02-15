@@ -598,7 +598,7 @@ class JSGenerator {
         case 'op.letterOf':
             return new TypedInput(`((${this.descendInput(node.string).asString()})[(${this.descendInput(node.letter).asNumber()} | 0) - 1] || "")`, TYPE_STRING);
         case 'op.lettersOf':
-            return new TypedInput(`((${this.descendInput(node.string).asString()}).substring(${this.descendInput(node.letter1).asNumber() - 1}, ${this.descendInput(node.letter2).asNumber()} - 1) || "")`, TYPE_STRING);
+            return new TypedInput(`((${this.descendInput(node.string).asString()}).substring(${this.descendInput(node.left).asNumber() - 1}, ${this.descendInput(node.right).asNumber() - 1}) || "")`, TYPE_STRING);
         case 'op.ln':
             // Needs to be marked as NaN because Math.log(-1) == NaN
             return new TypedInput(`Math.log(${this.descendInput(node.value).asNumber()})`, TYPE_NUMBER_NAN);
