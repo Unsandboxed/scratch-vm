@@ -471,6 +471,9 @@ class Runtime extends EventEmitter {
         this.stageWidth = Runtime.STAGE_WIDTH;
         this.stageHeight = Runtime.STAGE_HEIGHT;
 
+        this.cameraX = Runtime.CAMERA_X;
+        this.cameraY = Runtime.CAMERA_Y;
+
         this.runtimeOptions = {
             maxClones: Runtime.MAX_CLONES,
             miscLimits: false,
@@ -570,6 +573,24 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * X position of camera.
+     * @const {number}
+     */
+    static get CAMERA_X () {
+        // tw: camera is set per-runtime, this is only the initial value
+        return 0;
+    }
+
+    /**
+     * Y position of camera.
+     * @const {number}
+     */
+    static get CAMERA_Y () {
+        // tw: camera is set per-runtime, this is only the initial value
+        return 0;
+    }
+
+    /**
      * Event name for glowing a script.
      * @const {string}
      */
@@ -664,6 +685,14 @@ class Runtime extends EventEmitter {
      */
     static get STAGE_SIZE_CHANGED () {
         return 'STAGE_SIZE_CHANGED';
+    }
+
+    /**
+     * Event name for camera moving.
+     * @const {string}
+     */
+    static get CAMERA_MOVED () {
+        return 'CAMERA_MOVED';
     }
 
     /**
@@ -2776,6 +2805,29 @@ class Runtime extends EventEmitter {
             }
         }
         this.emit(Runtime.STAGE_SIZE_CHANGED, width, height);
+    }
+
+    /**
+     * Change X and Y of the camera. This will also inform the renderer of the new camera position.
+     * @param {number} x New camera x
+     * @param {number} y New camera y
+     */
+    setCameraXY(x, y) {
+        if (this.cameraX !== x || this.cameraY !== y) {
+            const deltaX = x - this.cameraX;
+            const deltaY = y - this.cameraY;
+            // Preserve monitor location relative to the center of the stage
+
+            this.cameraX = width;
+            this.cameraY = height;
+            if (this.renderer) {
+                this.renderer.setCameraPosition(
+                    x,
+                    y
+                );
+            }
+        }
+        this.emit(Runtime.CAMERA_MOVED, width, height);
     }
 
     // eslint-disable-next-line no-unused-vars
