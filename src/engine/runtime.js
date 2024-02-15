@@ -2818,8 +2818,8 @@ class Runtime extends EventEmitter {
             const deltaY = y - this.cameraY;
             // Preserve monitor location relative to the center of the stage
 
-            this.cameraX = width;
-            this.cameraY = height;
+            this.cameraX = x;
+            this.cameraY = y;
             if (this.renderer) {
                 this.renderer.setCameraPosition(
                     x,
@@ -2827,7 +2827,7 @@ class Runtime extends EventEmitter {
                 );
             }
         }
-        this.emit(Runtime.CAMERA_MOVED, width, height);
+        this.emit(Runtime.CAMERA_MOVED, x, y);
     }
 
     // eslint-disable-next-line no-unused-vars
