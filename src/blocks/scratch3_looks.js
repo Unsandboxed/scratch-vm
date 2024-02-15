@@ -298,6 +298,7 @@ class Scratch3LooksBlocks {
             looks_changeeffectby: this.changeEffect,
             looks_seteffectto: this.setEffect,
             looks_cleargraphiceffects: this.clearEffects,
+            looks_effect: this.getEffect,
             looks_changesizeby: this.changeSize,
             looks_setsizeto: this.setSize,
             looks_changestretchby: () => {}, // legacy no-op blocks
@@ -558,6 +559,12 @@ class Scratch3LooksBlocks {
 
     clearEffects (args, util) {
         util.target.clearEffects();
+    }
+
+    getEffect (args, util) {
+        const effect = Cast.toString(args.EFFECT).toLowerCase();
+        const value = util.target.effects[effect];
+        return Cast.toNumber(value);
     }
 
     changeSize (args, util) {
