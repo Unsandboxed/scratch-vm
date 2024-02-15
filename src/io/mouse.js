@@ -137,9 +137,9 @@ class Mouse {
      */
     getScratchX () {
         if (this.runtime.runtimeOptions.miscLimits) {
-            return Math.round(this._scratchX);
+            return Math.round(this._scratchX + this.cameraX);
         }
-        return roundToThreeDecimals(this._scratchX);
+        return roundToThreeDecimals(this._scratchX + this.cameraX);
     }
 
     /**
@@ -148,9 +148,9 @@ class Mouse {
      */
     getScratchY () {
         if (this.runtime.runtimeOptions.miscLimits) {
-            return Math.round(this._scratchY);
+            return Math.round(this._scratchY + this.cameraY);
         }
-        return roundToThreeDecimals(this._scratchY);
+        return roundToThreeDecimals(this._scratchY + this.cameraY);
     }
 
     /**
