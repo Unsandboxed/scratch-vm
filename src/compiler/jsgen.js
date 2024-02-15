@@ -472,6 +472,8 @@ class JSGenerator {
         case 'list.length':
             return new TypedInput(`${this.referenceVariable(node.list)}.value.length`, TYPE_NUMBER);
 
+        case 'looks.effect':
+            return new TypedInput('Math.round(target)', TYPE_NUMBER);
         case 'looks.size':
             return new TypedInput('Math.round(target.size)', TYPE_NUMBER);
         case 'looks.backdropName':
@@ -485,6 +487,8 @@ class JSGenerator {
 
         case 'motion.direction':
             return new TypedInput('target.direction', TYPE_NUMBER);
+        case 'motion.rotationStyle':
+            return new TypedInput('target.rotationStyle', TYPE_NUMBER);
         case 'motion.x':
             return new TypedInput('limitPrecision(target.x)', TYPE_NUMBER);
         case 'motion.y':
