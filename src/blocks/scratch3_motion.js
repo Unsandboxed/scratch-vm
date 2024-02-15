@@ -20,10 +20,12 @@ class Scratch3MotionBlocks {
             motion_movesteps: this.moveSteps,
             motion_gotoxy: this.goToXY,
             motion_goto: this.goTo,
+            motion_changebyxy: this.changeByXY,
             motion_turnright: this.turnRight,
             motion_turnleft: this.turnLeft,
             motion_pointindirection: this.pointInDirection,
             motion_pointtowards: this.pointTowards,
+            motion_pointtowards: this.pointTowardsXY,
             motion_glidesecstoxy: this.glide,
             motion_glideto: this.glideTo,
             motion_ifonedgebounce: this.ifOnEdgeBounce,
@@ -35,6 +37,7 @@ class Scratch3MotionBlocks {
             motion_xposition: this.getX,
             motion_yposition: this.getY,
             motion_direction: this.getDirection,
+            motion_rotationstyle: this.getRotationStyle,
             // Legacy no-op blocks:
             motion_scroll_right: () => {},
             motion_scroll_up: () => {},
@@ -57,6 +60,10 @@ class Scratch3MotionBlocks {
             motion_direction: {
                 isSpriteSpecific: true,
                 getId: targetId => `${targetId}_direction`
+            },
+            motion_rotationstyle: {
+                isSpriteSpecific: true,
+                getId: targetId => `${targetId}_rotationstyle`
             }
         };
     }
@@ -76,6 +83,12 @@ class Scratch3MotionBlocks {
         const x = Cast.toNumber(args.X);
         const y = Cast.toNumber(args.Y);
         util.target.setXY(x, y);
+    }
+
+    changeByXY (args, util) {
+        const dx = Cast.toNumber(args.X);
+        const dy = Cast.toNumber(args.Y);
+        util.target.setXY(util.target.x + dx, util.target.y + dy);
     }
 
     getTargetXY (targetName, util) {
@@ -140,6 +153,13 @@ class Scratch3MotionBlocks {
 
         const dx = targetX - util.target.x;
         const dy = targetY - util.target.y;
+        const direction = 90 - MathUtil.radToDeg(Math.atan2(dy, dx));
+        util.target.setDirection(direction);
+    }
+
+    pointTowardsXY (args, util) {
+        const dx = Cast.toNumber(args.X) - util.target.x;
+        const dy = Cast.toNumber(args.Y) - util.target.y;
         const direction = 90 - MathUtil.radToDeg(Math.atan2(dy, dx));
         util.target.setDirection(direction);
     }
@@ -279,6 +299,10 @@ class Scratch3MotionBlocks {
 
     getDirection (args, util) {
         return util.target.direction;
+    }
+
+    getRotationStyle (args, util) {
+        return util.target.rotationStyle;
     }
 
     // This corresponds to snapToInteger in Scratch 2
