@@ -8,6 +8,13 @@
 const stacked = [
     // usb to do: compile these when working
     'camera_movetoxy',
+    'camera_changebyxy',
+    'camera_setx',
+    'camera_changex',
+    'camera_sety',
+    'camera_changey',
+    'camera_xposition',
+    'camera_yposition',
 
     'looks_changestretchby',
     'looks_hideallsprites',
