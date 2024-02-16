@@ -471,8 +471,12 @@ class Runtime extends EventEmitter {
         this.stageWidth = Runtime.STAGE_WIDTH;
         this.stageHeight = Runtime.STAGE_HEIGHT;
 
-        this.cameraX = Runtime.CAMERA_X;
-        this.cameraY = Runtime.CAMERA_Y;
+        this.camera = {
+            x: Runtime.CAMERA_X,
+            y: Runtime.CAMERA_Y,
+            direction: Runtime.CAMERA_DIRECTION,
+            zoom: Runtime.CAMERA_ZOOM
+        }
 
         this.runtimeOptions = {
             maxClones: Runtime.MAX_CLONES,
@@ -579,6 +583,24 @@ class Runtime extends EventEmitter {
     static get CAMERA_X () {
         // tw: camera is set per-runtime, this is only the initial value
         return 0;
+    }
+
+    /**
+     * Initial rotation of camera.
+     * @const {number}
+     */
+    static get CAMERA_DIRECTION () {
+        // tw: camera is set per-runtime, this is only the initial value
+        return 90;
+    }
+
+    /**
+     * Initial zoom of camera.
+     * @const {number}
+     */
+    static get CAMERA_ZOOM () {
+        // tw: camera is set per-runtime, this is only the initial value
+        return 100;
     }
 
     /**
@@ -691,8 +713,8 @@ class Runtime extends EventEmitter {
      * Event name for camera moving.
      * @const {string}
      */
-    static get CAMERA_MOVED () {
-        return 'CAMERA_MOVED';
+    static get CAMREA_NEEDS_UPDATE () {
+        return 'CAMERA_NEEDS_UPDATE';
     }
 
     /**
@@ -2808,26 +2830,40 @@ class Runtime extends EventEmitter {
     }
 
     /**
-     * Change X and Y of the camera. This will also inform the renderer of the new camera position.
+     * Change all values of the camera. This will also inform the renderer of the new camera position.
      * @param {number} x New camera x
      * @param {number} y New camera y
+     * @param {number} direction New camera direction
+     * @param {number} zoom New camera zoom
      */
-    setCameraXY(x, y) {
-        if (this.cameraX !== x || this.cameraY !== y) {
-            const deltaX = x - this.cameraX;
-            const deltaY = y - this.cameraY;
-            // Preserve monitor location relative to the center of the stage
+    setCamera(x, y, direction, zoom) {
+        if (
+            this.camera.x !== x ||
+            this.camera.y !== y ||
+            this.camera.direction !== direction ||
+            this.camera.zoom !== zoom
+        ) {
+            this.camera.x = x ?? this.camera.x;
+            this.camera.y = y ?? this.camera.y;
+            this.camera.direction = direction ?? this.camera.direction;
+            this.camera.zoom = zoom ?? this.camera.zoom;
 
-            this.cameraX = x;
-            this.cameraY = y;
             if (this.renderer) {
-                this.renderer.setCameraPosition(
-                    x,
-                    y
+                this.renderer.updateCamera(
+                    this.camera.x,
+                    this.camera.y,
+                    this.camera.direction,
+                    this.camera.zoom,
                 );
             }
         }
-        this.emit(Runtime.CAMERA_MOVED, x, y);
+        this.emit(
+            Runtime.CAMERA_NEEDS_UPDATE,
+            this.camera.x, 
+            this.camera.y, 
+            this.camera.direction,
+            this.camera.zoom
+        );
     }
 
     // eslint-disable-next-line no-unused-vars
