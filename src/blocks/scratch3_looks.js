@@ -171,7 +171,8 @@ class Scratch3LooksBlocks {
                 bottom: target.y
             };
         }
-        const stageSize = this.runtime.renderer.getNativeSize();
+        // usb: remove bounds to support camera
+        const stageSize = [Infinity, Infinity];
         const stageBounds = {
             left: -stageSize[0] / 2,
             right: stageSize[0] / 2,
