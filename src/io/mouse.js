@@ -70,7 +70,7 @@ class Mouse {
                 true,
                 1,
                 true,
-                data.y,
+                this._clientY,
                 -1
             );
             const scratchX = MathUtil.clamp(
