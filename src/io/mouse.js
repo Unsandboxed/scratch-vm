@@ -70,6 +70,23 @@ class Mouse {
                 -(this.runtime.stageWidth / 2),
                 (this.runtime.stageWidth / 2)
             ) + this.runtime.cameraX;
+            // usb: transform based on camera
+            this._clientX = this.runtime.rendeer.translateX(
+                this._clientX,
+                true,
+                1,
+                true,
+                this._clientY,
+                -1
+            );
+            this._scratchX = this.runtime.renderer.translateX(
+                this._scratchX,
+                false,
+                1,
+                true,
+                this._scratchY,
+                1
+            );
         }
         if (typeof data.y === 'number') {
             this._clientY = data.y;
@@ -78,6 +95,23 @@ class Mouse {
                 -(this.runtime.stageHeight / 2),
                 (this.runtime.stageHeight / 2)
             ) + this.runtime.cameraY;
+            // usb: transform based on camera
+            this._clientY = this.runtime.rendeer.translateY(
+                this.clientY,
+                true,
+                1,
+                true,
+                this.clientX,
+                -1
+            );
+            this._scratchY = this.runtime.renderer.translateY(
+                this._scratchY,
+                false,
+                1,
+                true,
+                this._scratchX,
+                1
+            );
         }
         if (typeof data.isDown !== 'undefined') {
             // If no button specified, default to left button for compatibility
