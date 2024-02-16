@@ -64,23 +64,24 @@ class Mouse {
      */
     postData (data) {
         if (typeof data.x === 'number') {
-            this._clientX = data.x;
-            this._scratchX = MathUtil.clamp(
+            // usb: transform based on camera
+            this._clientX = this.runtime.renderer.translateX(
+                data.x,
+                true,
+                1,
+                true,
+                data.y,
+                -1
+            );
+            const scratchX = MathUtil.clamp(
                 this.runtime.stageWidth * ((data.x / data.canvasWidth) - 0.5),
                 -(this.runtime.stageWidth / 2),
                 (this.runtime.stageWidth / 2)
             );
+
             // usb: transform based on camera
-            this._clientX = this.runtime.renderer.translateX(
-                this._clientX,
-                true,
-                1,
-                true,
-                this._clientY,
-                -1
-            );
             this._scratchX = this.runtime.renderer.translateX(
-                this._scratchX,
+                scratchX,
                 false,
                 1,
                 true,
@@ -89,23 +90,24 @@ class Mouse {
             );
         }
         if (typeof data.y === 'number') {
-            this._clientY = data.y;
-            this._scratchY = MathUtil.clamp(
-                -this.runtime.stageHeight * ((data.y / data.canvasHeight) - 0.5),
-                -(this.runtime.stageHeight / 2),
-                (this.runtime.stageHeight / 2)
-            );
             // usb: transform based on camera
             this._clientY = this.runtime.renderer.translateY(
-                this.clientY,
+                data.y,
                 true,
                 1,
                 true,
                 this.clientX,
                 -1
             );
+            const scratchY = MathUtil.clamp(
+                -this.runtime.stageHeight * ((data.y / data.canvasHeight) - 0.5),
+                -(this.runtime.stageHeight / 2),
+                (this.runtime.stageHeight / 2)
+            );
+
+            // usb: transform based on camera
             this._scratchY = this.runtime.renderer.translateY(
-                this._scratchY,
+                scratchY,
                 false,
                 1,
                 true,
