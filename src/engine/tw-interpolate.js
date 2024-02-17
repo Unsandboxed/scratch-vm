@@ -76,7 +76,6 @@ const interpolate = (runtime, time) => {
         const absoluteXDistance = Math.abs(xDistance);
         const absoluteYDistance = Math.abs(yDistance);
         if (absoluteXDistance > 0.1 || absoluteYDistance > 0.1) {
-            const drawable = renderer._allDrawables[drawableID];
             // Large movements are likely intended to be instantaneous.
             const distance = Math.sqrt((absoluteXDistance ** 2) + (absoluteYDistance ** 2));
             if (distance < 50) {
