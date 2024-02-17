@@ -17,7 +17,7 @@ const setupInitialState = runtime => {
                 camera.zoom
             );
         }
-    
+
         camera.interpolationData = {
             x: camera.x,
             y: camera.y,
@@ -40,7 +40,7 @@ const setupInitialState = runtime => {
             renderer.updateDrawableEffect(drawableID, 'ghost', target.effects.ghost);
         }
 
-        if (target.visible && !target.isStage && target.interpolation) {
+        if (target.visible && !target.isStage) {
             target.interpolationData = {
                 x: target.x,
                 y: target.y,
@@ -93,8 +93,7 @@ const interpolate = (runtime, time) => {
         // interpolationData is the initial state at the start of the frame (time 0)
         // the state on the target itself is the state at the end of the frame (time 1)
         const interpolationData = target.interpolationData;
-        const interpolationEnabled = target.interpolation;
-        if (!interpolationData || !interpolationEnabled) {
+        if (!interpolationData) {
             continue;
         }
 
