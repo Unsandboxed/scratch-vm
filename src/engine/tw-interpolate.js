@@ -40,7 +40,7 @@ const setupInitialState = runtime => {
             renderer.updateDrawableEffect(drawableID, 'ghost', target.effects.ghost);
         }
 
-        if (target.visible && !target.isStage) {
+        if (target.visible && !target.isStage && target.interpolation) {
             target.interpolationData = {
                 x: target.x,
                 y: target.y,
