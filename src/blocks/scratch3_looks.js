@@ -314,6 +314,9 @@ class Scratch3LooksBlocks {
 
     getMonitored () {
         return {
+            looks_effect: {
+                getId: (targetId, fields) => getMonitorIdForBlockWithArgs(`${targetId}_effect`, fields)
+            },
             looks_size: {
                 isSpriteSpecific: true,
                 getId: targetId => `${targetId}_size`
