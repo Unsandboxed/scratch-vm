@@ -2412,6 +2412,7 @@ class Runtime extends EventEmitter {
         }
 
         this.ioDevices.cloud.clear();
+
         // Reset runtime cloud data info
         const newCloudDataManager = cloudDataManager(this.cloudOptions);
         this.hasCloudData = newCloudDataManager.hasCloudVariables;
