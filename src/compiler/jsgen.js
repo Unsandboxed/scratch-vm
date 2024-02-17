@@ -472,7 +472,7 @@ class JSGenerator {
         case 'list.length':
             return new TypedInput(`${this.referenceVariable(node.list)}.value.length`, TYPE_NUMBER);
 
-        case 'looks.effect':
+        case 'looks.getEffect':
             return new TypedInput(`target.getEffect(${sanitize(node.effect)})`, TYPE_NUMBER);
         case 'looks.size':
             return new TypedInput('Math.round(target.size)', TYPE_NUMBER);
