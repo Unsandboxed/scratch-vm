@@ -66,8 +66,7 @@ const interpolate = (runtime, time) => {
         return;
     }
 
-    // camera interpolation
-
+    // camera state
     if (camera.enabled && camera.interpolationData) {
         const interpolationData = camera.interpolationData;
 
@@ -79,7 +78,6 @@ const interpolate = (runtime, time) => {
         if (absoluteXDistance > 0.1 || absoluteYDistance > 0.1) {
             const drawable = renderer._allDrawables[drawableID];
             // Large movements are likely intended to be instantaneous.
-            // getAABB is less accurate than getBounds, but it's much faster
             const distance = Math.sqrt((absoluteXDistance ** 2) + (absoluteYDistance ** 2));
             if (distance < 50) {
                 const newX = interpolationData.x + (xDistance * time);
@@ -89,7 +87,7 @@ const interpolate = (runtime, time) => {
         }
     }
 
-    // target interpolation
+    // target state(s)
     for (const target of runtime.targets) {
         // interpolationData is the initial state at the start of the frame (time 0)
         // the state on the target itself is the state at the end of the frame (time 1)
