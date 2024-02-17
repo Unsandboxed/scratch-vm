@@ -167,7 +167,6 @@ class RenderedTarget extends Target {
         this.onTargetMoved = null;
         this.onTargetVisualChange = null;
 
-        this.interpolation = null; // null = default to project settings
         this.interpolationData = null;
     }
 
@@ -1075,13 +1074,6 @@ class RenderedTarget extends Target {
      */
     stopDrag () {
         this.dragging = false;
-    }
-
-    /**
-     * Set whether the sprite is interpolated.
-     */
-    setInterpolation(interpolated) {
-        this.interpolation = interpolated;
     }
 
     /**
