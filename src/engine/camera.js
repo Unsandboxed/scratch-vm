@@ -98,6 +98,14 @@ class Camera {
     }
 
     /**
+     * Set whether the camera will affect the projection.
+     * @param enabled The new enabled state.
+     */
+    setEnabled(enabled) {
+        this.enabled = enabled;
+    }
+
+    /**
      * Tell the renderer to update the rendered camera state.
      */
     emitCameraUpdate() {
@@ -111,6 +119,17 @@ class Camera {
         )
 
         this.emit(Camera.CAMERA_UPDATE);
+    }
+
+    /**
+     * Reset all camera properties.
+     */
+    reset() {
+        this.x = 0;
+        this.y = 0;
+        this.direction = 90;
+        this.zoom = 100;
+        this.enabled = true;
     }
 }
 
