@@ -4,7 +4,7 @@ const MathUtil = require('../util/math-util');
 /**
  * @fileoverview
  * The camera is an arbitrary object used to
- * tell where the renderer projection should go.
+ * describe properties of the renderer projection.
  */
 
 /**
@@ -57,20 +57,37 @@ class Camera {
         this.interpolationData = null;
     }
 
+    /**
+     * Event name for the camera updating.
+     * @const {string}
+     */
+    static get CAMERA_NEEDS_UPDATE () {
+        return 'CAMERA_NEEDS_UPDATE';
+    }
+
+    /**
+     * Set the X and Y values of the camera.
+     * @param x The x coordinate.
+     * @param y The y coordinate.
+     */
     setXY(x, y) {
         this.x = Cast.toNumber(x);
         this.y = Cast.toNumber(y);
+
+        this.emitCameraUpdate();
     }
 
     /**
      * Set the zoom of the camera.
-     * @param zoom The new zoom  value.
+     * @param zoom The new zoom value.
      */
     setZoom(zoom) {
         this.zoom = Cast.toNumber(zoom);
         if (this.runtime.runtimeOptions.miscLimits) {
             this.zoom = MathUtil.clamp(this.zoom, 10, 300);
         }
+
+        this.emitCameraUpdate();
     }
 
     /**
@@ -81,10 +98,17 @@ class Camera {
         if (!isFinite(direction)) return;
 
         this.direction = MathUtil.wrapClamp(direction, -179, 180);
+
+        this.emitCameraUpdate();
     }
 
-    emitCamreaUpdate() {
+    /**
+     * Tell the renderer to update the rendered camera state.
+     */
+    emitCameraUpdate() {
         if (!this.renderer) return;
+
+        this.emit(Camera.CAMERA_NEEDS_UPDATE);
     }
 }
 
