@@ -9,6 +9,8 @@ class Scratch3CameraBlocks {
          * @type {Runtime}
          */
         this.runtime = runtime;
+
+        this.camera = runtime.camera
     }
 
     getMonitored () {
@@ -42,7 +44,7 @@ class Scratch3CameraBlocks {
     moveToXY (args, util) {
         const x = Cast.toNumber(args.X);
         const y = Cast.toNumber(args.Y);
-        this.runtime.setCamera(x, y);
+        this.camera.setXY(x, y);
     }
 
     changeByXY (args, util) {
@@ -50,37 +52,37 @@ class Scratch3CameraBlocks {
         const y = Cast.toNumber(args.Y);
         const newX = x + this.runtime.camera.x;
         const newY = y + this.runtime.camera.y;
-        this.runtime.setCamera(newX, newY);
+        this.camera.setXY(newX, newY);
     }
 
     setX (args, util) {
         const x = Cast.toNumber(args.X);
-        this.runtime.setCamera(x);
+        this.camera.setXY(x, this.camera.y);
     }
 
     changeX (args, util) {
         const x = Cast.toNumber(args.X);
         const newX = x + this.runtime.camera.x;
-        this.runtime.setCamera(newX);
+        this.camera.setXY(newX, this.camera.y);
     }
 
     setY (args, util) {
         const y = Cast.toNumber(args.Y);
-        this.runtime.setCamera(null, y);
+        this.camera.setXY(this.camera.x, y);
     }
 
     changeY (args, util) {
         const y = Cast.toNumber(args.Y);
         const newY = y + this.runtime.camera.y;
-        this.runtime.setCamera(null, newY);
+        this.camera.setXY(this.camera.x, newY);
     }
 
     getCameraX (args, util) {
-        return this.runtime.camera.x;
+        return this.camera.x;
     }
 
     getCameraY (args, util) {
-        return this.runtime.camera.y;
+        return this.camera.y;
     }
 }
 
