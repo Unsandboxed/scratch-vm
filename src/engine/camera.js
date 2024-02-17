@@ -1,3 +1,5 @@
+const EventEmitter = require('events');
+
 const Cast = require('../util/cast');
 const MathUtil = require('../util/math-util');
 
@@ -10,11 +12,9 @@ const MathUtil = require('../util/math-util');
 /**
  * Camera: instance of a camera object on the stage.
  */
-class Camera {
+class Camera extends EventEmitter {
     constructor(runtime) {
         this.runtime = runtime;
-
-        this.renderer = runtime.renderer;
 
         /**
          * Scratch X coordinate. Currently should range from -240 to 240.
@@ -109,16 +109,14 @@ class Camera {
      * Tell the renderer to update the rendered camera state.
      */
     emitCameraUpdate() {
-        if (!this.renderer) return;
+        if (!this.runtime.renderer) return;
 
-        this.renderer._updateCamera(
+        this.runtime.renderer._updateCamera(
             this.x,
             this.y,
             this.direction,
             this.zoom
         )
-
-        this.emit(Camera.CAMERA_UPDATE);
     }
 
     /**
