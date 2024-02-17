@@ -477,6 +477,7 @@ class Runtime extends EventEmitter {
             y: Runtime.CAMERA_Y,
             direction: Runtime.CAMERA_DIRECTION,
             zoom: Runtime.CAMERA_ZOOM,
+            enabled: true,
             interpolationData: null
         }
 
