@@ -82,7 +82,7 @@ const interpolate = (runtime, time) => {
             if (distance < 50) {
                 const newX = interpolationData.x + (xDistance * time);
                 const newY = interpolationData.y + (yDistance * time);
-                renderer._updateCamera(drawableID, [newX, newY]);
+                renderer._updateCamera(newX, newY, camera.direction, camera.zoom);
             }
         }
     }
