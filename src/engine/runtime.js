@@ -50,6 +50,7 @@ const defaultBlockPackages = {
 
 const interpolate = require('./tw-interpolate');
 const FrameLoop = require('./tw-frame-loop');
+const Camera = require('./camera');
 
 const defaultExtensionColors = ['#0FBD8C', '#0DA57A', '#0B8E69'];
 
@@ -472,14 +473,7 @@ class Runtime extends EventEmitter {
         this.stageWidth = Runtime.STAGE_WIDTH;
         this.stageHeight = Runtime.STAGE_HEIGHT;
 
-        this.camera = {
-            x: Runtime.CAMERA_X,
-            y: Runtime.CAMERA_Y,
-            direction: Runtime.CAMERA_DIRECTION,
-            zoom: Runtime.CAMERA_ZOOM,
-            enabled: true,
-            interpolationData: null
-        }
+        this.camera = new Camera(this);
 
         this.runtimeOptions = {
             maxClones: Runtime.MAX_CLONES,
@@ -580,42 +574,6 @@ class Runtime extends EventEmitter {
     }
 
     /**
-     * X position of camera.
-     * @const {number}
-     */
-    static get CAMERA_X () {
-        // tw: camera is set per-runtime, this is only the initial value
-        return 0;
-    }
-
-    /**
-     * Initial rotation of camera.
-     * @const {number}
-     */
-    static get CAMERA_DIRECTION () {
-        // tw: camera is set per-runtime, this is only the initial value
-        return 90;
-    }
-
-    /**
-     * Initial zoom of camera.
-     * @const {number}
-     */
-    static get CAMERA_ZOOM () {
-        // tw: camera is set per-runtime, this is only the initial value
-        return 100;
-    }
-
-    /**
-     * Y position of camera.
-     * @const {number}
-     */
-    static get CAMERA_Y () {
-        // tw: camera is set per-runtime, this is only the initial value
-        return 0;
-    }
-
-    /**
      * Event name for glowing a script.
      * @const {string}
      */
@@ -710,14 +668,6 @@ class Runtime extends EventEmitter {
      */
     static get STAGE_SIZE_CHANGED () {
         return 'STAGE_SIZE_CHANGED';
-    }
-
-    /**
-     * Event name for camera moving.
-     * @const {string}
-     */
-    static get CAMREA_NEEDS_UPDATE () {
-        return 'CAMERA_NEEDS_UPDATE';
     }
 
     /**
@@ -2392,14 +2342,7 @@ class Runtime extends EventEmitter {
         this.ioDevices.clock.resetProjectTimer();
         this.fontManager.clear();
 
-        this.camera = {
-            x: Runtime.CAMERA_X,
-            y: Runtime.CAMERA_Y,
-            direction: Runtime.CAMERA_DIRECTION,
-            zoom: Runtime.CAMERA_ZOOM,
-            enabled: true,
-            interpolationData: null
-        }
+        this.camera.reset();
         // @todo clear out extensions? turboMode? etc.
 
         // *********** Cloud *******************
@@ -2842,40 +2785,10 @@ class Runtime extends EventEmitter {
     }
 
     /**
-     * Change all values of the camera. This will also inform the renderer of the new camera position.
-     * @param {number} x New camera x
-     * @param {number} y New camera y
-     * @param {number} direction New camera direction
-     * @param {number} zoom New camera zoom
+     * Get the current instance of the camera.
      */
-    setCamera(x, y, direction, zoom) {
-        if (
-            this.camera.x !== x ||
-            this.camera.y !== y ||
-            this.camera.direction !== direction ||
-            this.camera.zoom !== zoom
-        ) {
-            this.camera.x = x ?? this.camera.x;
-            this.camera.y = y ?? this.camera.y;
-            this.camera.direction = direction ?? this.camera.direction;
-            this.camera.zoom = zoom ?? this.camera.zoom;
-
-            if (this.renderer) {
-                this.renderer._updateCamera (
-                    this.camera.x,
-                    this.camera.y,
-                    this.camera.direction,
-                    this.camera.zoom,
-                );
-            }
-        }
-        this.emit(
-            Runtime.CAMERA_NEEDS_UPDATE,
-            this.camera.x, 
-            this.camera.y, 
-            this.camera.direction,
-            this.camera.zoom
-        );
+    getCamera() {
+        return this.camera;
     }
 
     // eslint-disable-next-line no-unused-vars
