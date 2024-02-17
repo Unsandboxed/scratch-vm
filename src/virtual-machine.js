@@ -187,9 +187,6 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.STAGE_SIZE_CHANGED, (width, height) => {
             this.emit(Runtime.STAGE_SIZE_CHANGED, width, height);
         });
-        this.runtime.on(Runtime.CAMERA_NEEDS_UPDATE, (x, y, direction, zoom) => {
-            this.emit(Runtime.CAMERA_NEEDS_UPDATE, x, y, direction, zoom);
-        });
         this.runtime.on(Runtime.COMPILE_ERROR, (target, error) => {
             this.emit(Runtime.COMPILE_ERROR, target, error);
         });
@@ -307,10 +304,6 @@ class VirtualMachine extends EventEmitter {
 
     setStageSize (width, height) {
         this.runtime.setStageSize(width, height);
-    }
-
-    setCamera (x, y, direction, zoom) {
-        this.runtime.setCamera(x, y, direction, zoom);
     }
 
     setInEditor (inEditor) {
