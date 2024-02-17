@@ -10,7 +10,7 @@ class Scratch3CameraBlocks {
          */
         this.runtime = runtime;
 
-        this.camera = runtime.camera
+        this.camera = runtime.camera;
     }
 
     getMonitored () {
