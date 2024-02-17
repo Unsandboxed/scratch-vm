@@ -47,11 +47,6 @@ class Camera {
         this.enabled = true;
 
         /**
-         * Determines whether interpolation is enabled for the camera.
-         */
-        this.interpolation = null; // null = default to project settings
-
-        /**
          * Interpolation data used by tw-interpolate.
          */
         this.interpolationData = null;
@@ -108,7 +103,14 @@ class Camera {
     emitCameraUpdate() {
         if (!this.renderer) return;
 
-        this.emit(Camera.CAMERA_NEEDS_UPDATE);
+        this.renderer._updateCamera(
+            this.x,
+            this.y,
+            this.direction,
+            this.zoom
+        )
+
+        this.emit(Camera.CAMERA_UPDATE);
     }
 }
 
