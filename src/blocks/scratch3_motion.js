@@ -102,6 +102,14 @@ class Scratch3MotionBlocks {
             const stageHeight = this.runtime.stageHeight;
             targetX = Math.round(stageWidth * (Math.random() - 0.5));
             targetY = Math.round(stageHeight * (Math.random() - 0.5));
+
+            // usb: transform based on camera
+            targetX = this.runtime.renderer.translateX(
+                targetX, false, 1, true, targetY, 1
+            );
+            targetY = this.runtime.renderer.translateY(
+                targetY, false, 1, true, targetX, 1
+            );
         } else {
             targetName = Cast.toString(targetName);
             const goToTarget = this.runtime.getSpriteTargetByName(targetName);
