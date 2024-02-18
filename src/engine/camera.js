@@ -119,6 +119,8 @@ class Camera extends EventEmitter {
             this.direction,
             this.zoom
         )
+
+        this.runtime.requestRedraw();
     }
 
     /**
