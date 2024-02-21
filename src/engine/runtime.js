@@ -2241,6 +2241,7 @@ class Runtime extends EventEmitter {
      * @param {!string} requestedHatOpcode Opcode of hats to start.
      * @param {object=} optMatchFields Optionally, fields to match on the hat.
      * @param {Target=} optTarget Optionally, a target to restrict to.
+     * @param {Target=} optParams Optionally, parameters to push onto the hat.
      * @return {Array.<Thread>} List of threads started by this function.
      */
     startHats (requestedHatOpcode, optMatchFields, optTarget, optParams) {
