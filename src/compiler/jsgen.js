@@ -437,6 +437,9 @@ class JSGenerator {
             return new TypedInput(`toBoolean(p${node.index})`, TYPE_BOOLEAN);
         case 'args.stringNumber':
             return new TypedInput(`p${node.index}`, TYPE_UNKNOWN);
+            // hat parameter
+        case 'args.parameter':
+            return new TypedInput(`thread.getParam("${node.name}")`, TYPE_UNKNOWN);
 
         case 'compat':
             // Compatibility layer inputs never use flags.
