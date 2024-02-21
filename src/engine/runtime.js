@@ -128,7 +128,7 @@ const ArgumentTypeMap = (() => {
         fieldName: 'VARIABLE'
     };
     map[ArgumentType.LABEL] = {
-        fieldType: 'field_label',
+        fieldType: 'field_label_serializable',
         fieldName: 'LABEL'
     };
     return map;
