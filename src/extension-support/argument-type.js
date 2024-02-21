@@ -61,7 +61,12 @@ const ArgumentType = {
     /**
      * A label text that can be dynamically changed
      */
-    LABEL: 'label'
+    LABEL: 'label',
+
+    /**
+     * A reporter that can be defined using startHats.
+     */
+    PARAMETER: 'parameter'
 };
 
 module.exports = ArgumentType;
