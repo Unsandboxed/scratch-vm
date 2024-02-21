@@ -202,15 +202,16 @@ class BlockUtility {
      * @param {!string} requestedHat Opcode of hats to start.
      * @param {object=} optMatchFields Optionally, fields to match on the hat.
      * @param {Target=} optTarget Optionally, a target to restrict to.
+     * @param {Target=} optParams Optionally, parameters to push onto the hat.
      * @return {Array.<Thread>} List of threads started by this function.
      */
-    startHats (requestedHat, optMatchFields, optTarget) {
+    startHats (requestedHat, optMatchFields, optTarget, optParams) {
         // Store thread and sequencer to ensure we can return to the calling block's context.
         // startHats may execute further blocks and dirty the BlockUtility's execution context
         // and confuse the calling block when we return to it.
         const callerThread = this.thread;
         const callerSequencer = this.sequencer;
-        const result = this.sequencer.runtime.startHats(requestedHat, optMatchFields, optTarget);
+        const result = this.sequencer.runtime.startHats(requestedHat, optMatchFields, optTarget, optParams);
 
         // Restore thread and sequencer to prior values before we return to the calling block.
         this.thread = callerThread;
