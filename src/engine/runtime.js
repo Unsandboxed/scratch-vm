@@ -133,6 +133,12 @@ const ArgumentTypeMap = (() => {
         fieldType: 'field_label_serializable',
         fieldName: 'LABEL'
     };
+    map[ArgumentType.PARAMETER] = {
+        shadow: {
+            type: 'argument_reporter_string_number',
+            fieldName: 'VALUE'
+        }
+    };
     return map;
 })();
 
@@ -1679,6 +1685,11 @@ class Runtime extends EventEmitter {
                 type: 'input_value',
                 name: placeholder
             };
+
+            // TO DO: make it impossible to connect anything in here.
+            if (argInfo.type === ArgumentType.PARAMETER) {
+                argJSON.check = null;
+            }
 
             const defaultValue =
                 typeof argInfo.defaultValue === 'undefined' ? null :
