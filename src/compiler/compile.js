@@ -1,4 +1,4 @@
-const IRGenerator = require('./irgen');
+const {IRGenerator} = require('./irgen');
 const JSGenerator = require('./jsgen');
 
 const compile = thread => {
@@ -29,7 +29,8 @@ const compile = thread => {
 
     return {
         startingFunction: entry,
-        procedures
+        procedures,
+        executableHat: ir.entry.executableHat
     };
 };
 

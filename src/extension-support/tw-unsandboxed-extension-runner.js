@@ -1,5 +1,10 @@
 const ScratchCommon = require('./tw-extension-api-common');
+const createScratchX = require('./tw-scratchx-compatibility-layer');
 const AsyncLimiter = require('../util/async-limiter');
+const createTranslate = require('./tw-l10n');
+const staticFetch = require('../util/tw-static-fetch');
+
+/* eslint-disable require-await */
 
 /**
  * Parse a URL object or return null.
@@ -73,21 +78,45 @@ const setupUnsandboxedExtensionAPI = vm => new Promise(resolve => {
         return vm.securityManager.canRedirect(parsed.href);
     };
 
+    Scratch.canRecordAudio = async () => vm.securityManager.canRecordAudio();
+
+    Scratch.canRecordVideo = async () => vm.securityManager.canRecordVideo();
+
+    Scratch.canReadClipboard = async () => vm.securityManager.canReadClipboard();
+
+    Scratch.canNotify = async () => vm.securityManager.canNotify();
+
+    Scratch.canGeolocate = async () => vm.securityManager.canGeolocate();
+
+    Scratch.canEmbed = async url => {
+        const parsed = parseURL(url);
+        if (!parsed) {
+            return false;
+        }
+        return vm.securityManager.canEmbed(parsed.href);
+    };
+
     Scratch.fetch = async (url, options) => {
         const actualURL = url instanceof Request ? url.url : url;
+
+        const staticFetchResult = staticFetch(url);
+        if (staticFetchResult) {
+            return staticFetchResult;
+        }
+
         if (!await Scratch.canFetch(actualURL)) {
             throw new Error(`Permission to fetch ${actualURL} rejected.`);
         }
-        return fetch(url, {
-            ...options,
-            redirect: 'error'
-        });
+        return fetch(url, options);
     };
 
     Scratch.openWindow = async (url, features) => {
         if (!await Scratch.canOpenWindow(url)) {
             throw new Error(`Permission to open tab ${url} rejected.`);
         }
+        // Use noreferrer to prevent new tab from accessing `window.opener`
+        const baseFeatures = 'noreferrer';
+        features = features ? `${baseFeatures},${features}` : baseFeatures;
         return window.open(url, '_blank', features);
     };
 
@@ -98,8 +127,10 @@ const setupUnsandboxedExtensionAPI = vm => new Promise(resolve => {
         location.href = url;
     };
 
+    Scratch.translate = createTranslate(vm);
+
     global.Scratch = Scratch;
-    global.ScratchExtensions = require('./tw-scratchx-compatibility-layer');
+    global.ScratchExtensions = createScratchX(Scratch);
 });
 
 /**

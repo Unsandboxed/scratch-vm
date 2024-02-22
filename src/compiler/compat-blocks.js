@@ -6,8 +6,14 @@
 // Please keep these lists alphabetical.
 
 const stacked = [
-    'control_clear_counter',
-    'control_incr_counter',
+    // usb to do: compile these when working
+    'camera_movetoxy',
+    'camera_changebyxy',
+    'camera_setx',
+    'camera_changex',
+    'camera_sety',
+    'camera_changey',
+
     'looks_changestretchby',
     'looks_hideallsprites',
     'looks_say',
@@ -20,7 +26,9 @@ const stacked = [
     'motion_glidesecstoxy',
     'motion_glideto',
     'motion_goto',
+    'motion_changebyxy',
     'motion_pointtowards',
+    'motion_pointtowardsxy',
     'motion_scroll_right',
     'motion_scroll_up',
     'sensing_askandwait',
@@ -36,7 +44,7 @@ const stacked = [
 ];
 
 const inputs = [
-    'control_get_counter',
+    'looks_effect',
     'motion_xscroll',
     'motion_yscroll',
     'sensing_loud',

@@ -9,7 +9,7 @@ const SecurityManager = require('./tw-security-manager');
 // TODO: move these out into a separate repository?
 // TODO: change extension spec so that library info, including extension ID, can be collected through static methods
 
-const builtinExtensions = {
+const defaultBuiltinExtensions = {
     // This is an example that isn't loaded with the other core blocks,
     // but serves as a reference for loading core blocks as extensions.
     coreExample: () => require('../blocks/scratch3_core_example'),
@@ -100,8 +100,8 @@ class ExtensionManager {
         this.workerURLs = [];
 
         /**
-         * Map of loaded extension URLs/IDs to service names.
-         * @type {Map.<string, string>}
+         * Map of loaded extension URLs/IDs (equivalent for built-in extensions) to service name.
+         * @type {Map.<string,string>}
          * @private
          */
         this._loadedExtensions = new Map();
@@ -125,6 +125,8 @@ class ExtensionManager {
 
         this.loadingAsyncExtensions = 0;
         this.asyncExtensionsLoadedCallbacks = [];
+
+        this.builtinExtensions = Object.assign({}, defaultBuiltinExtensions);
 
         dispatch.setService('extensions', createExtensionService(this)).catch(e => {
             log.error(`ExtensionManager was unable to register extension service: ${JSON.stringify(e)}`);
@@ -152,7 +154,7 @@ class ExtensionManager {
      * @returns {boolean}
      */
     isBuiltinExtension (extensionId) {
-        return Object.prototype.hasOwnProperty.call(builtinExtensions, extensionId);
+        return Object.prototype.hasOwnProperty.call(this.builtinExtensions, extensionId);
     }
 
     /**
@@ -173,11 +175,15 @@ class ExtensionManager {
             return;
         }
 
-        const extension = builtinExtensions[extensionId]();
+        const extension = this.builtinExtensions[extensionId]();
         const extensionInstance = new extension(this.runtime);
         const serviceName = this._registerInternalExtension(extensionInstance);
         this._loadedExtensions.set(extensionId, serviceName);
         this.runtime.compilerRegisterExtension(extensionId, extensionInstance);
+    }
+
+    addBuiltinExtension (extensionId, extensionClass) {
+        this.builtinExtensions[extensionId] = () => extensionClass;
     }
 
     _isValidExtensionURL (extensionURL) {
@@ -219,10 +225,11 @@ class ExtensionManager {
         this.loadingAsyncExtensions++;
 
         const sandboxMode = await this.securityManager.getSandboxMode(extensionURL);
+        const rewritten = await this.securityManager.rewriteExtensionURL(extensionURL);
 
         if (sandboxMode === 'unsandboxed') {
             const {load} = require('./tw-unsandboxed-extension-runner');
-            const extensionObjects = await load(extensionURL, this.vm)
+            const extensionObjects = await load(rewritten, this.vm)
                 .catch(error => this._failedLoadingExtensionScript(error));
             const fakeWorkerId = this.nextExtensionWorker++;
             this.workerURLs[fakeWorkerId] = extensionURL;
@@ -251,7 +258,7 @@ class ExtensionManager {
         /* eslint-enable max-len */
 
         return new Promise((resolve, reject) => {
-            this.pendingExtensions.push({extensionURL, resolve, reject});
+            this.pendingExtensions.push({extensionURL: rewritten, resolve, reject});
             dispatch.addWorker(new ExtensionWorker());
         }).catch(error => this._failedLoadingExtensionScript(error));
     }
@@ -284,7 +291,7 @@ class ExtensionManager {
                     dispatch.call('runtime', '_refreshExtensionPrimitives', info);
                 })
                 .catch(e => {
-                    log.error(`Failed to refresh built-in extension primitives: ${JSON.stringify(e)}`);
+                    log.error('Failed to refresh built-in extension primitives', e);
                 })
         );
         return Promise.all(allPromises);
@@ -484,7 +491,8 @@ class ExtensionManager {
             });
 
         if (!menuItems || menuItems.length < 1) {
-            throw new Error(`Extension menu returned no items: ${menuItemFunctionName}`);
+            console.warn(`Extension menu returned no items: ${menuItemFunctionName}`);
+            return [''];
         }
         return menuItems;
     }
@@ -497,6 +505,12 @@ class ExtensionManager {
      * @private
      */
     _prepareBlockInfo (serviceName, blockInfo) {
+        if (blockInfo.blockType === BlockType.XML) {
+            blockInfo = Object.assign({}, blockInfo);
+            blockInfo.xml = String(blockInfo.xml) || '';
+            return blockInfo;
+        }
+
         blockInfo = Object.assign({}, {
             blockType: BlockType.COMMAND,
             terminal: false,
@@ -514,6 +528,14 @@ class ExtensionManager {
         case BlockType.BUTTON:
             if (blockInfo.opcode) {
                 log.warn(`Ignoring opcode "${blockInfo.opcode}" for button with text: ${blockInfo.text}`);
+            }
+            blockInfo.callFunc = () => {
+                dispatch.call(serviceName, blockInfo.func);
+            };
+            break;
+        case BlockType.LABEL:
+            if (blockInfo.opcode) {
+                log.warn(`Ignoring opcode "${blockInfo.opcode}" for label: ${blockInfo.text}`);
             }
             break;
         default: {
@@ -579,7 +601,7 @@ class ExtensionManager {
     getExtensionURLs () {
         const extensionURLs = {};
         for (const [extensionId, serviceName] of this._loadedExtensions.entries()) {
-            if (builtinExtensions.hasOwnProperty(extensionId)) {
+            if (Object.prototype.hasOwnProperty.call(this.builtinExtensions, extensionId)) {
                 continue;
             }
 

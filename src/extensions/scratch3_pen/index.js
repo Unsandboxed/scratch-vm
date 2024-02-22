@@ -298,6 +298,16 @@ class Scratch3PenBlocks {
             }),
             blockIconURI: blockIconURI,
             blocks: [
+                // tw: additional message when on the stage for clarity
+                {
+                    blockType: BlockType.LABEL,
+                    text: formatMessage({
+                        id: 'tw.pen.stageSelected',
+                        default: 'Stage selected: less pen blocks',
+                        description: 'Label that appears in the Pen category when the stage is selected'
+                    }),
+                    filter: [TargetType.STAGE]
+                },
                 {
                     opcode: 'clear',
                     blockType: BlockType.COMMAND,
@@ -585,7 +595,7 @@ class Scratch3PenBlocks {
         penState.color = (hsv.h / 360) * 100;
         penState.saturation = hsv.s * 100;
         penState.brightness = hsv.v * 100;
-        if (rgb.hasOwnProperty('a')) {
+        if (Object.prototype.hasOwnProperty.call(rgb, 'a')) {
             penState.transparency = 100 * (1 - (rgb.a / 255.0));
         } else {
             penState.transparency = 0;

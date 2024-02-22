@@ -101,6 +101,7 @@ runtimeFunctions.waitThreads = `const waitThreads = function*(threads) {
  * @param {function} blockFunction The primitive's function.
  * @param {boolean} useFlags Whether to set flags (hasResumedFromPromise)
  * @param {string} blockId Block ID to set on the emulated block utility.
+ * @param {*|null} branchInfo Extra information object for CONDITIONAL and LOOP blocks. See createBranchInfo().
  * @returns {*} the value returned by the block, if any.
  */
 runtimeFunctions.executeInCompatibilityLayer = `let hasResumedFromPromise = false;
@@ -108,19 +109,20 @@ const waitPromise = function*(promise) {
     const thread = globalState.thread;
     let returnValue;
 
+    // enter STATUS_PROMISE_WAIT and yield
+    // this will stop script execution until the promise handlers reset the thread status
+    // because promise handlers might execute immediately, configure thread.status here
+    thread.status = 1; // STATUS_PROMISE_WAIT
+
     promise
         .then(value => {
             returnValue = value;
             thread.status = 0; // STATUS_RUNNING
-        })
-        .catch(error => {
+        }, error => {
             thread.status = 0; // STATUS_RUNNING
             globalState.log.warn('Promise rejected in compiled script:', error);
         });
 
-    // enter STATUS_PROMISE_WAIT and yield
-    // this will stop script execution until the promise handlers reset the thread status
-    thread.status = 1; // STATUS_PROMISE_WAIT
     yield;
 
     return returnValue;
@@ -131,26 +133,32 @@ const isPromise = value => (
     typeof value === 'object' &&
     typeof value.then === 'function'
 );
-const executeInCompatibilityLayer = function*(inputs, blockFunction, isWarp, useFlags, blockId) {
+const executeInCompatibilityLayer = function*(inputs, blockFunction, isWarp, useFlags, blockId, branchInfo) {
     const thread = globalState.thread;
+    const blockUtility = globalState.blockUtility;
+    const stackFrame = branchInfo ? branchInfo.stackFrame : {};
 
-    // reset the stackframe
-    // we only ever use one stackframe at a time, so this shouldn't cause issues
-    thread.stackFrames[thread.stackFrames.length - 1].reuse(isWarp);
+    const finish = (returnValue) => {
+        if (branchInfo) {
+            if (typeof returnValue === 'undefined' && blockUtility._startedBranch) {
+                branchInfo.isLoop = blockUtility._startedBranch[1];
+                return blockUtility._startedBranch[0];
+            }
+            branchInfo.isLoop = branchInfo.defaultIsLoop;
+            return returnValue;
+        }
+        return returnValue;
+    };
 
     const executeBlock = () => {
-        const blockUtility = globalState.blockUtility;
-        blockUtility.init(thread, blockId);
+        blockUtility.init(thread, blockId, stackFrame);
         return blockFunction(inputs, blockUtility);
     };
 
     let returnValue = executeBlock();
-
     if (isPromise(returnValue)) {
-        returnValue = yield* waitPromise(returnValue);
-        if (useFlags) {
-            hasResumedFromPromise = true;
-        }
+        returnValue = finish(yield* waitPromise(returnValue));
+        if (useFlags) hasResumedFromPromise = true;
         return returnValue;
     }
 
@@ -175,25 +183,33 @@ const executeInCompatibilityLayer = function*(inputs, blockFunction, isWarp, use
         }
 
         returnValue = executeBlock();
-
         if (isPromise(returnValue)) {
-            returnValue = yield* waitPromise(returnValue);
-            if (useFlags) {
-                hasResumedFromPromise = true;
-            }
+            returnValue = finish(yield* waitPromise(returnValue));
+            if (useFlags) hasResumedFromPromise = true;
             return returnValue;
         }
 
         if (thread.status === 1 /* STATUS_PROMISE_WAIT */) {
             yield;
-            return '';
+            return finish('');
         }
     }
 
     // todo: do we have to do anything extra if status is STATUS_DONE?
 
-    return returnValue;
+    return finish(returnValue);
 }`;
+
+/**
+ * @param {boolean} isLoop True if the block is a LOOP by default (can be overridden by startBranch() call)
+ * @returns {unknown} Branch info object for compatibility layer.
+ */
+runtimeFunctions.createBranchInfo = `const createBranchInfo = (isLoop) => ({
+    defaultIsLoop: isLoop,
+    isLoop: false,
+    branch: 0,
+    stackFrame: {}
+});`;
 
 /**
  * End the current script.
@@ -550,12 +566,40 @@ runtimeFunctions.tan = `const tan = (angle) => {
 }`;
 
 /**
+ * @param {function} callback The function to run
+ * @param {...unknown} args The arguments to pass to the function
+ * @returns {unknown} A generator that will yield once then call the function and return its value.
+ */
+runtimeFunctions.yieldThenCall = `const yieldThenCall = function* (callback, ...args) {
+    yield;
+    return callback(...args);
+}`;
+
+/**
+ * @param {function} callback The generator function to run
+ * @param {...unknown} args The arguments to pass to the generator function
+ * @returns {unknown} A generator that will yield once then delegate to the generator function and return its value.
+ */
+runtimeFunctions.yieldThenCallGenerator = `const yieldThenCallGenerator = function* (callback, ...args) {
+    yield;
+    return yield* callback(...args);
+}`;
+
+/**
  * Step a compiled thread.
  * @param {Thread} thread The thread to step.
  */
 const execute = thread => {
     globalState.thread = thread;
     thread.generator.next();
+};
+
+const threadStack = [];
+const saveGlobalState = () => {
+    threadStack.push(globalState.thread);
+};
+const restoreGlobalState = () => {
+    globalState.thread = threadStack.pop();
 };
 
 const insertRuntime = source => {
@@ -586,5 +630,7 @@ const scopedEval = source => {
 
 execute.scopedEval = scopedEval;
 execute.runtimeFunctions = runtimeFunctions;
+execute.saveGlobalState = saveGlobalState;
+execute.restoreGlobalState = restoreGlobalState;
 
 module.exports = execute;

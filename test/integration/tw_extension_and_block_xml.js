@@ -123,10 +123,11 @@ test('XML escaped in Runtime.getBlocksXML()', t => {
     // Check docsURI
     const docsButton = category.children[0];
     t.equal(docsButton.name, 'button', 'has docs <button>');
+    t.equal(docsButton.attribs.callbackkey, 'OPEN_EXTENSION_DOCS');
     t.equal(
-        docsButton.attribs['web-class'],
-        'docs-uri-https://example.com/&amp;&apos;&apos;&quot;&quot;&lt;&lt;&gt;&gt;',
-        'escaped docs class'
+        docsButton.attribs.callbackdata,
+        'https://example.com/&amp;&apos;&apos;&quot;&quot;&lt;&lt;&gt;&gt;',
+        'escaped docs callback data'
     );
     t.equal(docsButton.children.length, 0, 'docs button has 0 children');
 
@@ -197,7 +198,6 @@ test('XML escaped in Runtime.getBlocksXML()', t => {
     const button = category.children[2];
     t.equal(button.name, 'button', 'button is <button>');
     t.equal(button.attribs.text, '&apos;&quot;&gt;&lt;&amp; button text', 'escaped button text');
-    t.equal(button.attribs.callbackkey, '&apos;&quot;&gt;&lt;&amp; func', 'escaped button callback');
 
     t.end();
 });
@@ -274,7 +274,11 @@ test('XML escaped in Blocks.toXML()', async t => {
         // Check the string input
         const stringInputValue = block.children[0];
         t.equal(stringInputValue.name, 'value', 'string input is <value>');
-        t.equal(stringInputValue.attribs.name, 'string argument &lt;&gt;&amp;&quot;&apos;', 'escaped string input name');
+        t.equal(
+            stringInputValue.attribs.name,
+            'string argument &lt;&gt;&amp;&quot;&apos;',
+            'escaped string input name'
+        );
         t.equal(stringInputValue.children.length, 1, 'string input has 1 child');
 
         const stringInputShadow = stringInputValue.children[0];

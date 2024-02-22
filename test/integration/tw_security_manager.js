@@ -11,6 +11,7 @@ const FETCH_EXTENSION = 'https://extensions.turbowarp.org/fetch.js';
 const BITWISE_EXTENSION = 'https://extensions.turbowarp.org/bitwise.js';
 
 /* eslint-disable no-script-url */
+/* eslint-disable require-await */
 
 test('Deny both extensions', async t => {
     const vm = new VirtualMachine();
@@ -232,6 +233,35 @@ test('canRedirect', async t => {
         'https://example.com/',
         'https://example.com/index.html',
         'https://example.com/null'
+    ]);
+
+    t.end();
+});
+
+test('canEmbed', async t => {
+    const vm = new VirtualMachine();
+    setupUnsandboxedExtensionAPI(vm);
+    global.location = {
+        href: 'https://example.com/'
+    };
+
+    const calledWithURLs = [];
+    vm.securityManager.canEmbed = async url => {
+        calledWithURLs.push(url);
+        return url === 'https://example.com/ok';
+    };
+
+    t.equal(await global.Scratch.canEmbed('https://example.com/ok'), true);
+    t.equal(await global.Scratch.canEmbed('https://example.com/bad'), false);
+    t.equal(await global.Scratch.canEmbed('file:///etc/hosts'), false);
+    t.equal(await global.Scratch.canEmbed('data:text/html;,<h1>test</h1>'), false);
+    t.equal(await global.Scratch.canEmbed('ok'), true);
+    t.same(calledWithURLs, [
+        'https://example.com/ok',
+        'https://example.com/bad',
+        'file:///etc/hosts',
+        'data:text/html;,<h1>test</h1>',
+        'https://example.com/ok'
     ]);
 
     t.end();

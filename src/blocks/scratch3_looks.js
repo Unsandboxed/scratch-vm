@@ -171,7 +171,8 @@ class Scratch3LooksBlocks {
                 bottom: target.y
             };
         }
-        const stageSize = this.runtime.renderer.getNativeSize();
+        // usb: remove bounds to support camera
+        const stageSize = [Infinity, Infinity];
         const stageBounds = {
             left: -stageSize[0] / 2,
             right: stageSize[0] / 2,
@@ -249,7 +250,7 @@ class Scratch3LooksBlocks {
 
         // Non-integers should be rounded to 2 decimal places (no more, no less), unless they're small enough that
         // rounding would display them as 0.00. This matches 2.0's behavior:
-        // https://github.com/LLK/scratch-flash/blob/2e4a402ceb205a042887f54b26eebe1c2e6da6c0/src/scratch/ScratchSprite.as#L579-L585
+        // https://github.com/scratchfoundation/scratch-flash/blob/2e4a402ceb205a042887f54b26eebe1c2e6da6c0/src/scratch/ScratchSprite.as#L579-L585
         if (typeof text === 'number' &&
             Math.abs(text) >= 0.01 && text % 1 !== 0) {
             text = text.toFixed(2);
@@ -298,6 +299,7 @@ class Scratch3LooksBlocks {
             looks_changeeffectby: this.changeEffect,
             looks_seteffectto: this.setEffect,
             looks_cleargraphiceffects: this.clearEffects,
+            looks_effect: this.getEffect,
             looks_changesizeby: this.changeSize,
             looks_setsizeto: this.setSize,
             looks_changestretchby: () => {}, // legacy no-op blocks
@@ -312,6 +314,10 @@ class Scratch3LooksBlocks {
 
     getMonitored () {
         return {
+            looks_effect: {
+                isSpriteSpecific: true,
+                getId: (targetId, fields) => getMonitorIdForBlockWithArgs(`${targetId}_effect`, fields)
+            },
             looks_size: {
                 isSpriteSpecific: true,
                 getId: targetId => `${targetId}_size`
@@ -543,7 +549,7 @@ class Scratch3LooksBlocks {
     changeEffect (args, util) {
         const effect = Cast.toString(args.EFFECT).toLowerCase();
         const change = Cast.toNumber(args.CHANGE);
-        if (!util.target.effects.hasOwnProperty(effect)) return;
+        if (!Object.prototype.hasOwnProperty.call(util.target.effects, effect)) return;
         let newValue = change + util.target.effects[effect];
         newValue = this.clampEffect(effect, newValue);
         util.target.setEffect(effect, newValue);
@@ -558,6 +564,11 @@ class Scratch3LooksBlocks {
 
     clearEffects (args, util) {
         util.target.clearEffects();
+    }
+
+    getEffect (args, util) {
+        const effect = Cast.toString(args.EFFECT).toLowerCase();
+        return util.target.getEffect(effect);
     }
 
     changeSize (args, util) {

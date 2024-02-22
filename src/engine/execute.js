@@ -54,34 +54,39 @@ const handleReport = function (resolvedValue, sequencer, thread, blockCached, la
     const currentBlockId = blockCached.id;
     const opcode = blockCached.opcode;
     const isHat = blockCached._isHat;
+    const isConditional = blockCached._isConditional;
+    const isLoop = blockCached._isLoop;
 
     thread.pushReportedValue(resolvedValue);
     if (isHat) {
         // Hat predicate was evaluated.
-        if (sequencer.runtime.getIsEdgeActivatedHat(opcode)) {
+        if (thread.stackClick) {
+            thread.status = Thread.STATUS_RUNNING;
+        } else if (sequencer.runtime.getIsEdgeActivatedHat(opcode)) {
             // If this is an edge-activated hat, only proceed if the value is
             // true and used to be false, or the stack was activated explicitly
             // via stack click
-            if (!thread.stackClick) {
-                const hasOldEdgeValue = thread.target.hasEdgeActivatedValue(currentBlockId);
-                const oldEdgeValue = thread.target.updateEdgeActivatedValue(
-                    currentBlockId,
-                    resolvedValue
-                );
+            const hasOldEdgeValue = thread.target.hasEdgeActivatedValue(currentBlockId);
+            const oldEdgeValue = thread.target.updateEdgeActivatedValue(
+                currentBlockId,
+                resolvedValue
+            );
 
-                const edgeWasActivated = hasOldEdgeValue ? (!oldEdgeValue && resolvedValue) : resolvedValue;
-                if (edgeWasActivated) {
-                    // TW: Resume the thread if we were paused for a promise.
-                    thread.status = Thread.STATUS_RUNNING;
-                } else {
-                    sequencer.retireThread(thread);
-                }
+            const edgeWasActivated = hasOldEdgeValue ? (!oldEdgeValue && resolvedValue) : resolvedValue;
+            if (edgeWasActivated) {
+                thread.status = Thread.STATUS_RUNNING;
+            } else {
+                sequencer.retireThread(thread);
             }
-        } else if (!resolvedValue) {
-            // Not an edge-activated hat: retire the thread
-            // if predicate was false.
+        } else if (resolvedValue) {
+            // Predicate returned true: allow the script to run.
+            thread.status = Thread.STATUS_RUNNING;
+        } else {
+            // Predicate returned false: do not allow script to run
             sequencer.retireThread(thread);
         }
+    } else if ((isConditional || isLoop) && typeof resolvedValue !== 'undefined') {
+        sequencer.stepToBranch(thread, cast.toNumber(resolvedValue), isLoop);
     } else {
         // In a non-hat, report the value visually if necessary if
         // at the top of the thread stack.
@@ -118,7 +123,7 @@ const handlePromise = (primitiveReportedValue, sequencer, thread, blockCached, l
         // If it's a command block or a top level reporter in a stackClick.
         // TW: Don't mangle the stack when we just finished executing a hat block.
         // Hat block is always the top and first block of the script. There are no loops to find.
-        if (lastOperation && !blockCached._isHat) {
+        if (lastOperation && (!blockCached._isHat || thread.stackClick)) {
             let stackFrame;
             let nextBlockId;
             do {
@@ -291,6 +296,10 @@ class BlockCached {
         this._blockFunction = runtime.getOpcodeFunction(opcode);
         this._definedBlockFunction = typeof this._blockFunction !== 'undefined';
 
+        const flowing = runtime._flowing[opcode];
+        this._isConditional = !!(flowing && flowing.conditional);
+        this._isLoop = !!(flowing && flowing.loop);
+
         // Store the current shadow value if there is a shadow value.
         const fieldKeys = Object.keys(fields);
         this._isShadowBlock = (
@@ -302,11 +311,7 @@ class BlockCached {
 
         // Store the static fields onto _argValues.
         for (const fieldName in fields) {
-            if (
-                fieldName === 'VARIABLE' ||
-                fieldName === 'LIST' ||
-                fieldName === 'BROADCAST_OPTION'
-            ) {
+            if (typeof fields[fieldName].variableType !== 'undefined') {
                 this._argValues[fieldName] = {
                     id: fields[fieldName].id,
                     name: fields[fieldName].value
@@ -490,6 +495,7 @@ const execute = function (sequencer, thread) {
 
         currentStackFrame.reporting = null;
         currentStackFrame.reported = null;
+        currentStackFrame.waitingReporter = false;
     }
 
     const start = i;
@@ -497,6 +503,7 @@ const execute = function (sequencer, thread) {
     for (; i < length; i++) {
         const lastOperation = i === length - 1;
         const opCached = ops[i];
+        currentStackFrame.op = opCached;
 
         const blockFunction = opCached._blockFunction;
 
@@ -517,9 +524,11 @@ const execute = function (sequencer, thread) {
 
         const primitiveReportedValue = blockFunction(argValues, blockUtility);
 
-        // If it's a promise, wait until promise resolves.
-        if (isPromise(primitiveReportedValue)) {
-            handlePromise(primitiveReportedValue, sequencer, thread, opCached, lastOperation);
+        const primitiveIsPromise = isPromise(primitiveReportedValue);
+        if (primitiveIsPromise || currentStackFrame.waitingReporter) {
+            if (primitiveIsPromise) {
+                handlePromise(primitiveReportedValue, sequencer, thread, opCached, lastOperation);
+            }
 
             // Store the already reported values. They will be thawed into the
             // future versions of the same operations by block id. The reporting
@@ -543,7 +552,7 @@ const execute = function (sequencer, thread) {
                 };
             });
 
-            // We are waiting for a promise. Stop running this set of operations
+            // We are waiting to be resumed later. Stop running this set of operations
             // and continue them later after thawing the reported values.
             break;
         } else if (thread.status === Thread.STATUS_RUNNING) {

@@ -1,5 +1,6 @@
 const log = require('../util/log');
 const Cast = require('../util/cast');
+const BlockType = require('../extension-support/block-type');
 const VariablePool = require('./variable-pool');
 const jsexecute = require('./jsexecute');
 const environment = require('./environment');
@@ -385,6 +386,7 @@ class JSGenerator {
         this._setupVariables = {};
 
         this.descendedIntoModulo = false;
+        this.isInHat = false;
 
         this.debug = this.target.runtime.debug;
     }
@@ -428,10 +430,15 @@ class JSGenerator {
      */
     descendInput (node) {
         switch (node.kind) {
+        case 'addons.call':
+            return new TypedInput(`(${this.descendAddonCall(node)})`, TYPE_UNKNOWN);
+
         case 'args.boolean':
             return new TypedInput(`toBoolean(p${node.index})`, TYPE_BOOLEAN);
         case 'args.stringNumber':
             return new TypedInput(`p${node.index}`, TYPE_UNKNOWN);
+        case 'args.parameter':
+            return new TypedInput(`(thread.getParam("${node.name}") ?? 0)`, TYPE_UNKNOWN);
 
         case 'compat':
             // Compatibility layer inputs never use flags.
@@ -439,6 +446,9 @@ class JSGenerator {
 
         case 'constant':
             return this.safeConstantInput(node.value);
+
+        case 'counter.get':
+            return new TypedInput('runtime.ext_scratch3_control._counter', TYPE_NUMBER);
 
         case 'keyboard.pressed':
             return new TypedInput(`runtime.ioDevices.keyboard.getKeyIsDown(${this.descendInput(node.key).asSafe()})`, TYPE_BOOLEAN);
@@ -477,6 +487,8 @@ class JSGenerator {
 
         case 'motion.direction':
             return new TypedInput('target.direction', TYPE_NUMBER);
+        case 'motion.rotationStyle':
+            return new TypedInput('target.rotationStyle', TYPE_NUMBER);
         case 'motion.x':
             return new TypedInput('limitPrecision(target.x)', TYPE_NUMBER);
         case 'motion.y':
@@ -488,6 +500,9 @@ class JSGenerator {
             return new TypedInput('runtime.ioDevices.mouse.getScratchX()', TYPE_NUMBER);
         case 'mouse.y':
             return new TypedInput('runtime.ioDevices.mouse.getScratchY()', TYPE_NUMBER);
+
+        case 'noop':
+            return new TypedInput('""', TYPE_STRING);
 
         case 'op.abs':
             return new TypedInput(`Math.abs(${this.descendInput(node.value).asNumber()})`, TYPE_NUMBER);
@@ -582,6 +597,8 @@ class JSGenerator {
         }
         case 'op.letterOf':
             return new TypedInput(`((${this.descendInput(node.string).asString()})[(${this.descendInput(node.letter).asNumber()} | 0) - 1] || "")`, TYPE_STRING);
+        case 'op.lettersOf':
+            return new TypedInput(`((${this.descendInput(node.string).asString()}).substring(${this.descendInput(node.left).asNumber() - 1}, ${this.descendInput(node.right).asNumber()}) || "")`, TYPE_STRING);
         case 'op.ln':
             // Needs to be marked as NaN because Math.log(-1) == NaN
             return new TypedInput(`Math.log(${this.descendInput(node.value).asNumber()})`, TYPE_NUMBER_NAN);
@@ -599,6 +616,8 @@ class JSGenerator {
             return new TypedInput(`!${this.descendInput(node.operand).asBoolean()}`, TYPE_BOOLEAN);
         case 'op.or':
             return new TypedInput(`(${this.descendInput(node.left).asBoolean()} || ${this.descendInput(node.right).asBoolean()})`, TYPE_BOOLEAN);
+        case 'op.xor':
+            return new TypedInput(`(${this.descendInput(node.left).asBoolean()} !== ${this.descendInput(node.right).asBoolean()})`, TYPE_BOOLEAN);
         case 'op.random':
             if (node.useInts) {
                 // Both inputs are ints, so we know neither are NaN
@@ -622,6 +641,38 @@ class JSGenerator {
             return new TypedInput(`tan(${this.descendInput(node.value).asNumber()})`, TYPE_NUMBER_NAN);
         case 'op.10^':
             return new TypedInput(`(10 ** ${this.descendInput(node.value).asNumber()})`, TYPE_NUMBER);
+
+        case 'procedures.call': {
+            const procedureCode = node.code;
+            const procedureVariant = node.variant;
+            const procedureData = this.ir.procedures[procedureVariant];
+            if (procedureData.stack === null) {
+                // TODO still need to evaluate arguments for side effects
+                return new TypedInput('""', TYPE_STRING);
+            }
+
+            // Recursion makes this complicated because:
+            //  - We need to yield *between* each call in the same command block
+            //  - We need to evaluate arguments *before* that yield happens
+
+            const procedureReference = `thread.procedures["${sanitize(procedureVariant)}"]`;
+            const args = [];
+            for (const input of node.arguments) {
+                args.push(this.descendInput(input).asSafe());
+            }
+            const joinedArgs = args.join(',');
+
+            const yieldForRecursion = !this.isWarp && procedureCode === this.script.procedureCode;
+            const yieldForHat = this.isInHat;
+            if (yieldForRecursion || yieldForHat) {
+                const runtimeFunction = procedureData.yields ? 'yieldThenCallGenerator' : 'yieldThenCall';
+                return new TypedInput(`(yield* ${runtimeFunction}(${procedureReference}, ${joinedArgs}))`, TYPE_UNKNOWN);
+            }
+            if (procedureData.yields) {
+                return new TypedInput(`(yield* ${procedureReference}(${joinedArgs}))`, TYPE_UNKNOWN);
+            }
+            return new TypedInput(`${procedureReference}(${joinedArgs})`, TYPE_UNKNOWN);
+        }
 
         case 'sensing.answer':
             return new TypedInput(`runtime.ext_scratch3_sensing._answer`, TYPE_STRING);
@@ -693,6 +744,11 @@ class JSGenerator {
         case 'sensing.year':
             return new TypedInput(`(new Date().getFullYear())`, TYPE_NUMBER);
 
+        case 'camera.x':
+            return new TypedInput('runtime.camera.x', TYPE_NUMBER);
+        case 'camera.y':
+            return new TypedInput('runtime.camera.y', TYPE_NUMBER);
+
         case 'timer.get':
             return new TypedInput('runtime.ioDevices.clock.projectTimer()', TYPE_NUMBER);
 
@@ -713,19 +769,37 @@ class JSGenerator {
      */
     descendStackedBlock (node) {
         switch (node.kind) {
-        case 'addons.call': {
-            const inputs = this.descendInputRecord(node.arguments);
-            const blockFunction = `runtime.getAddonBlock("${sanitize(node.code)}").callback`;
-            const blockId = `"${sanitize(node.blockId)}"`;
-            this.source += `yield* executeInCompatibilityLayer(${inputs}, ${blockFunction}, ${this.isWarp}, false, ${blockId});\n`;
+        case 'addons.call':
+            this.source += `${this.descendAddonCall(node)};\n`;
             break;
-        }
 
         case 'compat': {
             // If the last command in a loop returns a promise, immediately continue to the next iteration.
             // If you don't do this, the loop effectively yields twice per iteration and will run at half-speed.
             const isLastInLoop = this.isLastBlockInLoop();
-            this.source += `${this.generateCompatibilityLayerCall(node, isLastInLoop)};\n`;
+
+            const blockType = node.blockType;
+            if (blockType === BlockType.COMMAND || blockType === BlockType.HAT) {
+                this.source += `${this.generateCompatibilityLayerCall(node, isLastInLoop)};\n`;
+            } else if (blockType === BlockType.CONDITIONAL || blockType === BlockType.LOOP) {
+                const branchVariable = this.localVariables.next();
+                this.source += `const ${branchVariable} = createBranchInfo(${blockType === BlockType.LOOP});\n`;
+                this.source += `while (${branchVariable}.branch = +(${this.generateCompatibilityLayerCall(node, false, branchVariable)})) {\n`;
+                this.source += `switch (${branchVariable}.branch) {\n`;
+                for (const index in node.substacks) {
+                    this.source += `case ${+index}: {\n`;
+                    this.descendStack(node.substacks[index], new Frame(false));
+                    this.source += `break;\n`;
+                    this.source += `}\n`; // close case
+                }
+                this.source += '}\n'; // close switch
+                this.source += `if (!${branchVariable}.isLoop) break;\n`;
+                this.yieldLoop();
+                this.source += '}\n'; // close while
+            } else {
+                throw new Error(`Unknown block type: ${blockType}`);
+            }
+
             if (isLastInLoop) {
                 this.source += 'if (hasResumedFromPromise) {hasResumedFromPromise = false;continue;}\n';
             }
@@ -781,11 +855,7 @@ class JSGenerator {
             this.source += 'runtime.stopForTarget(target, thread);\n';
             break;
         case 'control.stopScript':
-            if (this.isProcedure) {
-                this.source += 'return;\n';
-            } else {
-                this.retire();
-            }
+            this.stopScript();
             break;
         case 'control.wait': {
             const duration = this.localVariables.next();
@@ -817,6 +887,46 @@ class JSGenerator {
                 this.yieldLoop();
             }
             this.source += `}\n`;
+            break;
+
+        case 'control.allAtOnce':
+            const previousWarp = this.isWarp;
+            this.isWarp = true;
+            this.descendStack(node.code, new Frame(false, 'control.allAtOnce'));
+            this.isWarp = previousWarp;
+            break;
+
+        case 'counter.clear':
+            this.source += 'runtime.ext_scratch3_control._counter = 0;\n';
+            break;
+        case 'counter.increment':
+            this.source += 'runtime.ext_scratch3_control._counter++;\n';
+            break;
+
+        case 'hat.edge':
+            this.isInHat = true;
+            this.source += '{\n';
+            // For exact Scratch parity, evaluate the input before checking old edge state.
+            // Can matter if the input is not instantly evaluated.
+            this.source += `const resolvedValue = ${this.descendInput(node.condition).asBoolean()};\n`;
+            this.source += `const id = "${sanitize(node.id)}";\n`;
+            this.source += 'const hasOldEdgeValue = target.hasEdgeActivatedValue(id);\n';
+            this.source += `const oldEdgeValue = target.updateEdgeActivatedValue(id, resolvedValue);\n`;
+            this.source += `const edgeWasActivated = hasOldEdgeValue ? (!oldEdgeValue && resolvedValue) : resolvedValue;\n`;
+            this.source += `if (!edgeWasActivated) {\n`;
+            this.retire();
+            this.source += '}\n';
+            this.source += 'yield;\n';
+            this.source += '}\n';
+            this.isInHat = false;
+            break;
+        case 'hat.predicate':
+            this.isInHat = true;
+            this.source += `if (!${this.descendInput(node.condition).asBoolean()}) {\n`;
+            this.retire();
+            this.source += '}\n';
+            this.source += 'yield;\n';
+            this.isInHat = false;
             break;
 
         case 'event.broadcast':
@@ -887,7 +997,7 @@ class JSGenerator {
             this.source += 'target.clearEffects();\n';
             break;
         case 'looks.changeEffect':
-            if (this.target.effects.hasOwnProperty(node.effect)) {
+            if (Object.prototype.hasOwnProperty.call(this.target.effects, node.effect)) {
                 this.source += `target.setEffect("${sanitize(node.effect)}", runtime.ext_scratch3_looks.clampEffect("${sanitize(node.effect)}", ${this.descendInput(node.value).asNumber()} + target.effects["${sanitize(node.effect)}"]));\n`;
             }
             break;
@@ -920,7 +1030,7 @@ class JSGenerator {
             this.source += 'target.setCostume(target.currentCostume + 1);\n';
             break;
         case 'looks.setEffect':
-            if (this.target.effects.hasOwnProperty(node.effect)) {
+            if (Object.prototype.hasOwnProperty.call(this.target.effects, node.effect)) {
                 this.source += `target.setEffect("${sanitize(node.effect)}", runtime.ext_scratch3_looks.clampEffect("${sanitize(node.effect)}", ${this.descendInput(node.value).asNumber()}));\n`;
             }
             break;
@@ -970,7 +1080,6 @@ class JSGenerator {
             break;
 
         case 'noop':
-            // todo: remove noop entirely
             break;
 
         case 'pen.clear':
@@ -1016,35 +1125,34 @@ class JSGenerator {
         case 'procedures.call': {
             const procedureCode = node.code;
             const procedureVariant = node.variant;
-            // Do not generate any code for empty procedures.
             const procedureData = this.ir.procedures[procedureVariant];
             if (procedureData.stack === null) {
+                // TODO still need to evaluate arguments
                 break;
             }
-            if (!this.isWarp && procedureCode === this.script.procedureCode) {
-                // Direct recursion yields.
+
+            const yieldForRecursion = !this.isWarp && procedureCode === this.script.procedureCode;
+            if (yieldForRecursion) {
                 this.yieldNotWarp();
             }
+
             if (procedureData.yields) {
                 this.source += 'yield* ';
-                if (!this.script.yields) {
-                    throw new Error('Script uses yielding procedure but is not marked as yielding.');
-                }
             }
             this.source += `thread.procedures["${sanitize(procedureVariant)}"](`;
-            // Only include arguments if the procedure accepts any.
-            if (procedureData.arguments.length) {
-                const args = [];
-                for (const input of node.arguments) {
-                    args.push(this.descendInput(input).asSafe());
-                }
-                this.source += args.join(',');
+            const args = [];
+            for (const input of node.arguments) {
+                args.push(this.descendInput(input).asSafe());
             }
-            this.source += `);\n`;
-            // Variable input types may have changes after a procedure call.
+            this.source += args.join(',');
+            this.source += ');\n';
+
             this.resetVariableInputs();
             break;
         }
+        case 'procedures.return':
+            this.stopScriptAndReturn(this.descendInput(node.value).asSafe());
+            break;
 
         case 'timer.reset':
             this.source += 'runtime.ioDevices.clock.resetProjectTimer();\n';
@@ -1122,7 +1230,7 @@ class JSGenerator {
     }
 
     descendVariable (variable) {
-        if (this.variableInputs.hasOwnProperty(variable.id)) {
+        if (Object.prototype.hasOwnProperty.call(this.variableInputs, variable.id)) {
             return this.variableInputs[variable.id];
         }
         const input = new VariableInput(`${this.referenceVariable(variable)}.value`);
@@ -1137,8 +1245,15 @@ class JSGenerator {
         return this.evaluateOnce(`stage.variables["${sanitize(variable.id)}"]`);
     }
 
+    descendAddonCall (node) {
+        const inputs = this.descendInputRecord(node.arguments);
+        const blockFunction = `runtime.getAddonBlock("${sanitize(node.code)}").callback`;
+        const blockId = `"${sanitize(node.blockId)}"`;
+        return `yield* executeInCompatibilityLayer(${inputs}, ${blockFunction}, ${this.isWarp}, false, ${blockId})`;
+    }
+
     evaluateOnce (source) {
-        if (this._setupVariables.hasOwnProperty(source)) {
+        if (Object.prototype.hasOwnProperty.call(this._setupVariables, source)) {
             return this._setupVariables[source];
         }
         const variable = this._setupVariablesPool.next();
@@ -1154,6 +1269,25 @@ class JSGenerator {
             this.source += 'retire(); yield;\n';
         } else {
             this.source += 'retire(); return;\n';
+        }
+    }
+
+    stopScript () {
+        if (this.isProcedure) {
+            this.source += 'return "";\n';
+        } else {
+            this.retire();
+        }
+    }
+
+    /**
+     * @param {string} valueJS JS code of value to return.
+     */
+    stopScriptAndReturn (valueJS) {
+        if (this.isProcedure) {
+            this.source += `return ${valueJS};\n`;
+        } else {
+            this.retire();
         }
     }
 
@@ -1211,9 +1345,10 @@ class JSGenerator {
      * Generate a call into the compatibility layer.
      * @param {*} node The "compat" kind node to generate from.
      * @param {boolean} setFlags Whether flags should be set describing how this function was processed.
+     * @param {string|null} [frameName] Name of the stack frame variable, if any
      * @returns {string} The JS of the call.
      */
-    generateCompatibilityLayerCall (node, setFlags) {
+    generateCompatibilityLayerCall (node, setFlags, frameName = null) {
         const opcode = node.opcode;
 
         let result = 'yield* executeInCompatibilityLayer({';
@@ -1228,7 +1363,7 @@ class JSGenerator {
             result += `"${sanitize(fieldName)}":"${sanitize(field)}",`;
         }
         const opcodeFunction = this.evaluateOnce(`runtime.getOpcodeFunction("${sanitize(opcode)}")`);
-        result += `}, ${opcodeFunction}, ${this.isWarp}, ${setFlags}, null)`;
+        result += `}, ${opcodeFunction}, ${this.isWarp}, ${setFlags}, "${sanitize(node.id)}", ${frameName})`;
 
         return result;
     }
@@ -1286,10 +1421,6 @@ class JSGenerator {
 
         script += this.source;
 
-        if (!this.isProcedure) {
-            script += 'retire();\n';
-        }
-
         script += '}; })';
 
         return script;
@@ -1303,6 +1434,7 @@ class JSGenerator {
         if (this.script.stack) {
             this.descendStack(this.script.stack, new Frame(false));
         }
+        this.stopScript();
 
         const factory = this.createScriptFactory();
         const fn = jsexecute.scopedEval(factory);

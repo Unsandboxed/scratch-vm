@@ -14,6 +14,11 @@ const BlockType = {
     BUTTON: 'button',
 
     /**
+     * A text label (not an actual block) for adding comments or labling blocks
+     */
+    LABEL: 'label',
+
+    /**
      * Command block
      */
     COMMAND: 'command',
@@ -44,7 +49,18 @@ const BlockType = {
     /**
      * General reporter with numeric or string value
      */
-    REPORTER: 'reporter'
+    REPORTER: 'reporter',
+
+    /**
+     * Arbitrary scratch-blocks XML.
+     */
+    XML: 'xml',
+
+    /**
+     * Specialized reporter block that allows for the insertion and evaluation
+     * of a substack.
+     */
+    INLINE: 'inline'
 };
 
 module.exports = BlockType;

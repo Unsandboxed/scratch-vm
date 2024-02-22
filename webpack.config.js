@@ -71,7 +71,6 @@ module.exports = [
             'htmlparser2': true,
             'immutable': true,
             'jszip': true,
-            'minilog': true,
             'scratch-parser': true,
             'socket.io-client': true,
             'text-encoding': true
@@ -132,7 +131,7 @@ module.exports = [
             }, {
                 from: 'node_modules/scratch-render/dist/web'
             }, {
-                from: 'node_modules/scratch-svg-renderer/dist/web'
+                from: 'node_modules/@turbowarp/scratch-svg-renderer/dist/web'
             }, {
                 from: 'src/playground'
             }])

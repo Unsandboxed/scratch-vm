@@ -41,7 +41,32 @@ const ArgumentType = {
     /**
      * Inline image on block (as part of the label)
      */
-    IMAGE: 'image'
+    IMAGE: 'image',
+
+    /**
+     * Name of costume in the current target
+     */
+    COSTUME: 'costume',
+
+    /**
+     * Name of sound in the current target
+     */
+    SOUND: 'sound',
+
+    /**
+     * Name of variable in the current specified target(s)
+     */
+    VARIABLE: 'variable',
+
+    /**
+     * A label text that can be dynamically changed
+     */
+    LABEL: 'label',
+
+    /**
+     * A reporter that can be defined using startHats.
+     */
+    PARAMETER: 'parameter'
 };
 
 module.exports = ArgumentType;

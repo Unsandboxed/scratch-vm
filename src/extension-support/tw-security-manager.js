@@ -2,7 +2,7 @@
 
 /**
  * Responsible for determining various policies related to custom extension security.
- * The default implementation restricts automatic extension loading, but grants any
+ * The default implementation prevents automatic extension loading, but grants any
  * loaded extensions the maximum possible capabilities so as to retain compatibility
  * with a vanilla scratch-vm. You may override properties of an instance of this class
  * to customize the security policies as you see fit, for example:
@@ -51,6 +51,15 @@ class SecurityManager {
     }
 
     /**
+     * Allows last-minute changing the real URL of the extension that gets loaded.
+     * @param {*} extensionURL The URL requested to be loaded.
+     * @returns {Promise<string>|string} The URL to actually load.
+     */
+    rewriteExtensionURL (extensionURL) {
+        return Promise.resolve(extensionURL);
+    }
+
+    /**
      * Determine whether an extension is allowed to fetch a remote resource URL.
      * This only applies to unsandboxed extensions that use the appropriate Scratch.* APIs.
      * Sandboxed extensions ignore this entirely as there is no way to force them to use our APIs.
@@ -85,6 +94,62 @@ class SecurityManager {
      */
     canRedirect (websiteURL) {
         // By default, allow all.
+        return Promise.resolve(true);
+    }
+
+    /**
+     * Determine whether an extension is allowed to record audio from the user's microphone.
+     * This could include raw audio data or a transcriptions.
+     * Note that, even if this returns true, success is not guaranteed.
+     * @returns {Promise<boolean>|boolean}
+     */
+    canRecordAudio () {
+        return Promise.resolve(true);
+    }
+
+    /**
+     * Determine whether an extension is allowed to record video from the user's camera.
+     * Note that, even if this returns true, success is not guaranteed.
+     * @returns {Promise<boolean>|boolean}
+     */
+    canRecordVideo () {
+        return Promise.resolve(true);
+    }
+
+    /**
+     * Determine whether an extension is allowed to read values from the user's clipboard
+     * without user interaction.
+     * Note that, even if this returns true, success is not guaranteed.
+     * @returns {Promise<boolean>|boolean}
+     */
+    canReadClipboard () {
+        return Promise.resolve(true);
+    }
+
+    /**
+     * Determine whether an extension is allowed to show notifications.
+     * Note that, even if this returns true, success is not guaranteed.
+     * @returns {Promise<boolean>|boolean}
+     */
+    canNotify () {
+        return Promise.resolve(true);
+    }
+
+    /**
+     * Determine whether an extension is allowed to find the user's precise location using GPS
+     * and other techniques. Note that, even if this returns true, success is not guaranteed.
+     * @returns {Promise<boolean>|boolean}
+     */
+    canGeolocate () {
+        return Promise.resolve(true);
+    }
+
+    /**
+     * Determine whether an extension is allowed to embed content from a given URL.
+     * @param {string} documentURL The URL of the embed.
+     * @returns {Promise<boolean>|boolean}
+     */
+    canEmbed (documentURL) {
         return Promise.resolve(true);
     }
 }
