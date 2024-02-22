@@ -194,19 +194,10 @@ class ScriptTreeGenerator {
                     };
                 }
 
-                // probably a hat parameter.
                 return {
                     kind: 'args.parameter',
                     name: name
                 };
-
-                // TODO: Removing this will put extra overhead on procedure
-                // arguments when used outside of define blocks.
-                //
-                // return {
-                //     kind: 'constant',
-                //     value: 0
-                // };
             }
             return {
                 kind: 'args.stringNumber',

@@ -2319,15 +2319,6 @@ class Runtime extends EventEmitter {
             newThreads.push(this._pushThread(topBlockId, target));
         }, optTarget);
 
-        // If there are "hat parameters", push them
-        if (optParams) {
-            newThreads.forEach(thread => {
-                for (const param in optParams) {
-                    thread.pushParam(param, optParams.param);
-                }
-            });
-        }
-
         // For compatibility with Scratch 2, edge triggered hats need to be processed before
         // threads are stepped. See ScratchRuntime.as for original implementation
         newThreads.forEach(thread => {
@@ -2342,8 +2333,17 @@ class Runtime extends EventEmitter {
             } else {
                 execute(this.sequencer, thread);
                 thread.goToNextBlock();
+
+                // If there are "hat parameters", push them
+                if (optParams) {
+                    thread.initParams();
+                    for (const param in optParams) {
+                        thread.pushParam(param, optParams[param]);
+                    }
+                }
             }
         });
+
         return newThreads;
     }
 
