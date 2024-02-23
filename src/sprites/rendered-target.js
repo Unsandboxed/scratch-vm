@@ -229,6 +229,14 @@ class RenderedTarget extends Target {
     }
 
     /**
+     * Rotation style for "looking."
+     * @type {string}
+     */
+    static get ROTATION_STYLE_LOOKING () {
+        return "looking";
+    }
+
+    /**
      * Rotation style for "no rotation."
      * @type {string}
      */
@@ -301,6 +309,9 @@ class RenderedTarget extends Target {
         } else if (this.rotationStyle === RenderedTarget.ROTATION_STYLE_LEFT_RIGHT) {
             // Force rendered direction to be 90, and flip drawable if needed.
             finalDirection = 90;
+            const scaleFlip = (this.direction < 0) ? -1 : 1;
+            finalScale = [scaleFlip * this.size, this.size];
+        } else if (this.rotationStyle === RenderedTarget.ROTATION_LOOKING) {
             const scaleFlip = (this.direction < 0) ? -1 : 1;
             finalScale = [scaleFlip * this.size, this.size];
         }
@@ -600,6 +611,8 @@ class RenderedTarget extends Target {
             this.rotationStyle = RenderedTarget.ROTATION_STYLE_ALL_AROUND;
         } else if (rotationStyle === RenderedTarget.ROTATION_STYLE_LEFT_RIGHT) {
             this.rotationStyle = RenderedTarget.ROTATION_STYLE_LEFT_RIGHT;
+        } else if (rotationStyle === RenderedTarget.ROTATION_STYLE_LOOKING) {
+            this.rotationStyle = RenderedTarget.ROTATION_STYLE_LOOKING;
         }
         if (this.renderer) {
             const {direction, scale} = this._getRenderedDirectionAndScale();
