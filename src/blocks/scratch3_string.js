@@ -1,7 +1,7 @@
 const Cast = require('../util/cast.js');
 const MathUtil = require('../util/math-util.js');
 
-class Scratch3OperatorsBlocks {
+class Scratch3StringBlocks {
     constructor (runtime) {
         /**
          * The runtime instantiating this block package.
@@ -190,4 +190,4 @@ class Scratch3OperatorsBlocks {
 
 }
 
-module.exports = Scratch3OperatorsBlocks;
+module.exports = Scratch3StringBlocks;
