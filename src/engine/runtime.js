@@ -41,6 +41,7 @@ const defaultBlockPackages = {
     scratch3_looks: require('../blocks/scratch3_looks'),
     scratch3_motion: require('../blocks/scratch3_motion'),
     scratch3_operators: require('../blocks/scratch3_operators'),
+    scratch3_string: require('../blocks/scratch3_string'),
     scratch3_sound: require('../blocks/scratch3_sound'),
     scratch3_sensing: require('../blocks/scratch3_sensing'),
     scratch3_camera: require('../blocks/scratch3_camera'),
