@@ -762,6 +762,31 @@ class JSGenerator {
         case 'sensing.year':
             return new TypedInput(`(new Date().getFullYear())`, TYPE_NUMBER);
 
+        case 'str.convert':
+            return new TypedInput(`runtime.ext_scratch3_string._convertString(${this.descendInput(node.left).asString()}, ${this.descendInput(node.right).asString()})`, TYPE_STRING);
+        case 'str.exactly':
+            return new TypedInput(`(${this.descendInput(node.left)} === ${this.descendInput(node.right)})`, TYPE_UNKNOWN);
+        case 'str.index':
+            return new TypedInput(`runtime.ext_scratch3_string._getNumberIndex(${this.descendInput(node.left).asString()}, ${this.descendInput(node.right).asString()}, ${this.descendInput(node.num).asNumber()})`, TYPE_NUMBER);
+        case 'str.is': {
+            const str = this.descendInput(node.left).asString();
+            if (this.descendInput(node.right).asString().toLowerCase() === "uppercase") {
+                return new TypedInput(`${str.toUpperCase() === str}`, TYPE_BOOLEAN);
+            } else {
+                return new TypedInput(`${str.toLowerCase() === str}`, TYPE_BOOLEAN);
+            }
+        }
+        case 'str.split':
+            return new TypedInput(`runtime.ext_scratch3_string._getIndexFromSplit(${this.descendInput(node.str).asString()}, ${this.descendInput(node.split).asString()}, ${this.descendInput(node.num).asNumber()})`, TYPE_STRING);
+        case 'str.repeat':
+            return new TypedInput(`(${this.descendInput(node.str).asString()}.repeat(${this.descendInput(node.num).asNumber()}))`, TYPE_STRING);
+        case 'str.replace':
+            return new TypedInput(`${this.descendInput(node.str).asString()}.replace(new RegExp(${this.descendInput(node.left).asString()}, "gi"), ${this.descendInput(node.right).asString()})`, TYPE_STRING);
+        case 'str.reverse':
+            return new TypedInput(`${this.descendInput(node.str).asString()}.split("").reverse().join("");`, TYPE_STRING);
+        case 'str.ternary':
+            return new TypedInput(`(${this.descendInput(node.operand).asString()}) ? ${this.descendInput(node.left).asString()} : ${this.descendInput(node.right).asString()}`, TYPE_UNKNOWN);
+
         case 'camera.x':
             return new TypedInput('runtime.camera.x', TYPE_NUMBER);
         case 'camera.y':
