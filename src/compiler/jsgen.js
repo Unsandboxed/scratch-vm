@@ -763,7 +763,7 @@ class JSGenerator {
             return new TypedInput(`(new Date().getFullYear())`, TYPE_NUMBER);
 
         case 'str.convert':
-            return new TypedInput(`runtime.ext_scratch3_string._convertString(${node.left}, ${node.right})`, TYPE_STRING);
+            return new TypedInput(`runtime.ext_scratch3_string._convertString(${this.descendInput(node.left).asString()}, ${node.right})`, TYPE_STRING);
         case 'str.exactly':
             return new TypedInput(`(${this.descendInput(node.left).asUnknown()} === ${this.descendInput(node.right).asUnknown()})`, TYPE_UNKNOWN);
         case 'str.index':
