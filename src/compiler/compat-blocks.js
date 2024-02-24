@@ -53,6 +53,7 @@ const inputs = [
     'sound_volume'
     
     // USB TO DO: MUST SUPPORT COMPILER
+    'operator_letter_of',
     'operator_clamp',
     'operator_exponent',
     'operator_gt_equals',
