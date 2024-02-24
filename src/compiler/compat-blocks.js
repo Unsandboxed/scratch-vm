@@ -54,12 +54,6 @@ const inputs = [
     
     // USB TO DO: MUST SUPPORT COMPILER
     'operator_letter_of',
-    'operator_clamp',
-    'operator_exponent',
-    'operator_gt_equals',
-    'operator_lt_equals',
-    'operator_min',
-    'operator_max',
     'string_convert',
     'string_exactly',
     'string_index_of',
