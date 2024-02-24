@@ -328,6 +328,13 @@ class ScriptTreeGenerator {
                 left: this.descendInputOfBlock(block, 'OPERAND1'),
                 right: this.descendInputOfBlock(block, 'OPERAND2')
             };
+        case 'operator_clamp':
+            return {
+                kind: 'op.clamp',
+                num: this.descendInputOfBlock(block, 'NUM'),
+                left: this.descendInputOfBlock(block, 'FROM'),
+                right: this.descendInputOfBlock(block, 'TO')
+            };
         case 'operator_contains':
             return {
                 kind: 'op.contains',
@@ -340,6 +347,12 @@ class ScriptTreeGenerator {
                 left: this.descendInputOfBlock(block, 'NUM1'),
                 right: this.descendInputOfBlock(block, 'NUM2')
             };
+        case 'operator_exponent':
+            return {
+                kind: 'op.exponent',
+                left: this.descendInputOfBlock(block, 'NUM1'),
+                right: this.descendInputOfBlock(block, 'NUM2')
+            };
         case 'operator_equals':
             return {
                 kind: 'op.equals',
@@ -349,6 +362,12 @@ class ScriptTreeGenerator {
         case 'operator_gt':
             return {
                 kind: 'op.greater',
+                left: this.descendInputOfBlock(block, 'OPERAND1'),
+                right: this.descendInputOfBlock(block, 'OPERAND2')
+            };
+        case 'operator_gt_equals':
+            return {
+                kind: 'op.greaterEqual',
                 left: this.descendInputOfBlock(block, 'OPERAND1'),
                 right: this.descendInputOfBlock(block, 'OPERAND2')
             };
@@ -379,6 +398,12 @@ class ScriptTreeGenerator {
         case 'operator_lt':
             return {
                 kind: 'op.less',
+                left: this.descendInputOfBlock(block, 'OPERAND1'),
+                right: this.descendInputOfBlock(block, 'OPERAND2')
+            };
+        case 'operator_lt_equals':
+            return {
+                kind: 'op.lessEqual',
                 left: this.descendInputOfBlock(block, 'OPERAND1'),
                 right: this.descendInputOfBlock(block, 'OPERAND2')
             };
@@ -451,6 +476,18 @@ class ScriptTreeGenerator {
         case 'operator_mod':
             return {
                 kind: 'op.mod',
+                left: this.descendInputOfBlock(block, 'NUM1'),
+                right: this.descendInputOfBlock(block, 'NUM2')
+            };
+        case 'operator_min':
+            return {
+                kind: 'op.min',
+                left: this.descendInputOfBlock(block, 'NUM1'),
+                right: this.descendInputOfBlock(block, 'NUM2')
+            };
+        case 'operator_max':
+            return {
+                kind: 'op.max',
                 left: this.descendInputOfBlock(block, 'NUM1'),
                 right: this.descendInputOfBlock(block, 'NUM2')
             };
