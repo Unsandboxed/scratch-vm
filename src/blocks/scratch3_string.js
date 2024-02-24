@@ -41,20 +41,20 @@ class Scratch3OperatorsBlocks {
         return Cast.toString(args.STRING1) + Cast.toString(args.STRING2);
     }
 
-    reverse (args) {
+    reverse (args) { // usb
         const str = Cast.toString(args.STRING);
 
         return str.split("").reverse().join("");
     }
 
-    repeat (args) {
+    repeat (args) { // usb
         const str = Cast.toString(args.STRING);
         const times = Cast.toNumber(args.NUMBER);
 
         return str.repeat(times);
     }
 
-    replace (args) {
+    replace (args) { // usb
         const old = Cast.toString(args.REPLACE);
         const replacer = Cast.toString(args.WITH);
         const str = Cast.toString(args.STRING);
@@ -64,25 +64,28 @@ class Scratch3OperatorsBlocks {
 
     letterOf (args) {
         const str = Cast.toString(args.STRING);
+        return this._getLetterOf(str, args.LETTER);
+    }
 
-        if (args.LETTER === "_last_") {
-            args.LETTER = str.length - 1;
-        } else if (args.LETTER === "_random_") {
-            args.LETTER = Math.floor(Math.random()*str.length);
+    _getLetterOf (string, index) { // usb // used by compiler
+        // usb: we support some weird dropdowns now
+        if (index === "_last_") {
+            index = string.length - 1;
+        } else if (index === "_random_") {
+            index = Math.floor(Math.random()*string.length);
         } else {
-            args.LETTER = Cast.toNumber(args.LETTER) - 1;
+            index = Cast.toNumber(index) - 1;
         }
 
-        const index = args.LETTER;
         // Out of bounds?
-        if (index < 0 || index >= str.length) {
+        if (index < 0 || index >= string.length) {
             return '';
         }
 
-        return str.charAt(index);
+        return string.charAt(index);
     }
 
-    lettersOf (args) {
+    lettersOf (args) { // usb
         const index1 = Cast.toNumber(args.LETTER1);
         const index2 = Cast.toNumber(args.LETTER2);
         const str = Cast.toString(args.STRING);
@@ -90,23 +93,26 @@ class Scratch3OperatorsBlocks {
         return str.slice(Math.max(index1, 1) - 1, Math.min(str.length, index2));
     }
 
-    itemSplit (args) {
+    itemSplit (args) { // usb
         const str = Cast.toString(args.STRING).toLowerCase();
         const split = Cast.toString(args.SPLIT).toLowerCase();
 
-        if (args.INDEX === "_last_") {
-            args.INDEX = str.length - 1;
-        } else if (args.INDEX === "_random_") {
-            args.INDEX = Math.floor(Math.random()*str.length);
-        } else {
-            args.INDEX = Cast.toNumber(args.INDEX) - 1;
-        }
-
-        const index = args.INDEX;
-        return str.split(split)[index] ?? 0;
+        return this._getIndexFromSplit(str, split, args.INDEX);
     }
 
-    ternary (args) {
+    _getIndexFromSplit (string, split, index) { // used by compiler
+        if (index === "_last_") {
+            index = string.length - 1;
+        } else if (index === "_random_") {
+            index = Math.floor(Math.random()*string.length);
+        } else {
+            index = Cast.toNumber(index) - 1;
+        }
+
+        return string.split(split)[index] ?? 0;
+    }
+
+    ternary (args) { // usb
         const condition = Cast.toBoolean(args.CONDITION);
         const str1 = Cast.toString(args.STRING1);
         const str2 = Cast.toString(args.STRING2);
@@ -114,37 +120,43 @@ class Scratch3OperatorsBlocks {
         return condition ? str1 : str2;
     }
 
-    convertTo (args) {
+    convertTo (args) { // usb
         const str = Cast.toString(args.STRING);
         const convert = Cast.toString(args.CONVERT).toLowerCase();
 
-        if (convert === "lowercase") {
-            return str.toLowerCase();
+        return this._convertString(str, convert);
+    }
+
+    _convertString (string, textCase) { // used by compiler
+        if (textCase === "lowercase") {
+            return string.toLowerCase();
         } else {
-            return str.toUpperCase();
+            return string.toUpperCase();
         }
     }
 
-    indexOf (args) {
+    indexOf (args) { // usb
         const find = Cast.toString(args.STRING1).toLowerCase();
         const str = Cast.toString(args.STRING2).toLowerCase();
 
-        if (args.INDEX === "_last_") {
-            args.INDEX = str.length - 1;
-        } else if (args.INDEX === "_random_") {
-            args.INDEX = Math.floor(Math.random()*str.length);
+        return this._getNumberIndex(find, str, args.INDEX);
+    }
+
+    _getNumberIndex (find, string, index) { // used by compiler
+        if (index === "_last_") {
+            index = string.length - 1;
+        } else if (index === "_random_") {
+            index = Math.floor(Math.random()*string.length);
         } else {
-            args.INDEX = Cast.toNumber(args.INDEX) - 1;
+            index = Cast.toNumber(index) - 1;
         }
 
-        const index = args.INDEX;
-
         const length = find.length() - 1;
-        if (length > str) return 0;
+        if (length > string) return 0;
 
         let occurences = [];
-        for (let i = 0; i > str.length(); i++) {
-            if (str.substring(i, i + length) === find) {
+        for (let i = 0; i > string.length(); i++) {
+            if (string.substring(i, i + length) === find) {
                 occurences.push(i);
             }
         }
@@ -159,7 +171,7 @@ class Scratch3OperatorsBlocks {
         return format(args.STRING1).includes(format(args.STRING2));
     }
 
-    exactly (args) {
+    exactly (args) { // usb
         const str1 = args.STRING1;
         const str2 = args.STRING2;
         return str1 === str2;
