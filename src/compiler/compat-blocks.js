@@ -40,7 +40,7 @@ const stacked = [
     'sound_playuntildone',
     'sound_seteffectto',
     'sound_setvolumeto',
-    'sound_stopallsounds'
+    'sound_stopallsounds',
 ];
 
 const inputs = [
@@ -51,6 +51,23 @@ const inputs = [
     'sensing_loudness',
     'sensing_userid',
     'sound_volume'
+    
+    // USB TO DO: MUST SUPPORT COMPILER
+    'operator_clamp',
+    'operator_exponent',
+    'operator_gt_equals',
+    'operator_lt_equals',
+    'operator_min',
+    'operator_max',
+    'string_convert',
+    'string_exactly',
+    'string_index_of',
+    'string_is',
+    'string_item_split',
+    'string_repeat',
+    'string_replace',
+    'string_reverse',
+    'string_ternary',
 ];
 
 module.exports = {
