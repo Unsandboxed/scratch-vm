@@ -20,20 +20,21 @@ class Scratch3OperatorsBlocks {
             operator_subtract: this.subtract,
             operator_multiply: this.multiply,
             operator_divide: this.divide,
+            operator_exponent: this.exponent,
+            operator_clamp: this.clamp,
             operator_lt: this.lt,
+            operator_lt_equals: this.ltEquals,
             operator_equals: this.equals,
             operator_gt: this.gt,
+            operator_gt_equals: this.gtEquals,
             operator_and: this.and,
             operator_or: this.or,
             operator_xor: this.xor,
             operator_not: this.not,
             operator_random: this.random,
-            operator_join: this.join,
-            operator_letter_of: this.letterOf,
-            operator_letters_of: this.lettersOf,
-            operator_length: this.length,
-            operator_contains: this.contains,
             operator_mod: this.mod,
+            operator_min: this.min,
+            operator_max: this.max,
             operator_round: this.round,
             operator_mathop: this.mathop
         };
@@ -55,8 +56,16 @@ class Scratch3OperatorsBlocks {
         return Cast.toNumber(args.NUM1) / Cast.toNumber(args.NUM2);
     }
 
+    exponent (args) {
+        return Cast.toNumber(args.NUM1) ** Cast.toNumber(args.NUM2);
+    }
+
     lt (args) {
         return Cast.compare(args.OPERAND1, args.OPERAND2) < 0;
+    }
+
+    ltEquals (args) {
+        return Cast.compare(args.OPERAND1, args.OPERAND2) <= 0;
     }
 
     equals (args) {
@@ -65,6 +74,10 @@ class Scratch3OperatorsBlocks {
 
     gt (args) {
         return Cast.compare(args.OPERAND1, args.OPERAND2) > 0;
+    }
+
+    gtEquals (args) {
+        return Cast.compare(args.OPERAND1, args.OPERAND2) >= 0;
     }
 
     and (args) {
@@ -83,6 +96,30 @@ class Scratch3OperatorsBlocks {
         return !Cast.toBoolean(args.OPERAND);
     }
 
+    min (args) {
+        const n1 = Cast.toNumber(args.NUM1);
+        const n2 = Cast.toNumber(args.NUM2);
+        return Math.min(n1, n2);
+    }
+
+    max (args) {
+        const n1 = Cast.toNumber(args.NUM1);
+        const n2 = Cast.toNumber(args.NUM2);
+        return Math.max(n1, n2);
+    }
+
+    clamp (args) {
+        const n = Cast.toNumber(args.NUM);
+        const from = Cast.toNumber(args.FROM);
+        const to = Cast.toNumber(args.TO);
+
+        if (from > to) {
+            return Math.min(Math.max(n, to), from);
+        } else {
+            return Math.min(Math.max(n, from), to);
+        }
+    }
+
     random (args) {
         return this._random(args.FROM, args.TO);
     }
@@ -97,38 +134,6 @@ class Scratch3OperatorsBlocks {
             return low + Math.floor(Math.random() * ((high + 1) - low));
         }
         return (Math.random() * (high - low)) + low;
-    }
-
-    join (args) {
-        return Cast.toString(args.STRING1) + Cast.toString(args.STRING2);
-    }
-
-    letterOf (args) {
-        const index = Cast.toNumber(args.LETTER) - 1;
-        const str = Cast.toString(args.STRING);
-        // Out of bounds?
-        if (index < 0 || index >= str.length) {
-            return '';
-        }
-        return str.charAt(index);
-    }
-
-    lettersOf (args) {
-        const index1 = Cast.toNumber(args.LETTER1);
-        const index2 = Cast.toNumber(args.LETTER2);
-        const str = Cast.toString(args.STRING);
-        return str.slice(Math.max(index1, 1) - 1, Math.min(str.length, index2));
-    }
-
-    length (args) {
-        return Cast.toString(args.STRING).length;
-    }
-
-    contains (args) {
-        const format = function (string) {
-            return Cast.toString(string).toLowerCase();
-        };
-        return format(args.STRING1).includes(format(args.STRING2));
     }
 
     mod (args) {
