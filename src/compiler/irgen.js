@@ -706,7 +706,7 @@ class ScriptTreeGenerator {
             return {
                 kind: 'str.convert',
                 left: this.descendInputOfBlock(block, 'STRING'),
-                right: this.descendInputOfBlock(block, 'CONVERT'),
+                right: block.fields.CONVERT.value
             };
         case 'string_exactly':
             return {
@@ -725,7 +725,7 @@ class ScriptTreeGenerator {
             return {
                 kind: 'str.is',
                 left: this.descendInputOfBlock(block, 'STRING'),
-                right: this.descendInputOfBlock(block, 'CONVERT')
+                right: block.fields.CONVERT.value
             };
         case 'string_item_split':
             return {
