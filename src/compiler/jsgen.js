@@ -763,14 +763,14 @@ class JSGenerator {
             return new TypedInput(`(new Date().getFullYear())`, TYPE_NUMBER);
 
         case 'str.convert':
-            return new TypedInput(`runtime.ext_scratch3_string._convertString(${this.descendInput(node.left).asString()}, ${this.descendInput(node.right).asString()})`, TYPE_STRING);
+            return new TypedInput(`runtime.ext_scratch3_string._convertString(${node.left}, ${node.right})`, TYPE_STRING);
         case 'str.exactly':
             return new TypedInput(`(${this.descendInput(node.left).asUnknown()} === ${this.descendInput(node.right).asUnknown()})`, TYPE_UNKNOWN);
         case 'str.index':
             return new TypedInput(`runtime.ext_scratch3_string._getNumberIndex(${this.descendInput(node.left).asString()}, ${this.descendInput(node.right).asString()}, ${this.descendInput(node.num).asNumber()})`, TYPE_NUMBER);
         case 'str.is': {
             const str = this.descendInput(node.left).asString();
-            if (this.descendInput(node.right).asString().toLowerCase() === "uppercase") {
+            if (node.right.toLowerCase() === "uppercase") {
                 return new TypedInput(`${str.toUpperCase() === str}`, TYPE_BOOLEAN);
             } else {
                 return new TypedInput(`${str.toLowerCase() === str}`, TYPE_BOOLEAN);
@@ -785,7 +785,7 @@ class JSGenerator {
         case 'str.reverse':
             return new TypedInput(`${this.descendInput(node.str).asString()}.split("").reverse().join("");`, TYPE_STRING);
         case 'str.ternary':
-            return new TypedInput(`(${this.descendInput(node.operand).asBoolean()}) ? ${this.descendInput(node.left).asUnknown()} : ${this.descendInput(node.right).asUnknown()})`, TYPE_UNKNOWN);
+            return new TypedInput(`(${this.descendInput(node.operand).asBoolean()} ? ${this.descendInput(node.left).asString()} : ${this.descendInput(node.right).asString()})`, TYPE_UNKNOWN);
 
         case 'camera.x':
             return new TypedInput('runtime.camera.x', TYPE_NUMBER);
