@@ -63,8 +63,17 @@ class Scratch3OperatorsBlocks {
     }
 
     letterOf (args) {
-        const index = Cast.toNumber(args.LETTER) - 1;
         const str = Cast.toString(args.STRING);
+
+        if (args.LETTER === "_last_") {
+            args.LETTER = str.length - 1;
+        } else if (args.LETTER === "_random_") {
+            args.LETTER = Math.floor(Math.random()*str.length);
+        } else {
+            args.LETTER = Cast.toNumber(args.LETTER) - 1;
+        }
+
+        const index = args.LETTER;
         // Out of bounds?
         if (index < 0 || index >= str.length) {
             return '';
@@ -82,10 +91,18 @@ class Scratch3OperatorsBlocks {
     }
 
     itemSplit (args) {
-        const index = Cast.toNumber(args.INDEX) - 1;
         const str = Cast.toString(args.STRING).toLowerCase();
         const split = Cast.toString(args.SPLIT).toLowerCase();
 
+        if (args.INDEX === "_last_") {
+            args.INDEX = str.length - 1;
+        } else if (args.INDEX === "_random_") {
+            args.INDEX = Math.floor(Math.random()*str.length);
+        } else {
+            args.INDEX = Cast.toNumber(args.INDEX) - 1;
+        }
+
+        const index = args.INDEX;
         return str.split(split)[index] ?? 0;
     }
 
@@ -109,9 +126,18 @@ class Scratch3OperatorsBlocks {
     }
 
     indexOf (args) {
-        const index = Cast.toNumber(args.INDEX) - 1;
         const find = Cast.toString(args.STRING1).toLowerCase();
         const str = Cast.toString(args.STRING2).toLowerCase();
+
+        if (args.INDEX === "_last_") {
+            args.INDEX = str.length - 1;
+        } else if (args.INDEX === "_random_") {
+            args.INDEX = Math.floor(Math.random()*str.length);
+        } else {
+            args.INDEX = Cast.toNumber(args.INDEX) - 1;
+        }
+
+        const index = args.INDEX;
 
         const length = find.length() - 1;
         if (length > str) return 0;
