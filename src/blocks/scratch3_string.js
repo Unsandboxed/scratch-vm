@@ -69,9 +69,9 @@ class Scratch3StringBlocks {
 
     _getLetterOf (string, index) { // usb // used by compiler
         // usb: we support some weird dropdowns now
-        if (index === "_last_") {
+        if (index.toLowerCase() === "last") {
             index = string.length - 1;
-        } else if (index === "_random_") {
+        } else if (index.toLowerCase() === "random") {
             index = Math.floor(Math.random()*string.length);
         } else {
             index = Cast.toNumber(index) - 1;
@@ -101,9 +101,9 @@ class Scratch3StringBlocks {
     }
 
     _getIndexFromSplit (string, split, index) { // used by compiler
-        if (index === "_last_") {
+        if (index.toLowerCase() === "last") {
             index = string.length - 1;
-        } else if (index === "_random_") {
+        } else if (index.toLowerCase() === "random") {
             index = Math.floor(Math.random()*string.length);
         } else {
             index = Cast.toNumber(index) - 1;
@@ -142,20 +142,20 @@ class Scratch3StringBlocks {
         return this._getNumberIndex(find, str, args.INDEX);
     }
 
-    _getNumberIndex (find, string, index) { // used by compiler
-        if (index === "_last_") {
+    _getNumberIndex (find, string, index) { // used by compile
+        if (index.toLowerCase() === "last") {
             index = string.length - 1;
-        } else if (index === "_random_") {
+        } else if (index.toLowerCase() === "random") {
             index = Math.floor(Math.random()*string.length);
         } else {
             index = Cast.toNumber(index) - 1;
         }
 
-        const length = find.length() - 1;
+        const length = find.length - 1;
         if (length > string) return 0;
 
         let occurences = [];
-        for (let i = 0; i > string.length(); i++) {
+        for (let i = 0; i > string.length; i++) {
             if (string.substring(i, i + length) === find) {
                 occurences.push(i);
             }
