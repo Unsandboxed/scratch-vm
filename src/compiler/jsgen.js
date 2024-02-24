@@ -765,7 +765,7 @@ class JSGenerator {
         case 'str.convert':
             return new TypedInput(`runtime.ext_scratch3_string._convertString(${this.descendInput(node.left).asString()}, ${this.descendInput(node.right).asString()})`, TYPE_STRING);
         case 'str.exactly':
-            return new TypedInput(`(${this.descendInput(node.left)} === ${this.descendInput(node.right)})`, TYPE_UNKNOWN);
+            return new TypedInput(`(${this.descendInput(node.left).asUnknown()} === ${this.descendInput(node.right).asUnknown()})`, TYPE_UNKNOWN);
         case 'str.index':
             return new TypedInput(`runtime.ext_scratch3_string._getNumberIndex(${this.descendInput(node.left).asString()}, ${this.descendInput(node.right).asString()}, ${this.descendInput(node.num).asNumber()})`, TYPE_NUMBER);
         case 'str.is': {
@@ -785,7 +785,7 @@ class JSGenerator {
         case 'str.reverse':
             return new TypedInput(`${this.descendInput(node.str).asString()}.split("").reverse().join("");`, TYPE_STRING);
         case 'str.ternary':
-            return new TypedInput(`(${this.descendInput(node.operand).asString()}) ? ${this.descendInput(node.left).asString()} : ${this.descendInput(node.right).asString()}`, TYPE_UNKNOWN);
+            return new TypedInput(`(${this.descendInput(node.operand).asBoolean()}) ? ${this.descendInput(node.left).asUnknown()} : ${this.descendInput(node.right).asUnknown()})`, TYPE_UNKNOWN);
 
         case 'camera.x':
             return new TypedInput('runtime.camera.x', TYPE_NUMBER);
