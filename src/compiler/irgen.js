@@ -226,6 +226,15 @@ class ScriptTreeGenerator {
             };
         }
 
+        case 'camera_xposition':
+            return {
+                kind: 'camera.x'
+            };
+        case 'camera_yposition':
+            return {
+                kind: 'camera.y'
+            };
+
         case 'control_get_counter':
             return {
                 kind: 'counter.get'
@@ -508,12 +517,6 @@ class ScriptTreeGenerator {
                 left: this.descendInputOfBlock(block, 'OPERAND1'),
                 right: this.descendInputOfBlock(block, 'OPERAND2')
             };
-        case 'operator_xor':
-            return {
-                kind: 'op.xor',
-                left: this.descendInputOfBlock(block, 'OPERAND1'),
-                right: this.descendInputOfBlock(block, 'OPERAND2')
-            };
         case 'operator_random': {
             const from = this.descendInputOfBlock(block, 'FROM');
             const to = this.descendInputOfBlock(block, 'TO');
@@ -591,6 +594,12 @@ class ScriptTreeGenerator {
                 kind: 'op.subtract',
                 left: this.descendInputOfBlock(block, 'NUM1'),
                 right: this.descendInputOfBlock(block, 'NUM2')
+            };
+        case 'operator_xor':
+            return {
+                kind: 'op.xor',
+                left: this.descendInputOfBlock(block, 'OPERAND1'),
+                right: this.descendInputOfBlock(block, 'OPERAND2')
             };
 
         case 'procedures_call':
@@ -693,13 +702,62 @@ class ScriptTreeGenerator {
                 kind: 'sensing.username'
             };
 
-        case 'camera_xposition':
+        case 'string_convert':
             return {
-                kind: 'camera.x'
+                kind: 'str.convert',
+                left: this.descendInputOfBlock(block, 'STRING'),
+                right: this.descendInputOfBlock(block, 'CONVERT'),
             };
-        case 'camera_yposition':
+        case 'string_exactly':
             return {
-                kind: 'camera.y'
+                kind: 'str.exactly',
+                left: this.descendInputOfBlock(block, 'STRING1'),
+                right: this.descendInputOfBlock(block, 'STRING2')
+            };
+        case 'string_index_of':
+            return {
+                kind: 'str.index',
+                num: this.descendInputOfBlock(block, 'INDEX'),
+                left: this.descendInputOfBlock(block, 'STRING1'),
+                right: this.descendInputOfBlock(block, 'STRING2')
+            };
+        case 'string_is':
+            return {
+                kind: 'str.is',
+                left: this.descendInputOfBlock(block, 'STRING'),
+                right: this.descendInputOfBlock(block, 'CONVERT')
+            };
+        case 'string_item_split':
+            return {
+                kind: 'str.split',
+                num: this.descendInputOfBlock(block, 'INDEX'),
+                str: this.descendInputOfBlock(block, 'STRING'),
+                split: this.descendInputOfBlock(block, 'SPLIT')
+            };
+        case 'string_repeat':
+            return {
+                kind: 'str.repeat',
+                str: this.descendInputOfBlock(block, 'STRING'),
+                num: this.descendInputOfBlock(block, 'NUMBER')
+            };
+        case 'string_replace':
+            return {
+                kind: 'str.replace',
+                left: this.descendInputOfBlock(block, 'REPLACE'),
+                right: this.descendInputOfBlock(block, 'WITH'),
+                str: this.descendInputOfBlock(block, 'STRING')
+            };
+        case 'string_reverse':
+            return {
+                kind: 'str.reverse',
+                str: this.descendInputOfBlock(block, 'STRING')
+            };
+        case 'string_ternary':
+            return {
+                kind: 'str.convert',
+                operand: this.descendInputOfBlock(block, 'CONDITION'),
+                left: this.descendInputOfBlock(block, 'STRING1'),
+                right: this.descendInputOfBlock(block, 'STRING2')
             };
 
         case 'sound_sounds_menu':
