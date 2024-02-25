@@ -1,4 +1,5 @@
 const log = require('./log');
+const Cast = require('../util/cast.js');
 
 class StringUtil {
     static withoutTrailingDigits (s) {
