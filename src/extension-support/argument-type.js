@@ -9,6 +9,11 @@ const ArgumentType = {
     ANGLE: 'angle',
 
     /**
+     * A representation of a JSON array.
+     */
+    ARRAY: 'array',
+
+    /**
      * Boolean value with hexagonal placeholder
      */
     BOOLEAN: 'Boolean',
@@ -19,14 +24,19 @@ const ArgumentType = {
     COLOR: 'color',
 
     /**
-     * Numeric value with text field
+     * Name of costume in the current target
      */
-    NUMBER: 'number',
+    COSTUME: 'costume',
 
     /**
-     * String value with text field
+     * Inline image on block (as part of the label)
      */
-    STRING: 'string',
+    IMAGE: 'image',
+
+    /**
+     * A label text that can be dynamically changed
+     */
+    LABEL: 'label',
 
     /**
      * String value with matrix field
@@ -39,14 +49,19 @@ const ArgumentType = {
     NOTE: 'note',
 
     /**
-     * Inline image on block (as part of the label)
+     * Numeric value with text field
      */
-    IMAGE: 'image',
+    NUMBER: 'number',
 
     /**
-     * Name of costume in the current target
+     * Numeric value with text field
      */
-    COSTUME: 'costume',
+    OBJECT: 'Object',
+
+    /**
+     * A reporter that can be defined using startHats.
+     */
+    PARAMETER: 'parameter',
 
     /**
      * Name of sound in the current target
@@ -54,19 +69,14 @@ const ArgumentType = {
     SOUND: 'sound',
 
     /**
+     * String value with text field
+     */
+    STRING: 'string',
+
+    /**
      * Name of variable in the current specified target(s)
      */
     VARIABLE: 'variable',
-
-    /**
-     * A label text that can be dynamically changed
-     */
-    LABEL: 'label',
-
-    /**
-     * A reporter that can be defined using startHats.
-     */
-    PARAMETER: 'parameter'
 };
 
 module.exports = ArgumentType;
