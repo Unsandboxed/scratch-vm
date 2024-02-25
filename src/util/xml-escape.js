@@ -1,4 +1,5 @@
 const log = require('./log');
+const Cast = require('./cast');
 
 /**
  * Escape a string to be safe to use in XML content.
@@ -10,10 +11,10 @@ const log = require('./log');
  */
 const xmlEscape = function (unsafe) {
     if (typeof unsafe !== 'string') {
-        if (Array.isArray(unsafe)) {
+        if (typeof unsafe === "object") {
             // This happens when we have hacked blocks from 2.0
             // See #1030
-            unsafe = String(unsafe);
+            unsafe = Cast.toString(unsafe);
         } else {
             log.error('Unexpected input recieved in replaceUnsafeChars');
             return unsafe;
