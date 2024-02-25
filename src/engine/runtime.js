@@ -52,6 +52,7 @@ const defaultBlockPackages = {
 const interpolate = require('./tw-interpolate');
 const FrameLoop = require('./tw-frame-loop');
 const Camera = require('./camera');
+const Cast = require('../util/cast.js');
 
 const defaultExtensionColors = ['#0FBD8C', '#0DA57A', '#0B8E69'];
 
@@ -3189,7 +3190,7 @@ class Runtime extends EventEmitter {
      * @param {string} value Value to show associated with the block.
      */
     visualReport (blockId, value) {
-        this.emit(Runtime.VISUAL_REPORT, {id: blockId, value: String(value)});
+        this.emit(Runtime.VISUAL_REPORT, {id: blockId, value: Cast.toString(value)});
     }
 
     /**
