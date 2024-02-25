@@ -54,7 +54,7 @@ const ArgumentType = {
     NUMBER: 'number',
 
     /**
-     * Numeric value with text field
+     * A representation of a JSON object.
      */
     OBJECT: 'Object',
 
