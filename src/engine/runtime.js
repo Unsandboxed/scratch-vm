@@ -97,6 +97,12 @@ const ArgumentTypeMap = (() => {
     map[ArgumentType.BOOLEAN] = {
         check: 'Boolean'
     };
+    map[ArgumentType.ARRAY] = {
+        check: 'Array'
+    };
+    map[ArgumentType.OBJECT] = {
+        check: 'Object'
+    };
     map[ArgumentType.MATRIX] = {
         shadow: {
             type: 'matrix',
@@ -1457,6 +1463,14 @@ class Runtime extends EventEmitter {
             blockInfo.branchCount = blockInfo.branchCount || 1;
             blockJSON.output = blockInfo.allowDropAnywhere ? null : 'String'; // TODO: distinguish number & string here?
             blockJSON.outputShape = ScratchBlocksConstants.OUTPUT_SHAPE_SQUARE;
+            break;
+        case BlockType.ARRAY:
+            blockJSON.output = 'Array';
+            blockJSON.outputShape = ScratchBlocksConstants.OUTPUT_SHAPE_SQUARE;
+            break;
+        case BlockType.OBJECT:
+            blockJSON.output = 'Object';
+            blockJSON.outputShape = ScratchBlocksConstants.OUTPUT_SHAPE_OBJECT;
             break;
         }
 
