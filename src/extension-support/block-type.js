@@ -9,7 +9,7 @@ const BlockType = {
     ARRAY: 'array',
 
     /**
-     * Array reporter with a square shape.
+     * Object reporter with a lemon shape.
      */
     OBJECT: 'Object',
 
