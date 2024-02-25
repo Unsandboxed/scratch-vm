@@ -4,6 +4,16 @@
  */
 const BlockType = {
     /**
+     * Array reporter with a square shape.
+     */
+    ARRAY: 'array',
+
+    /**
+     * Array reporter with a square shape.
+     */
+    OBJECT: 'Object',
+
+    /**
      * Boolean reporter with hexagonal shape
      */
     BOOLEAN: 'Boolean',
@@ -41,6 +51,12 @@ const BlockType = {
     HAT: 'hat',
 
     /**
+     * Specialized reporter block that allows for the insertion and evaluation
+     * of a substack.
+     */
+    INLINE: 'inline',
+
+    /**
      * Specialized command block which may or may not run a child branch
      * If a child branch runs, the thread evaluates the loop block again.
      */
@@ -55,12 +71,6 @@ const BlockType = {
      * Arbitrary scratch-blocks XML.
      */
     XML: 'xml',
-
-    /**
-     * Specialized reporter block that allows for the insertion and evaluation
-     * of a substack.
-     */
-    INLINE: 'inline'
 };
 
 module.exports = BlockType;
