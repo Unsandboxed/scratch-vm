@@ -1,4 +1,5 @@
 const Color = require('../util/color');
+const log = require('./log');
 
 /**
  * @fileoverview
@@ -92,7 +93,29 @@ class Cast {
      * @return {string} The Scratch-casted string value.
      */
     static toString (value) {
+        if (typeof value === "object") {
+            try {
+                return JSON.stringify(value);
+            } catch (error) {
+                log.error("Could not stringify JSON: " + error);
+                return "{}";
+            }
+        }
         return String(value);
+    }
+
+    /**
+     * Scratch cast to JSON.
+     * @param {*} value Value to cast to JSON.
+     * @return {string} The Scratch-casted json value.
+     */
+    static toJson (value) {
+        try {
+            return JSON.parse(value);
+        } catch (error) {
+            log.error("Could not parse JSON: " + error);
+            return {};
+        }
     }
 
     /**
