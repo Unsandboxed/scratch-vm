@@ -93,15 +93,7 @@ class Cast {
      * @return {string} The Scratch-casted string value.
      */
     static toString (value) {
-        if (typeof value === "object") {
-            try {
-                return JSON.stringify(value);
-            } catch (error) {
-                log.error("Could not stringify JSON: " + error);
-                return "{}";
-            }
-        }
-        return String(value);
+        return String(this.sanitize(value));
     }
 
     /**
@@ -116,6 +108,17 @@ class Cast {
             log.error("Could not parse JSON: " + error);
             return {};
         }
+    }
+
+    /**
+     * Used internally to sanitize rogue JSON values.
+     * @param {*} value Value to sanitize.
+     * @return {any} Sanitized json value.
+     */
+    static sanitize (value) {
+        if (typeof value === "object") {
+            return JSON.stringify(value);
+        } else return value;
     }
 
     /**
