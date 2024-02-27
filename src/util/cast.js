@@ -97,16 +97,30 @@ class Cast {
     }
 
     /**
-     * Scratch cast to JSON.
+     * Scratch cast to JSON. (Will return array if invalid).
      * @param {*} value Value to cast to JSON.
      * @return {string} The Scratch-casted json value.
      */
-    static toJson (value) {
+    static toArray (value) {
         try {
             return JSON.parse(value);
         } catch (error) {
             log.error("Could not parse JSON: " + error);
-            return {};
+            return [];
+        }
+    }
+
+    /**
+     * Scratch cast to JSON. (Will return object if invalid).
+     * @param {*} value Value to cast to JSON.
+     * @return {string} The Scratch-casted json value.
+     */
+    static toObject (value) {
+        try {
+            return JSON.parse(value);
+        } catch (error) {
+            log.error("Could not parse JSON: " + error);
+            return Object.create(null);
         }
     }
 
