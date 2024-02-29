@@ -106,10 +106,16 @@ class Cast {
         if (Array.isArray(value)) {
             return value;
         }
+
+        // Numbers are finicky with JSON.parse. The output of this
+        // should ALWAYS be an array.
+        if (typeof value === "number") {
+            return [];
+        }
+
         try {
-            return JSON.parse(value);
+            return JSON.parse(this.toString(value));
         } catch (error) {
-            log.error("Could not parse JSON: " + error);
             return [];
         }
     }
@@ -121,13 +127,19 @@ class Cast {
      */
     static toObject (value) {
         // Already an object?
-        if (typeof value === "object") {
+        if (typeof value === "object" && !Array.isArray(value)) {
             return value;
         }
+
+        // Numbers are finicky with JSON.parse. The output of this
+        // should ALWAYS be an object.
+        if (typeof value === "number") {
+            return Object.create(null);
+        }
+
         try {
             return JSON.parse(value);
         } catch (error) {
-            log.error("Could not parse JSON: " + error);
             return Object.create(null);
         }
     }
