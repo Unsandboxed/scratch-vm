@@ -102,6 +102,10 @@ class Cast {
      * @return {string} The Scratch-casted json value.
      */
     static toArray (value) {
+        // Already an array?
+        if (Array.isArray(value)) {
+            return value;
+        }
         try {
             return JSON.parse(value);
         } catch (error) {
@@ -116,6 +120,10 @@ class Cast {
      * @return {string} The Scratch-casted json value.
      */
     static toObject (value) {
+        // Already an object?
+        if (typeof value === "object") {
+            return value;
+        }
         try {
             return JSON.parse(value);
         } catch (error) {
