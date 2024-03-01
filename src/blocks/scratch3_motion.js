@@ -97,6 +97,9 @@ class Scratch3MotionBlocks {
         if (targetName === '_mouse_') {
             targetX = util.ioQuery('mouse', 'getScratchX');
             targetY = util.ioQuery('mouse', 'getScratchY');
+        } else if (args.TOWARDS === '_camera_') {
+            targetX = this.runtime.camera.x;
+            targetY = this.runtime.camera.y;
         } else if (targetName === '_random_') {
             const stageWidth = this.runtime.stageWidth;
             const stageHeight = this.runtime.stageHeight;
@@ -148,6 +151,9 @@ class Scratch3MotionBlocks {
         if (args.TOWARDS === '_mouse_') {
             targetX = util.ioQuery('mouse', 'getScratchX');
             targetY = util.ioQuery('mouse', 'getScratchY');
+        } else if (args.TOWARDS === '_camera_') {
+            targetX = this.runtime.camera.x;
+            targetY = this.runtime.camera.y;
         } else if (args.TOWARDS === '_random_') {
             util.target.setDirection(Math.round(Math.random() * 360) - 180);
             return;
