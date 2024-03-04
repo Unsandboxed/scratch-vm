@@ -101,9 +101,9 @@ class Scratch3StringBlocks {
     }
 
     _getIndexFromSplit (string, split, index) { // used by compiler
-        if (index.toLowerCase() === "last") {
+        if (index === "last") {
             index = string.length - 1;
-        } else if (index.toLowerCase() === "random") {
+        } else if (index === "random") {
             index = Math.floor(Math.random()*string.length);
         } else {
             index = Cast.toNumber(index) - 1;
