@@ -153,7 +153,7 @@ class Scratch3StringBlocks {
             index = Cast.toNumber(index) - 1;
         }
 
-        const length = find.length - 1;
+        const length = find.length;
         if (length > string.length) return 0;
 
         let occurences = [];
@@ -162,6 +162,8 @@ class Scratch3StringBlocks {
                 occurences.push(i);
             }
         }
+
+        console.log(occurences);
 
         return occurences[index] ?? 0;
     }
