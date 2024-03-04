@@ -391,12 +391,12 @@ class ScriptTreeGenerator {
                 kind: 'op.length',
                 string: this.descendInputOfBlock(block, 'STRING')
             };
-        case 'operator_letter_of':
-            return {
-                kind: 'op.letterOf',
-                letter: this.descendInputOfBlock(block, 'LETTER'),
-                string: this.descendInputOfBlock(block, 'STRING')
-            };
+//        case 'operator_letter_of':
+//            return {
+//                kind: 'op.letterOf',
+//                letter: this.descendInputOfBlock(block, 'LETTER'),
+//                string: this.descendInputOfBlock(block, 'STRING')
+//            };
         case 'operator_letters_of':
             return {
                 kind: 'op.lettersOf',
@@ -702,22 +702,9 @@ class ScriptTreeGenerator {
                 kind: 'sensing.username'
             };
 
-        case 'string_convert':
-            return {
-                kind: 'str.convert',
-                left: this.descendInputOfBlock(block, 'STRING'),
-                right: block.fields.CONVERT.value
-            };
         case 'string_exactly':
             return {
                 kind: 'str.exactly',
-                left: this.descendInputOfBlock(block, 'STRING1'),
-                right: this.descendInputOfBlock(block, 'STRING2')
-            };
-        case 'string_index_of':
-            return {
-                kind: 'str.index',
-                num: this.descendInputOfBlock(block, 'INDEX'),
                 left: this.descendInputOfBlock(block, 'STRING1'),
                 right: this.descendInputOfBlock(block, 'STRING2')
             };
@@ -726,13 +713,6 @@ class ScriptTreeGenerator {
                 kind: 'str.is',
                 left: this.descendInputOfBlock(block, 'STRING'),
                 right: block.fields.CONVERT.value
-            };
-        case 'string_item_split':
-            return {
-                kind: 'str.split',
-                num: this.descendInputOfBlock(block, 'INDEX'),
-                str: this.descendInputOfBlock(block, 'STRING'),
-                split: this.descendInputOfBlock(block, 'SPLIT')
             };
         case 'string_repeat':
             return {
@@ -751,13 +731,6 @@ class ScriptTreeGenerator {
             return {
                 kind: 'str.reverse',
                 str: this.descendInputOfBlock(block, 'STRING')
-            };
-        case 'string_ternary':
-            return {
-                kind: 'str.convert',
-                operand: this.descendInputOfBlock(block, 'CONDITION'),
-                left: this.descendInputOfBlock(block, 'STRING1'),
-                right: this.descendInputOfBlock(block, 'STRING2')
             };
 
         case 'sound_sounds_menu':
