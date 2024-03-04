@@ -145,23 +145,22 @@ class Scratch3StringBlocks {
     }
 
     _getNumberIndex (find, string, index) { // used by compiler
-        if (index === "last") {
-            index = string.length - 1;
-        } else if (index === "random") {
-            index = Math.floor(Math.random()*string.length);
-        } else {
-            index = Cast.toNumber(index) - 1;
-        }
-
         const length = find.length;
         if (length > string.length) return 0;
 
         let occurences = [];
         for (let i = 0; i < string.length; i++) {
-            console.log(string.substring(i, i + length));
             if (string.substring(i, i + length) === find) {
                 occurences.push(i);
             }
+        }
+
+        if (index === "last") {
+            index = occurences.length - 1;
+        } else if (index === "random") {
+            index = Math.floor(Math.random()*occurences.length);
+        } else {
+            index = Cast.toNumber(index) - 1;
         }
 
         return occurences[index] ?? 0;
