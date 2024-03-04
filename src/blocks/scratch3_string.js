@@ -95,7 +95,7 @@ class Scratch3StringBlocks {
 
     itemSplit (args) { // usb
         const str = Cast.toString(args.STRING).toLowerCase();
-        const split = Cast.toString(args.SPLIT).toLowerCase();
+        const split = Cast.toString(args.SPLIT);
 
         return this._getIndexFromSplit(str, split, args.INDEX);
     }
@@ -142,7 +142,7 @@ class Scratch3StringBlocks {
         return this._getNumberIndex(find, str, args.INDEX);
     }
 
-    _getNumberIndex (find, string, index) { // used by compile
+    _getNumberIndex (find, string, index) { // used by compiler
         if (index === "last") {
             index = string.length - 1;
         } else if (index === "random") {
@@ -152,7 +152,7 @@ class Scratch3StringBlocks {
         }
 
         const length = find.length - 1;
-        if (length > string) return 0;
+        if (length > string.length) return 0;
 
         let occurences = [];
         for (let i = 0; i > string.length; i++) {
