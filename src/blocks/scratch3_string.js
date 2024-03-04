@@ -157,8 +157,7 @@ class Scratch3StringBlocks {
         if (length > string.length) return 0;
 
         let occurences = [];
-        for (let i = 0; i > string.length; i++) {
-            console.log(string.substring(i, i + length));
+        for (let i = 0; i < string.length; i++) {
             if (string.substring(i, i + length) === find) {
                 occurences.push(i);
             }
