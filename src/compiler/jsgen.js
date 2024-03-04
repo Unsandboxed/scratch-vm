@@ -609,8 +609,8 @@ class JSGenerator {
             const right = this.descendInput(node.right);
             return new TypedInput(`(${left.asUnknown()} <= ${right.asUnknown()})`, TYPE_BOOLEAN);
         }
-        case 'op.letterOf':
-            return new TypedInput(`((${this.descendInput(node.string).asString()})[(${this.descendInput(node.letter).asNumber()} | 0) - 1] || "")`, TYPE_STRING);
+//        case 'op.letterOf':
+//            return new TypedInput(`((${this.descendInput(node.string).asString()})[(${this.descendInput(node.letter).asNumber()} | 0) - 1] || "")`, TYPE_STRING);
         case 'op.lettersOf':
             return new TypedInput(`((${this.descendInput(node.string).asString()}).substring(${this.descendInput(node.left).asNumber() - 1}, ${this.descendInput(node.right).asNumber()}) || "")`, TYPE_STRING);
         case 'op.ln':
@@ -762,12 +762,8 @@ class JSGenerator {
         case 'sensing.year':
             return new TypedInput(`(new Date().getFullYear())`, TYPE_NUMBER);
 
-        case 'str.convert':
-            return new TypedInput(`runtime.ext_scratch3_string._convertString(${this.descendInput(node.left).asString()}, ${node.right})`, TYPE_STRING);
         case 'str.exactly':
             return new TypedInput(`(${this.descendInput(node.left).asUnknown()} === ${this.descendInput(node.right).asUnknown()})`, TYPE_UNKNOWN);
-        case 'str.index':
-            return new TypedInput(`runtime.ext_scratch3_string._getNumberIndex(${this.descendInput(node.left).asString()}, ${this.descendInput(node.right).asString()}, ${this.descendInput(node.num).asNumber()})`, TYPE_NUMBER);
         case 'str.is': {
             const str = this.descendInput(node.left).asString();
             if (node.right.toLowerCase() === "uppercase") {
@@ -776,16 +772,12 @@ class JSGenerator {
                 return new TypedInput(`${str.toLowerCase() === str}`, TYPE_BOOLEAN);
             }
         }
-        case 'str.split':
-            return new TypedInput(`runtime.ext_scratch3_string._getIndexFromSplit(${this.descendInput(node.str).asString()}, ${this.descendInput(node.split).asString()}, ${this.descendInput(node.num).asNumber()})`, TYPE_STRING);
         case 'str.repeat':
             return new TypedInput(`(${this.descendInput(node.str).asString()}.repeat(${this.descendInput(node.num).asNumber()}))`, TYPE_STRING);
         case 'str.replace':
             return new TypedInput(`${this.descendInput(node.str).asString()}.replace(new RegExp(${this.descendInput(node.left).asString()}, "gi"), ${this.descendInput(node.right).asString()})`, TYPE_STRING);
         case 'str.reverse':
             return new TypedInput(`${this.descendInput(node.str).asString()}.split("").reverse().join("");`, TYPE_STRING);
-        case 'str.ternary':
-            return new TypedInput(`(${this.descendInput(node.operand).asBoolean()} ? ${this.descendInput(node.left).asString()} : ${this.descendInput(node.right).asString()})`, TYPE_UNKNOWN);
 
         case 'camera.x':
             return new TypedInput('runtime.camera.x', TYPE_NUMBER);
