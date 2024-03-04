@@ -106,7 +106,7 @@ class Scratch3StringBlocks {
         if (index === "last") {
             index = splitString.length - 1;
         } else if (index === "random") {
-            index = Math.floor(Math.random()*(string.length - 1));
+            index = Math.floor(Math.random()*(splitString.length - 1));
         } else {
             index = Cast.toNumber(index) - 1;
         }
