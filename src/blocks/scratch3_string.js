@@ -97,19 +97,21 @@ class Scratch3StringBlocks {
         const str = Cast.toString(args.STRING).toLowerCase();
         const split = Cast.toString(args.SPLIT);
 
-        return this._getIndexFromSplit(str, split, args.INDEX);
+        return this._getItemFromSplit(str, split, args.INDEX);
     }
 
-    _getIndexFromSplit (string, split, index) { // used by compiler
+    _getItemFromSplit (string, split, index) { // used by compiler
+        const splitString = string.split(split);
+
         if (index === "last") {
-            index = string.length - 1;
+            index = splitString.length - 1;
         } else if (index === "random") {
-            index = Math.floor(Math.random()*string.length);
+            index = Math.floor(Math.random()*string.length - 1);
         } else {
             index = Cast.toNumber(index) - 1;
         }
 
-        return string.split(split)[index] ?? 0;
+        return splitString[index] ?? "";
     }
 
     ternary (args) { // usb
