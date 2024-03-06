@@ -25,7 +25,6 @@ class Scratch3ProcedureBlocks {
         return {
             procedures_call: {
                 restartExistingThreads: false,
-                edgeActivated: true,
                 procedureHat: true,
             },
         };
@@ -37,18 +36,12 @@ class Scratch3ProcedureBlocks {
 
     call (args, util) {
         const stackFrame = util.stackFrame;
-        if (!args.mutation) return;
 
         const isReporter = !!args.mutation.return;
-        const isHat = !!args.mutation.hat;
+        const isHat = JSON.parse(args.mutation.hat);
 
         if (stackFrame.executed) {
-            if (isHat) {
-                const returnValue = stackFrame.returnValue;
-                console.log(returnValue);
-                return Boolean(returnValue);
-            }
-            if (isReporter) {
+            if (isReporter || isHat) {
                 const returnValue = stackFrame.returnValue;
                 // This stackframe will be reused for other reporters in this block, so clean it up for them.
                 // Can't use reset() because that will reset too much.
@@ -58,6 +51,7 @@ class Scratch3ProcedureBlocks {
                 delete stackFrame.executed;
                 return returnValue;
             }
+
             return;
         }
 
