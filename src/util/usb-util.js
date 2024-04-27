@@ -21,27 +21,27 @@ const VariableUtil = require('../util/variable-util');
 const xmlEscape = require('../util/xml-escape');
 
 const Util = {
-  Base64Util,
-  Cast,
-  Clone,
-  Color,
-  fetchWithTimeout,
-  getMonitorID,
-  JSONRPC,
-  log,
-  MathUtil,
-  maybeFormatMessage,
-  newBlockIDs,
-  RateLimiter,
-  ScratchLinkWebsocket,
-  StringUtil,
-  taskQueue,
-  Timer,
-  AssetUtil,
-  StaticFetch,
-  uid,
-  VariableUtil,
-  xmlEscape
-}
+    Base64Util,
+    Cast,
+    Clone,
+    Color,
+    fetchWithTimeout,
+    getMonitorID,
+    JSONRPC,
+    log,
+    MathUtil,
+    maybeFormatMessage,
+    newBlockIDs,
+    RateLimiter,
+    ScratchLinkWebsocket,
+    StringUtil,
+    taskQueue,
+    Timer,
+    AssetUtil,
+    StaticFetch,
+    uid,
+    VariableUtil,
+    xmlEscape
+};
 
 module.exports = Util;
