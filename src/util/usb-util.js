@@ -38,6 +38,7 @@ const Util = {
   taskQueue,
   Timer,
   AssetUtil,
+  StaticFetch,
   uid,
   VariableUtil,
   xmlEscape
