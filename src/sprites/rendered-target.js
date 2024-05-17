@@ -233,7 +233,7 @@ class RenderedTarget extends Target {
      * @type {string}
      */
     static get ROTATION_STYLE_LOOKING () {
-        return "looking";
+        return 'looking';
     }
 
     /**

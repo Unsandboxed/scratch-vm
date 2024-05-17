@@ -90,6 +90,7 @@ class Scratch3ProcedureBlocks {
         }
 
         util.startProcedure(procedureCode);
+        util.thread.tryCompile();
     }
 
     return (args, util) {

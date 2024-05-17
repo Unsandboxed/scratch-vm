@@ -152,16 +152,16 @@ const ArgumentTypeMap = (() => {
 const FieldTypeMap = (() => {
     const map = {};
     map[ArgumentType.ANGLE] = {
-        fieldName: "field_angle",
+        fieldName: 'field_angle'
     };
     map[ArgumentType.NUMBER] = {
-        fieldName: "field_number",
+        fieldName: 'field_number'
     };
     map[ArgumentType.STRING] = {
-        fieldName: "field_input",
+        fieldName: 'field_input'
     };
     map[ArgumentType.NOTE] = {
-        fieldName: "field_note",
+        fieldName: 'field_note'
     };
     return map;
 })();
@@ -1258,7 +1258,7 @@ class Runtime extends EventEmitter {
         const acceptInput = (menuInfo.acceptText || menuInfo.acceptNumber);
         const type = menuInfo.acceptText ?
             'field_textdropdown' : menuInfo.acceptNumber ?
-            'field_numberdropdown' : 'field_dropdown';
+                'field_numberdropdown' : 'field_dropdown';
         return {
             json: {
                 message0: '%1',
@@ -1669,7 +1669,7 @@ class Runtime extends EventEmitter {
         return {
             type: 'field_label_serializable',
             name: placeholder,
-            text: argInfo.defaultValue,
+            text: argInfo.defaultValue
         };
     }
 
@@ -1736,9 +1736,9 @@ class Runtime extends EventEmitter {
                 const menuInfo = context.categoryInfo.menuInfo[argInfo.menu];
 
                 let acceptReporters = false;
-                if (typeof argInfo.acceptReporters !== "undefined") {
+                if (typeof argInfo.acceptReporters !== 'undefined') {
                     acceptReporters = argInfo.acceptReporters;
-                } else if (typeof menuInfo.acceptReporters !== "undefined") {
+                } else if (typeof menuInfo.acceptReporters !== 'undefined') {
                     acceptReporters = menuInfo.acceptReporters;
                 }
 
@@ -2844,7 +2844,7 @@ class Runtime extends EventEmitter {
     /**
      * Get the current instance of the camera.
      */
-    getCamera() {
+    getCamera () {
         return this.camera;
     }
 

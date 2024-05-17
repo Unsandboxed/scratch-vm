@@ -44,7 +44,8 @@ class Scratch3StringBlocks {
     reverse (args) { // usb
         const str = Cast.toString(args.STRING);
 
-        return str.split("").reverse().join("");
+        return str.split('').reverse()
+            .join('');
     }
 
     repeat (args) { // usb
@@ -59,7 +60,7 @@ class Scratch3StringBlocks {
         const replacer = Cast.toString(args.WITH);
         const str = Cast.toString(args.STRING);
 
-        return str.replace(new RegExp(old, "gi"), replacer);
+        return str.replace(new RegExp(old, 'gi'), replacer);
     }
 
     letterOf (args) {
@@ -69,10 +70,10 @@ class Scratch3StringBlocks {
 
     _getLetterOf (string, index) { // usb // used by compiler
         // usb: we support some weird dropdowns now
-        if (index === "last") {
+        if (index === 'last') {
             index = string.length - 1;
-        } else if (index === "random") {
-            index = Math.floor(Math.random()*string.length);
+        } else if (index === 'random') {
+            index = Math.floor(Math.random() * string.length);
         } else {
             index = Cast.toNumber(index) - 1;
         }
@@ -103,15 +104,15 @@ class Scratch3StringBlocks {
     _getItemFromSplit (string, split, index) { // used by compiler
         const splitString = string.split(split);
 
-        if (index === "last") {
+        if (index === 'last') {
             index = splitString.length - 1;
-        } else if (index === "random") {
-            index = Math.floor(Math.random()*splitString.length);
+        } else if (index === 'random') {
+            index = Math.floor(Math.random() * splitString.length);
         } else {
             index = Cast.toNumber(index) - 1;
         }
 
-        return splitString[index] ?? "";
+        return splitString[index] ?? '';
     }
 
     ternary (args) { // usb
@@ -130,11 +131,11 @@ class Scratch3StringBlocks {
     }
 
     _convertString (string, textCase) { // used by compiler
-        if (textCase === "lowercase") {
+        if (textCase === 'lowercase') {
             return string.toLowerCase();
-        } else {
-            return string.toUpperCase();
         }
+        return string.toUpperCase();
+        
     }
 
     indexOf (args) { // usb
@@ -148,17 +149,17 @@ class Scratch3StringBlocks {
         const length = find.length;
         if (length > string.length) return 0;
 
-        let occurences = [];
+        const occurences = [];
         for (let i = 0; i < string.length; i++) {
             if (string.substring(i, i + length) === find) {
                 occurences.push(i);
             }
         }
 
-        if (index === "last") {
+        if (index === 'last') {
             index = occurences.length - 1;
-        } else if (index === "random") {
-            index = Math.floor(Math.random()*occurences.length);
+        } else if (index === 'random') {
+            index = Math.floor(Math.random() * occurences.length);
         } else {
             index = Cast.toNumber(index) - 1;
         }
@@ -183,11 +184,11 @@ class Scratch3StringBlocks {
         const str = Cast.toString(args.STRING);
         const check = Cast.toString(args.CONVERT).toLowerCase();
 
-        if (check === "lowercase") {
+        if (check === 'lowercase') {
             return str.toLowerCase() === str;
-        } else {
-            return str.toUpperCase() === str;
         }
+        return str.toUpperCase() === str;
+        
     }
 
 }

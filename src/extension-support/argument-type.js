@@ -76,7 +76,7 @@ const ArgumentType = {
     /**
      * Name of variable in the current specified target(s)
      */
-    VARIABLE: 'variable',
+    VARIABLE: 'variable'
 };
 
 module.exports = ArgumentType;

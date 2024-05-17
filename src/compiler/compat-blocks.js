@@ -40,7 +40,7 @@ const stacked = [
     'sound_playuntildone',
     'sound_seteffectto',
     'sound_setvolumeto',
-    'sound_stopallsounds',
+    'sound_stopallsounds'
 ];
 
 const inputs = [
@@ -56,7 +56,7 @@ const inputs = [
     'string_item_split',
     'string_convert',
     'string_index_of',
-    'string_ternary',
+    'string_ternary'
 ];
 
 module.exports = {

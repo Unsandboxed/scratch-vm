@@ -609,8 +609,8 @@ class JSGenerator {
             const right = this.descendInput(node.right);
             return new TypedInput(`(${left.asUnknown()} <= ${right.asUnknown()})`, TYPE_BOOLEAN);
         }
-//        case 'op.letterOf':
-//            return new TypedInput(`((${this.descendInput(node.string).asString()})[(${this.descendInput(node.letter).asNumber()} | 0) - 1] || "")`, TYPE_STRING);
+        //        case 'op.letterOf':
+        //            return new TypedInput(`((${this.descendInput(node.string).asString()})[(${this.descendInput(node.letter).asNumber()} | 0) - 1] || "")`, TYPE_STRING);
         case 'op.lettersOf':
             return new TypedInput(`((${this.descendInput(node.string).asString()}).substring(${this.descendInput(node.left).asNumber() - 1}, ${this.descendInput(node.right).asNumber()}) || "")`, TYPE_STRING);
         case 'op.ln':
@@ -766,11 +766,11 @@ class JSGenerator {
             return new TypedInput(`(${this.descendInput(node.left).asUnknown()} === ${this.descendInput(node.right).asUnknown()})`, TYPE_UNKNOWN);
         case 'str.is': {
             const str = this.descendInput(node.left).asString();
-            if (node.right.toLowerCase() === "uppercase") {
+            if (node.right.toLowerCase() === 'uppercase') {
                 return new TypedInput(`${str.toUpperCase() === str}`, TYPE_BOOLEAN);
-            } else {
-                return new TypedInput(`${str.toLowerCase() === str}`, TYPE_BOOLEAN);
             }
+            return new TypedInput(`${str.toLowerCase() === str}`, TYPE_BOOLEAN);
+            
         }
         case 'str.repeat':
             return new TypedInput(`(${this.descendInput(node.str).asString()}.repeat(${this.descendInput(node.num).asNumber()}))`, TYPE_STRING);

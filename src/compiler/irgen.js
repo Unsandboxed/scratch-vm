@@ -391,12 +391,12 @@ class ScriptTreeGenerator {
                 kind: 'op.length',
                 string: this.descendInputOfBlock(block, 'STRING')
             };
-//        case 'operator_letter_of':
-//            return {
-//                kind: 'op.letterOf',
-//                letter: this.descendInputOfBlock(block, 'LETTER'),
-//                string: this.descendInputOfBlock(block, 'STRING')
-//            };
+            //        case 'operator_letter_of':
+            //            return {
+            //                kind: 'op.letterOf',
+            //                letter: this.descendInputOfBlock(block, 'LETTER'),
+            //                string: this.descendInputOfBlock(block, 'STRING')
+            //            };
         case 'operator_letters_of':
             return {
                 kind: 'op.lettersOf',
@@ -794,7 +794,7 @@ class ScriptTreeGenerator {
                     kind: 'constant',
                     value: true
                 },
-                code: this.descendSubstack(block, 'SUBSTACK'),
+                code: this.descendSubstack(block, 'SUBSTACK')
             };
         case 'control_clear_counter':
             return {

@@ -23,7 +23,7 @@ const setupInitialState = runtime => {
             y: camera.y,
             direction: camera.direction,
             zoom: camera.zoom
-        }
+        };
     } else {
         camera.interpolationData = null;
     }

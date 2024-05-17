@@ -77,7 +77,7 @@ class VirtualMachine extends EventEmitter {
         this.io = {
             BLE,
             BT
-        }
+        };
 
         /**
          * The "currently editing"/selected target ID for the VM.

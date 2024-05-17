@@ -70,7 +70,7 @@ const BlockType = {
     /**
      * Arbitrary scratch-blocks XML.
      */
-    XML: 'xml',
+    XML: 'xml'
 };
 
 module.exports = BlockType;

@@ -13,7 +13,7 @@ const MathUtil = require('../util/math-util');
  * Camera: instance of a camera object on the stage.
  */
 class Camera extends EventEmitter {
-    constructor(runtime) {
+    constructor (runtime) {
         super();
 
         this.runtime = runtime;
@@ -67,7 +67,7 @@ class Camera extends EventEmitter {
      * @param x The x coordinate.
      * @param y The y coordinate.
      */
-    setXY(x, y) {
+    setXY (x, y) {
         this.x = Cast.toNumber(x);
         this.y = Cast.toNumber(y);
 
@@ -78,7 +78,7 @@ class Camera extends EventEmitter {
      * Set the zoom of the camera.
      * @param zoom The new zoom value.
      */
-    setZoom(zoom) {
+    setZoom (zoom) {
         this.zoom = Cast.toNumber(zoom);
         if (this.runtime.runtimeOptions.miscLimits) {
             this.zoom = MathUtil.clamp(this.zoom, 10, 300);
@@ -91,7 +91,7 @@ class Camera extends EventEmitter {
      * Point the camera towards a given direction.
      * @param direction Direction to point the camera.
      */
-    setDirection(direction) {
+    setDirection (direction) {
         if (!isFinite(direction)) return;
 
         this.direction = MathUtil.wrapClamp(direction, -179, 180);
@@ -103,14 +103,14 @@ class Camera extends EventEmitter {
      * Set whether the camera will affect the projection.
      * @param enabled The new enabled state.
      */
-    setEnabled(enabled) {
+    setEnabled (enabled) {
         this.enabled = enabled;
     }
 
     /**
      * Tell the renderer to update the rendered camera state.
      */
-    emitCameraUpdate() {
+    emitCameraUpdate () {
         if (!this.runtime.renderer) return;
 
         this.runtime.renderer._updateCamera(
@@ -118,7 +118,7 @@ class Camera extends EventEmitter {
             this.y,
             this.direction,
             this.zoom
-        )
+        );
 
         this.runtime.requestRedraw();
     }
@@ -126,7 +126,7 @@ class Camera extends EventEmitter {
     /**
      * Reset all camera properties.
      */
-    reset() {
+    reset () {
         this.x = 0;
         this.y = 0;
         this.direction = 90;
