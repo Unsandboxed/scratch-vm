@@ -534,6 +534,19 @@ class ExtensionManager {
         }, blockInfo);
         blockInfo.text = blockInfo.text || blockInfo.opcode;
 
+        if (blockInfo.customContextMenu && blockInfo.customContextMenu.length > 0) {
+            // Replace all the string callback names of the context menu items
+            // with the actual function call.
+            blockInfo.customContextMenu = blockInfo.customContextMenu.map(contextMenuOption => {
+                if (typeof contextMenuOption.callback === 'string') {
+                    const callbackName = this._sanitizeID(contextMenuOption.callback);
+                    contextMenuOption.callback = args =>
+                        dispatch.call(serviceName, callbackName, args);
+                }
+                return contextMenuOption;
+            });
+        }
+
         switch (blockInfo.blockType) {
         case BlockType.EVENT:
             if (blockInfo.func) {
