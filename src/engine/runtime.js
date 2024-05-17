@@ -368,6 +368,12 @@ class Runtime extends EventEmitter {
         this._prevMonitorState = OrderedMap({});
 
         /**
+         * Track any monitors to be added that don't have corresponding monitor blocks
+         * created yet.
+         */
+        this._pendingMonitors = new Set();
+
+        /**
          * Whether the project is in "turbo mode."
          * @type {Boolean}
          */
@@ -952,6 +958,13 @@ class Runtime extends EventEmitter {
      */
     static get BLOCKS_NEED_UPDATE () {
         return 'BLOCKS_NEED_UPDATE';
+    }
+
+    // usb: this was originally an event intended to replace the one above, apparently
+    // after they made the sensing_of block compatible with core extensions. They never
+    // did do this, but I'm adding it anyway in case it serves a purpose in the future.
+    static get BLOCK_UPDATE () {
+        return 'BLOCK_UPDATE';
     }
 
     /**
@@ -2393,6 +2406,7 @@ class Runtime extends EventEmitter {
         const emptyMonitorState = OrderedMap({});
         if (!emptyMonitorState.equals(this._monitorState)) {
             this._monitorState = emptyMonitorState;
+            this._pendingMonitors.clear();
             this.emit(Runtime.MONITORS_UPDATE, this._monitorState);
         }
         this.emit(Runtime.RUNTIME_DISPOSED);
@@ -3436,6 +3450,34 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Keep track of the fact that a monitor has been requested
+     * for the given blockId, even though the block with the given id
+     * does not exist in the flyout yet.
+     * @param {string} blockId The id of the block with a pending monitor
+     */
+    addPendingMonitor (blockId) {
+        this._pendingMonitors.add(blockId);
+    }
+
+    /**
+     * Removes a block id from the pending monitors list (e.g. if it has
+     * been turned into an actual monitor).
+     * @param {string} blockId The id of the block with a pending monitor
+     */
+    removePendingMonitor (blockId) {
+        this._pendingMonitors.delete(blockId);
+    }
+
+    /**
+     * Checks whether the given block id has a pending monitor.
+     * @param {string} blockId The id of the block with a pending monitor
+     * @return {boolean} True if the block has a pending monitor, false otherwise.
+     */
+    getPendingMonitor (blockId) {
+        return this._pendingMonitors.has(blockId);
+    }
+
+    /**
      * Create a new global variable avoiding conflicts with other variable names.
      * @param {string} variableName The desired variable name for the new global variable.
      * This can be turned into a fresh name as necessary.
@@ -3477,6 +3519,15 @@ class Runtime extends EventEmitter {
      */
     requestBlocksUpdate () {
         this.emit(Runtime.BLOCKS_NEED_UPDATE);
+    }
+
+    /**
+     * Emit an event that indicates that the given block got updated.
+     * @param {string} blockId The id of the block
+     * @param {ExtensionBlockMetadata} blockInfo The new block info
+     */
+    updateBlockInfo (blockId, blockInfo) {
+        this.emit(Runtime.BLOCK_UPDATE, blockId, blockInfo);
     }
 
     /**
