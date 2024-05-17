@@ -482,7 +482,9 @@ class ExtensionManager {
 
         // trim the menu state down to structured-copy-compatible properties that extensions might need
         const menuState = {
-            selectedValue: scratchBlocksMenuObject.getValue()
+            selectedValue: scratchBlocksMenuObject.getValue(),
+            sourceBlock: scratchBlocksMenuObject.sourceBlock_,
+            menuObject: scratchBlocksMenuObject,
         };
 
         // TODO: Fix this to use dispatch.call when extensions are running in workers.
