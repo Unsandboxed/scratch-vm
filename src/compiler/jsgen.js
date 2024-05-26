@@ -973,9 +973,12 @@ class JSGenerator {
             this.yielded();
             break;
 
+        // TODO: Lists that are locked don't need their monitors updated.
+        // In fact, they don't need to be executed at all, since right
+        // now, locked is a static value that cannot be changed.
         case 'list.add': {
             const list = this.referenceVariable(node.list);
-            this.source += `${list}.value.push(${this.descendInput(node.item).asSafe()});\n`;
+            this.source += `if (!${list}.locked) ${list}.value.push(${this.descendInput(node.item).asSafe()});\n`;
             this.source += `${list}._monitorUpToDate = false;\n`;
             break;
         }
@@ -984,12 +987,12 @@ class JSGenerator {
             const index = this.descendInput(node.index);
             if (index instanceof ConstantInput) {
                 if (index.constantValue === 'last') {
-                    this.source += `${list}.value.pop();\n`;
+                    this.source += `if (!${list}.locked) ${list}.value.pop();\n`;
                     this.source += `${list}._monitorUpToDate = false;\n`;
                     break;
                 }
                 if (+index.constantValue === 1) {
-                    this.source += `${list}.value.shift();\n`;
+                    this.source += `if (!${list}.locked) ${list}.value.shift();\n`;
                     this.source += `${list}._monitorUpToDate = false;\n`;
                     break;
                 }
@@ -998,9 +1001,11 @@ class JSGenerator {
             this.source += `listDelete(${list}, ${index.asUnknown()});\n`;
             break;
         }
-        case 'list.deleteAll':
-            this.source += `${this.referenceVariable(node.list)}.value = [];\n`;
+        case 'list.deleteAll': {
+            const list = this.referenceVariable(node.list);
+            this.source += `if (!${list}.locked) ${list}.value = [];\n`;
             break;
+        }
         case 'list.hide':
             this.source += `runtime.monitorBlocks.changeBlock({ id: "${sanitize(node.list.id)}", element: "checkbox", value: false }, runtime);\n`;
             break;
@@ -1009,16 +1014,18 @@ class JSGenerator {
             const index = this.descendInput(node.index);
             const item = this.descendInput(node.item);
             if (index instanceof ConstantInput && +index.constantValue === 1) {
-                this.source += `${list}.value.unshift(${item.asSafe()});\n`;
+                this.source += `if (!${list}.locked) ${list}.value.unshift(${item.asSafe()});\n`;
                 this.source += `${list}._monitorUpToDate = false;\n`;
                 break;
             }
-            this.source += `listInsert(${list}, ${index.asUnknown()}, ${item.asSafe()});\n`;
+            this.source += `if (!${list}.locked) listInsert(${list}, ${index.asUnknown()}, ${item.asSafe()});\n`;
             break;
         }
-        case 'list.replace':
-            this.source += `listReplace(${this.referenceVariable(node.list)}, ${this.descendInput(node.index).asUnknown()}, ${this.descendInput(node.item).asSafe()});\n`;
+        case 'list.replace': {
+            const list = this.referenceVariable(node.list);
+            this.source += `if (!${list}.locked) listReplace(${list}, ${this.descendInput(node.index).asUnknown()}, ${this.descendInput(node.item).asSafe()});\n`;
             break;
+        }
         case 'list.show':
             this.source += `runtime.monitorBlocks.changeBlock({ id: "${sanitize(node.list.id)}", element: "checkbox", value: true }, runtime);\n`;
             break;

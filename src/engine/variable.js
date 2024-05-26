@@ -19,6 +19,7 @@ class Variable {
         this.name = name;
         this.type = type;
         this.isCloud = isCloud;
+        this.locked = false; // always locked on start.
         switch (this.type) {
         case Variable.SCALAR_TYPE:
             this.value = 0;
@@ -37,7 +38,8 @@ class Variable {
     toXML (isLocal) {
         isLocal = (isLocal === true);
         return `<variable type="${this.type}" id="${this.id}" islocal="${isLocal
-        }" iscloud="${this.isCloud}">${xmlEscape(this.name)}</variable>`;
+        }" iscloud="${this.isCloud}" islocked="${this.locked
+        }">${xmlEscape(this.name)}</variable>`;
     }
 
     /**
