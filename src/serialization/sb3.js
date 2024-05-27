@@ -536,7 +536,12 @@ const serializeVariables = function (variables) {
             continue;
         }
         if (v.type === Variable.LIST_TYPE) {
-            obj.lists[varId] = [v.name, makeSafeForJSON(v.value)];
+            obj.lists[varId] = [
+                v.name, 
+                makeSafeForJSON(v.value), 
+                false, 
+                v.locked
+            ];
             continue;
         }
 
@@ -691,6 +696,7 @@ const serializeMonitors = function (monitors, runtime, extensions) {
                 value: Array.isArray(monitorData.value) ? [] : 0,
                 width: monitorData.width,
                 height: monitorData.height,
+                locked: monitorData.locked,
                 x: monitorData.x - xOffset,
                 y: monitorData.y - yOffset,
                 visible: monitorData.visible
@@ -1249,7 +1255,8 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
                 listId,
                 list[0],
                 Variable.LIST_TYPE,
-                false
+                false,
+                list[3],
             );
             newList.value = list[1];
             target.variables[newList.id] = newList;
