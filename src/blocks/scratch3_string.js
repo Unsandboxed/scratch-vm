@@ -44,7 +44,8 @@ class Scratch3StringBlocks {
     reverse (args) { // usb
         const str = Cast.toString(args.STRING);
 
-        return str.split("").reverse().join("");
+        return str.split('').reverse()
+            .join('');
     }
 
     repeat (args) { // usb
@@ -59,7 +60,7 @@ class Scratch3StringBlocks {
         const replacer = Cast.toString(args.WITH);
         const str = Cast.toString(args.STRING);
 
-        return str.replace(new RegExp(old, "gi"), replacer);
+        return str.replace(new RegExp(old, 'gi'), replacer);
     }
 
     letterOf (args) {
@@ -69,10 +70,10 @@ class Scratch3StringBlocks {
 
     _getLetterOf (string, index) { // usb // used by compiler
         // usb: we support some weird dropdowns now
-        if (index === "last") {
+        if (index === 'last') {
             index = string.length - 1;
-        } else if (index === "random") {
-            index = Math.floor(Math.random()*string.length);
+        } else if (index === 'random') {
+            index = Math.floor(Math.random() * string.length);
         } else {
             index = Cast.toNumber(index) - 1;
         }
@@ -95,21 +96,23 @@ class Scratch3StringBlocks {
 
     itemSplit (args) { // usb
         const str = Cast.toString(args.STRING).toLowerCase();
-        const split = Cast.toString(args.SPLIT).toLowerCase();
+        const split = Cast.toString(args.SPLIT);
 
-        return this._getIndexFromSplit(str, split, args.INDEX);
+        return this._getItemFromSplit(str, split, args.INDEX);
     }
 
-    _getIndexFromSplit (string, split, index) { // used by compiler
-        if (index === "last") {
-            index = string.length - 1;
-        } else if (index === "random") {
-            index = Math.floor(Math.random()*string.length);
+    _getItemFromSplit (string, split, index) { // used by compiler
+        const splitString = string.split(split);
+
+        if (index === 'last') {
+            index = splitString.length - 1;
+        } else if (index === 'random') {
+            index = Math.floor(Math.random() * splitString.length);
         } else {
             index = Cast.toNumber(index) - 1;
         }
 
-        return string.split(split)[index] ?? 0;
+        return splitString[index] ?? '';
     }
 
     ternary (args) { // usb
@@ -128,11 +131,11 @@ class Scratch3StringBlocks {
     }
 
     _convertString (string, textCase) { // used by compiler
-        if (textCase === "lowercase") {
+        if (textCase === 'lowercase') {
             return string.toLowerCase();
-        } else {
-            return string.toUpperCase();
         }
+        return string.toUpperCase();
+        
     }
 
     indexOf (args) { // usb
@@ -142,23 +145,23 @@ class Scratch3StringBlocks {
         return this._getNumberIndex(find, str, args.INDEX);
     }
 
-    _getNumberIndex (find, string, index) { // used by compile
-        if (index === "last") {
-            index = string.length - 1;
-        } else if (index === "random") {
-            index = Math.floor(Math.random()*string.length);
-        } else {
-            index = Cast.toNumber(index) - 1;
-        }
+    _getNumberIndex (find, string, index) { // used by compiler
+        const length = find.length;
+        if (length > string.length) return 0;
 
-        const length = find.length - 1;
-        if (length > string) return 0;
-
-        let occurences = [];
-        for (let i = 0; i > string.length; i++) {
+        const occurences = [];
+        for (let i = 0; i < string.length; i++) {
             if (string.substring(i, i + length) === find) {
                 occurences.push(i);
             }
+        }
+
+        if (index === 'last') {
+            index = occurences.length - 1;
+        } else if (index === 'random') {
+            index = Math.floor(Math.random() * occurences.length);
+        } else {
+            index = Cast.toNumber(index) - 1;
         }
 
         return occurences[index] ?? 0;
@@ -181,11 +184,11 @@ class Scratch3StringBlocks {
         const str = Cast.toString(args.STRING);
         const check = Cast.toString(args.CONVERT).toLowerCase();
 
-        if (check === "lowercase") {
+        if (check === 'lowercase') {
             return str.toLowerCase() === str;
-        } else {
-            return str.toUpperCase() === str;
         }
+        return str.toUpperCase() === str;
+        
     }
 
 }

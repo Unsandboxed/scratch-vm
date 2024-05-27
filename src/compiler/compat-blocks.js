@@ -40,7 +40,7 @@ const stacked = [
     'sound_playuntildone',
     'sound_seteffectto',
     'sound_setvolumeto',
-    'sound_stopallsounds',
+    'sound_stopallsounds'
 ];
 
 const inputs = [
@@ -51,6 +51,12 @@ const inputs = [
     'sensing_loudness',
     'sensing_userid',
     'sound_volume',
+
+    'operator_letter_of',
+    'string_item_split',
+    'string_convert',
+    'string_index_of',
+    'string_ternary'
 ];
 
 module.exports = {

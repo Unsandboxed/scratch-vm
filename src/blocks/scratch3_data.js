@@ -126,6 +126,8 @@ class Scratch3DataBlocks {
     addToList (args, util) {
         const list = util.target.lookupOrCreateList(
             args.LIST.id, args.LIST.name);
+        if (list.locked) return;
+
         list.value.push(args.ITEM);
         list._monitorUpToDate = false;
     }
@@ -133,6 +135,7 @@ class Scratch3DataBlocks {
     deleteOfList (args, util) {
         const list = util.target.lookupOrCreateList(
             args.LIST.id, args.LIST.name);
+        if (list.locked) return;
         const index = Cast.toListIndex(args.INDEX, list.value.length, true);
         if (index === Cast.LIST_INVALID) {
             return;
@@ -147,6 +150,7 @@ class Scratch3DataBlocks {
     deleteAllOfList (args, util) {
         const list = util.target.lookupOrCreateList(
             args.LIST.id, args.LIST.name);
+        if (list.locked) return;
         list.value = [];
         return;
     }
@@ -155,6 +159,7 @@ class Scratch3DataBlocks {
         const item = args.ITEM;
         const list = util.target.lookupOrCreateList(
             args.LIST.id, args.LIST.name);
+        if (list.locked) return;
         const index = Cast.toListIndex(args.INDEX, list.value.length + 1, false);
         if (index === Cast.LIST_INVALID) {
             return;
@@ -167,6 +172,7 @@ class Scratch3DataBlocks {
         const item = args.ITEM;
         const list = util.target.lookupOrCreateList(
             args.LIST.id, args.LIST.name);
+        if (list.locked) return;
         const index = Cast.toListIndex(args.INDEX, list.value.length, false);
         if (index === Cast.LIST_INVALID) {
             return;

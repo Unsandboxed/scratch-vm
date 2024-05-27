@@ -119,8 +119,9 @@ const waitPromise = function*(promise) {
             returnValue = value;
             thread.status = 0; // STATUS_RUNNING
         }, error => {
-            thread.status = 0; // STATUS_RUNNING
             globalState.log.warn('Promise rejected in compiled script:', error);
+            returnValue = '' + error;
+            thread.status = 0; // STATUS_RUNNING
         });
 
     yield;
@@ -162,7 +163,7 @@ const executeInCompatibilityLayer = function*(inputs, blockFunction, isWarp, use
         return returnValue;
     }
 
-    if (thread.status === 1 /* STATUS_PROMISE_WAIT */) {
+    if (thread.status === 1 /* STATUS_PROMISE_WAIT */ || thread.status === 4 /* STATUS_DONE */) {
         // Something external is forcing us to stop
         yield;
         // Make up a return value because whatever is forcing us to stop can't specify one
@@ -189,13 +190,11 @@ const executeInCompatibilityLayer = function*(inputs, blockFunction, isWarp, use
             return returnValue;
         }
 
-        if (thread.status === 1 /* STATUS_PROMISE_WAIT */) {
+        if (thread.status === 1 /* STATUS_PROMISE_WAIT */ || thread.status === 4 /* STATUS_DONE */) {
             yield;
             return finish('');
         }
     }
-
-    // todo: do we have to do anything extra if status is STATUS_DONE?
 
     return finish(returnValue);
 }`;
@@ -377,6 +376,9 @@ runtimeFunctions.distance = `const distance = menu => {
     if (menu === '_mouse_') {
         targetX = thread.target.runtime.ioDevices.mouse.getScratchX();
         targetY = thread.target.runtime.ioDevices.mouse.getScratchY();
+    } else if (menu === '_camera_') {
+        targetX = thread.target.runtime.camera.x;
+        targetY = thread.target.runtime.camera.y;
     } else {
         const distTarget = thread.target.runtime.getSpriteTargetByName(menu);
         if (!distTarget) return 10000;

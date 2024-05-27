@@ -22,6 +22,9 @@ const xmlEscape = require('../util/xml-escape');
 const ScratchLinkWebSocket = require('../util/scratch-link-websocket');
 const FontManager = require('./tw-font-manager');
 const fetchWithTimeout = require('../util/fetch-with-timeout');
+const platform = require('./tw-platform.js');
+
+const CORE_BLOCKS = [];
 
 // Virtual I/O devices.
 const Clock = require('../io/clock');
@@ -153,16 +156,16 @@ const ArgumentTypeMap = (() => {
 const FieldTypeMap = (() => {
     const map = {};
     map[ArgumentType.ANGLE] = {
-        fieldName: "field_angle",
+        fieldName: 'field_angle'
     };
     map[ArgumentType.NUMBER] = {
-        fieldName: "field_number",
+        fieldName: 'field_number'
     };
     map[ArgumentType.STRING] = {
-        fieldName: "field_input",
+        fieldName: 'field_input'
     };
     map[ArgumentType.NOTE] = {
-        fieldName: "field_note",
+        fieldName: 'field_note'
     };
     return map;
 })();
@@ -369,6 +372,12 @@ class Runtime extends EventEmitter {
         this._prevMonitorState = OrderedMap({});
 
         /**
+         * Track any monitors to be added that don't have corresponding monitor blocks
+         * created yet.
+         */
+        this._pendingMonitors = new Set();
+
+        /**
          * Whether the project is in "turbo mode."
          * @type {Boolean}
          */
@@ -479,6 +488,11 @@ class Runtime extends EventEmitter {
          * @type {?string}
          */
         this.origin = null;
+
+        /**
+         * Metadata about the platform this VM is part of.
+         */
+        this.platform = Object.assign({}, platform);
 
         this._initScratchLink();
 
@@ -923,6 +937,10 @@ class Runtime extends EventEmitter {
         return 'BLOCKSINFO_UPDATE';
     }
 
+    static get BLOCK_UPDATE () {
+        return 'BLOCK_UPDATE';
+    }
+
     /**
      * Event name when the runtime tick loop has been started.
      * @const {string}
@@ -953,6 +971,13 @@ class Runtime extends EventEmitter {
      */
     static get BLOCKS_NEED_UPDATE () {
         return 'BLOCKS_NEED_UPDATE';
+    }
+
+    /**
+     * Event name when platform name inside a project does not match the runtime.
+     */
+    static get PLATFORM_MISMATCH () {
+        return 'PLATFORM_MISMATCH';
     }
 
     /**
@@ -1147,6 +1172,7 @@ class Runtime extends EventEmitter {
         categoryInfo.customFieldTypes = {};
         categoryInfo.menus = [];
         categoryInfo.menuInfo = {};
+        categoryInfo.convertedMenuInfo = {};
 
         for (const menuName in extensionInfo.menus) {
             if (Object.prototype.hasOwnProperty.call(extensionInfo.menus, menuName)) {
@@ -1154,6 +1180,13 @@ class Runtime extends EventEmitter {
                 const convertedMenu = this._buildMenuForScratchBlocks(menuName, menuInfo, categoryInfo);
                 categoryInfo.menus.push(convertedMenu);
                 categoryInfo.menuInfo[menuName] = menuInfo;
+                // Use the convertedMenu and `menuInfo` to consolidate
+                // the information needed to layout the menu correctly
+                // on a dynamic extension block.
+                categoryInfo.convertedMenuInfo[menuName] = {
+                    items: Array.isArray(menuInfo.items) ? convertedMenu.json.args0[0].options : menuInfo.items,
+                    acceptReporters: menuInfo.acceptReporters || false
+                };
             }
         }
         for (const fieldTypeName in extensionInfo.customFieldTypes) {
@@ -1259,7 +1292,7 @@ class Runtime extends EventEmitter {
         const acceptInput = (menuInfo.acceptText || menuInfo.acceptNumber);
         const type = menuInfo.acceptText ?
             'field_textdropdown' : menuInfo.acceptNumber ?
-            'field_numberdropdown' : 'field_dropdown';
+                'field_numberdropdown' : 'field_dropdown';
         return {
             json: {
                 message0: '%1',
@@ -1533,7 +1566,9 @@ class Runtime extends EventEmitter {
 
         const mutation = blockInfo.isDynamic ? `<mutation blockInfo="${xmlEscape(JSON.stringify(blockInfo))}"/>` : '';
         const inputs = context.inputList.join('');
-        const blockXML = `<block type="${xmlEscape(extendedOpcode)}">${mutation}${inputs}</block>`;
+        const toolboxIdXml = blockInfo.isDynamic && blockInfo.paletteKey ?
+        ` id="${xmlEscape(blockInfo.paletteKey)}"` : '';
+        const blockXML = `<block type="${xmlEscape(extendedOpcode)}"${toolboxIdXml}>${mutation}${inputs}</block>`;
 
         if (blockInfo.extensions) {
             for (const extension of blockInfo.extensions) {
@@ -1632,9 +1667,8 @@ class Runtime extends EventEmitter {
         return {
             type: 'field_image',
             src: argInfo.dataURI || '',
-            // TODO these probably shouldn't be hardcoded...?
-            width: 24,
-            height: 24,
+            width: argInfo.width || 24,
+            height: argInfo.height || 24,
             // Whether or not the inline image should be flipped horizontally
             // in RTL languages. Defaults to false, indicating that the
             // image will not be flipped.
@@ -1644,7 +1678,7 @@ class Runtime extends EventEmitter {
 
     /**
      * Helper for _convertPlaceholders which handles variable fields which are a specialized case of block "arguments".
-     * @param {object} argInfo Metadata about the inline image as specified by the extension
+     * @param {object} argInfo Metadata about the variable dropdown as specified by the extension
      * @return {object} JSON blob for a scratch-blocks variable field.
      * @private
      */
@@ -1658,6 +1692,20 @@ class Runtime extends EventEmitter {
             // TO DO: default to an existing variable.
             variable: argInfo.variable ?? (argInfo.variableTypes === 'broadcast_msg') ? 'message1' : null,
             filter: argInfo.filter ?? []
+        };
+    }
+
+    /**
+     * Helper for _convertPlaceholders which handles label fields which are a specialized case of block "arguments".
+     * @param {object} argInfo Metadata about the label as specified by the extension
+     * @return {object} JSON blob for a scratch-blocks label field.
+     * @private
+     */
+    _constructLabelJson (argInfo, placeholder) {
+        return {
+            type: 'field_label_serializable',
+            name: placeholder,
+            text: argInfo.defaultValue
         };
     }
 
@@ -1688,9 +1736,8 @@ class Runtime extends EventEmitter {
         // check if this is not one of those cases. E.g. an inline image on a block.
         if (argTypeInfo.fieldType === 'field_image') {
             argJSON = this._constructInlineImageJson(argInfo);
-        } else if (argTypeInfo.fieldType === 'field_label') {
-            argJSON.type = 'field_label';
-            argJSON.text = argInfo.text;
+        } else if (argTypeInfo.fieldType === 'field_label_serializable') {
+            argJSON = this._constructLabelJson(argInfo);
         } else if (argTypeInfo.fieldType === 'field_variable') {
             argJSON = this._constructVariableJson(argInfo, placeholder);
         } else {
@@ -1725,9 +1772,9 @@ class Runtime extends EventEmitter {
                 const menuInfo = context.categoryInfo.menuInfo[argInfo.menu];
 
                 let acceptReporters = false;
-                if (typeof argInfo.acceptReporters !== "undefined") {
+                if (typeof argInfo.acceptReporters !== 'undefined') {
                     acceptReporters = argInfo.acceptReporters;
-                } else if (typeof menuInfo.acceptReporters !== "undefined") {
+                } else if (typeof menuInfo.acceptReporters !== 'undefined') {
                     acceptReporters = menuInfo.acceptReporters;
                 }
 
@@ -2382,6 +2429,7 @@ class Runtime extends EventEmitter {
         const emptyMonitorState = OrderedMap({});
         if (!emptyMonitorState.equals(this._monitorState)) {
             this._monitorState = emptyMonitorState;
+            this._pendingMonitors.clear();
             this.emit(Runtime.MONITORS_UPDATE, this._monitorState);
         }
         this.emit(Runtime.RUNTIME_DISPOSED);
@@ -2833,7 +2881,7 @@ class Runtime extends EventEmitter {
     /**
      * Get the current instance of the camera.
      */
-    getCamera() {
+    getCamera () {
         return this.camera;
     }
 
@@ -3399,6 +3447,10 @@ class Runtime extends EventEmitter {
         return varNames;
     }
 
+    isCoreExtension (categoryId) {
+        return CORE_BLOCKS.indexOf(categoryId) > -1;
+    }
+
     /**
      * Get the label or label function for an opcode
      * @param {string} extendedOpcode - the opcode you want a label for
@@ -3406,6 +3458,7 @@ class Runtime extends EventEmitter {
      * @property {string} category - the category for this opcode
      * @property {Function} [labelFn] - function to generate the label for this opcode
      * @property {string} [label] - the label for this opcode if `labelFn` is absent
+     * @deprecated
      */
     getLabelForOpcode (extendedOpcode) {
         const [category, opcode] = StringUtil.splitFirst(extendedOpcode, '_');
@@ -3422,6 +3475,88 @@ class Runtime extends EventEmitter {
             category: 'extension', // This assumes that all extensions have the same monitor color.
             label: `${categoryInfo.name}: ${block.info.text}`
         };
+    }
+
+    /**
+     * Get the monitor label and color for a given toolbox block id.
+     * @param {string} id - the block id for a block with a monitor being requested
+     * @return {object} - object with label and color
+     * @property {string} color - the color for the monitor for the given block id
+     * @property {string} label - the label for the monitor for the given block id
+     */
+    getMonitorLabelForBlock (id) {
+        // Having dynamic extension blocks makes it so that a single extension category can have
+        // multiple toolbox blocks with the same opcode. This previously wasn't possible.
+        // This means that we can no longer use just the opcode to look up the block and
+        // should instead look up the block using its unique id.
+        const block = this.flyoutBlocks.getBlock(id);
+        // If the block doesn't actually exist in the flyout, we should not
+        // be creating a label for it.
+        if (!block) return;
+
+        // Look up category info from the block
+        const extendedOpcode = block.opcode;
+        const [category, opcode] = StringUtil.splitFirst(extendedOpcode, '_');
+        if (!(category && opcode)) return;
+
+        const categoryInfo = this._blockInfo.find(ci => ci.id === category);
+        if (!categoryInfo) return;
+
+        const isDynamicExtensionBlock =
+            block.mutation &&
+            block.mutation.blockInfo &&
+            block.mutation.blockInfo.isDynamic;
+        let extensionBlockInfo;
+        if (isDynamicExtensionBlock) {
+            extensionBlockInfo = block.mutation.blockInfo;
+        } else {
+            const extensionBlockDesc = categoryInfo.blocks.find(b => b.info.opcode === opcode);
+            extensionBlockInfo = (extensionBlockDesc && extensionBlockDesc.info) || null;
+        }
+        if (!extensionBlockInfo) return;
+
+        // TODO get rid of this when we update the core extension name
+        const temporaryCategory = category === 'data2' ? 'data' : category;
+        if (this.isCoreExtension(temporaryCategory)) {
+            return {
+                color: extensionBlockInfo.color1 || categoryInfo.color1,
+                label: extensionBlockInfo.text
+            };
+        }
+        
+        // TODO: we may want to format the label in a locale-specific way.
+        return {
+            category: 'extension', // This assumes that all extensions have the same monitor color.
+            label: `${categoryInfo.name}: ${extensionBlockInfo.text}`
+        };
+    }
+
+    /**
+     * Keep track of the fact that a monitor has been requested
+     * for the given blockId, even though the block with the given id
+     * does not exist in the flyout yet.
+     * @param {string} blockId The id of the block with a pending monitor
+     */
+    addPendingMonitor (blockId) {
+        this._pendingMonitors.add(blockId);
+    }
+
+    /**
+     * Removes a block id from the pending monitors list (e.g. if it has
+     * been turned into an actual monitor).
+     * @param {string} blockId The id of the block with a pending monitor
+     */
+    removePendingMonitor (blockId) {
+        this._pendingMonitors.delete(blockId);
+    }
+
+    /**
+     * Checks whether the given block id has a pending monitor.
+     * @param {string} blockId The id of the block with a pending monitor
+     * @return {boolean} True if the block has a pending monitor, false otherwise.
+     */
+    getPendingMonitor (blockId) {
+        return this._pendingMonitors.has(blockId);
     }
 
     /**
@@ -3466,6 +3601,15 @@ class Runtime extends EventEmitter {
      */
     requestBlocksUpdate () {
         this.emit(Runtime.BLOCKS_NEED_UPDATE);
+    }
+
+    /**
+     * Emit an event that indicates that the given block got updated.
+     * @param {string} blockId The id of the block
+     * @param {ExtensionBlockMetadata} blockInfo The new block info
+     */
+    updateBlockInfo (blockId, blockInfo) {
+        this.emit(Runtime.BLOCK_UPDATE, blockId, blockInfo);
     }
 
     /**
@@ -3574,24 +3718,26 @@ class Runtime extends EventEmitter {
     /**
      * Wrap an asset loading promise with progress support.
      * @template T
-     * @param {Promise<T>} promise
+     * @param {() => Promise<T>} callback
      * @returns {Promise<T>}
      */
-    wrapAssetRequest (promise) {
+    wrapAssetRequest (callback) {
         this.totalAssetRequests++;
         this.emitAssetProgress();
 
-        return promise
-            .then(result => {
-                this.finishedAssetRequests++;
-                this.emitAssetProgress();
-                return result;
-            })
-            .catch(error => {
-                this.finishedAssetRequests++;
-                this.emitAssetProgress();
-                throw error;
-            });
+        const onSuccess = result => {
+            this.finishedAssetRequests++;
+            this.emitAssetProgress();
+            return result;
+        };
+
+        const onError = error => {
+            this.finishedAssetRequests++;
+            this.emitAssetProgress();
+            throw error;
+        };
+
+        return callback().then(onSuccess, onError);
     }
 }
 

@@ -115,9 +115,9 @@ class Scratch3OperatorsBlocks {
 
         if (from > to) {
             return Math.min(Math.max(n, to), from);
-        } else {
-            return Math.min(Math.max(n, from), to);
         }
+        return Math.min(Math.max(n, from), to);
+        
     }
 
     random (args) {

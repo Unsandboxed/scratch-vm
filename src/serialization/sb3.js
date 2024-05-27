@@ -4,6 +4,7 @@
  * JSON and then generates all needed scratch-vm runtime structures.
  */
 
+const Runtime = require('../engine/runtime');
 const Blocks = require('../engine/blocks');
 const Sprite = require('../sprites/sprite');
 const Variable = require('../engine/variable');
@@ -44,6 +45,7 @@ const INPUT_DIFF_BLOCK_SHADOW = 3; // obscured shadow
 // Constants used during deserialization of an SB3 file
 const CORE_EXTENSIONS = [
     'argument',
+    'camera',
     'colour',
     'control',
     'data',
@@ -54,6 +56,7 @@ const CORE_EXTENSIONS = [
     'operator',
     'procedures',
     'sensing',
+    'string',
     'sound'
 ];
 
@@ -533,7 +536,12 @@ const serializeVariables = function (variables) {
             continue;
         }
         if (v.type === Variable.LIST_TYPE) {
-            obj.lists[varId] = [v.name, makeSafeForJSON(v.value)];
+            obj.lists[varId] = [
+                v.name, 
+                makeSafeForJSON(v.value), 
+                false, 
+                v.locked
+            ];
             continue;
         }
 
@@ -688,6 +696,7 @@ const serializeMonitors = function (monitors, runtime, extensions) {
                 value: Array.isArray(monitorData.value) ? [] : 0,
                 width: monitorData.width,
                 height: monitorData.height,
+                locked: monitorData.locked,
                 x: monitorData.x - xOffset,
                 y: monitorData.y - yOffset,
                 visible: monitorData.visible
@@ -789,10 +798,21 @@ const serialize = function (runtime, targetId, {allowOptimization = true} = {}) 
         meta.origin = runtime.origin;
     }
 
+    // USB: A few mods have agreed to list our platform's name inside of the project json.
+    // We also add a couple more bits specific to Unsandboxed.
+    const platformMeta = Object.create(null);
+    platformMeta.name = 'Unsandboxed';
+    platformMeta.url = 'https://unsandboxed.org/';
+    platformMeta.version = 'alpha';
+    meta.platform = platformMeta;
+
     // Attach full user agent string to metadata if available
     meta.agent = '';
     // TW: Never include full user agent to slightly improve user privacy
     // if (typeof navigator !== 'undefined') meta.agent = navigator.userAgent;
+
+    // TW: Attach copy of platform information
+    meta.platform = Object.assign({}, runtime.platform);
 
     // Assemble payload and return
     obj.meta = meta;
@@ -1111,7 +1131,7 @@ const parseScratchAssets = function (object, runtime, zip) {
         // we're always loading the 'sb3' representation of the costume
         // any translation that needs to happen will happen in the process
         // of building up the costume object into an sb3 format
-        return runtime.wrapAssetRequest(deserializeCostume(costume, runtime, zip)
+        return runtime.wrapAssetRequest(() => deserializeCostume(costume, runtime, zip)
             .then(() => loadCostume(costumeMd5Ext, costume, runtime)));
         // Only attempt to load the costume after the deserialization
         // process has been completed
@@ -1136,7 +1156,7 @@ const parseScratchAssets = function (object, runtime, zip) {
         // we're always loading the 'sb3' representation of the costume
         // any translation that needs to happen will happen in the process
         // of building up the costume object into an sb3 format
-        return runtime.wrapAssetRequest(deserializeSound(sound, runtime, zip)
+        return runtime.wrapAssetRequest(() => deserializeSound(sound, runtime, zip)
             .then(() => loadSound(sound, runtime, assets.soundBank)));
         // Only attempt to load the sound after the deserialization
         // process has been completed.
@@ -1235,7 +1255,8 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
                 listId,
                 list[0],
                 Variable.LIST_TYPE,
-                false
+                false,
+                list[3],
             );
             newList.value = list[1];
             target.variables[newList.id] = newList;
@@ -1424,6 +1445,7 @@ const deserializeMonitor = function (monitorData, runtime, targets, extensions) 
         } else if (monitorData.opcode === 'data_listcontents') {
             const field = monitorBlock.fields.LIST;
             field.id = monitorData.id;
+            field.locked = monitorData = monitorData.locked;
             field.variableType = Variable.LIST_TYPE;
         }
 
@@ -1469,6 +1491,36 @@ const replaceUnsafeCharsInVariableIds = function (targets) {
 };
 
 /**
+ * @param {object} json
+ * @param {Runtime} runtime
+ * @returns {void|Promise<void>} Resolves when the user has acknowledged any compatibilities, if any exist.
+ */
+const checkPlatformCompatibility = (json, runtime) => {
+    if (!json.meta || !json.meta.platform) {
+        return;
+    }
+
+    const projectPlatform = json.meta.platform.name;
+    if (projectPlatform === runtime.platform.name) {
+        return;
+    }
+
+    let pending = runtime.listenerCount(Runtime.PLATFORM_MISMATCH);
+    if (pending === 0) {
+        return;
+    }
+
+    return new Promise(resolve => {
+        runtime.emit(Runtime.PLATFORM_MISMATCH, json.meta.platform, () => {
+            pending--;
+            if (pending === 0) {
+                resolve();
+            }
+        });
+    });
+};
+
+/**
  * Deserialize the specified representation of a VM runtime and loads it into the provided runtime instance.
  * @param  {object} json - JSON representation of a VM runtime.
  * @param  {Runtime} runtime - Runtime instance
@@ -1476,7 +1528,9 @@ const replaceUnsafeCharsInVariableIds = function (targets) {
  * @param {boolean} isSingleSprite - If true treat as single sprite, else treat as whole project
  * @returns {Promise.<ImportedProject>} Promise that resolves to the list of targets after the project is deserialized
  */
-const deserialize = function (json, runtime, zip, isSingleSprite) {
+const deserialize = async function (json, runtime, zip, isSingleSprite) {
+    await checkPlatformCompatibility(json, runtime);
+
     const extensions = {
         extensionIDs: new Set(),
         extensionURLs: new Map()
@@ -1484,8 +1538,10 @@ const deserialize = function (json, runtime, zip, isSingleSprite) {
 
     // Store the origin field (e.g. project originated at CSFirst) so that we can save it again.
     if (json.meta && json.meta.origin) {
+        // eslint-disable-next-line require-atomic-updates
         runtime.origin = json.meta.origin;
     } else {
+        // eslint-disable-next-line require-atomic-updates
         runtime.origin = null;
     }
 

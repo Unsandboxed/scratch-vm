@@ -203,6 +203,9 @@ class Scratch3SensingBlocks {
         if (args.DISTANCETOMENU === '_mouse_') {
             targetX = util.ioQuery('mouse', 'getScratchX');
             targetY = util.ioQuery('mouse', 'getScratchY');
+        } else if (args.DISTANCETOMENU === '_camera_') {
+            targetX = this.runtime.camera.x;
+            targetY = this.runtime.camera.y;
         } else {
             args.DISTANCETOMENU = Cast.toString(args.DISTANCETOMENU);
             const distTarget = this.runtime.getSpriteTargetByName(

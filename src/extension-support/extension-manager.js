@@ -383,6 +383,16 @@ class ExtensionManager {
     }
 
     /**
+     * Modify the provided text as necessary to ensure that it may be used as an attribute value in valid XML.
+     * @param {string} text - the text to be sanitized
+     * @returns {string} - the sanitized text
+     * @private
+     */
+    _sanitizeID (text) {
+        return text.toString().replace(/[<"&]/, '_');
+    }
+
+    /**
      * Apply minor cleanup and defaults for optional extension fields.
      * TODO: make the ID unique in cases where two copies of the same extension are loaded.
      * @param {string} serviceName - the name of the service hosting this extension block
@@ -430,6 +440,18 @@ class ExtensionManager {
      */
     _prepareMenuInfo (serviceName, menus) {
         const menuNames = Object.getOwnPropertyNames(menus);
+
+        // `makeGetItemsShim` is like `bind` except that it explicitly doesn't bind `this`
+        const makeGetItemsShim = (serviceObject, menuItemFunctionName) => {
+            const extensionManager = this;
+            return function () {
+                // scratch-blocks passes the menu as `this` when calling a menu's `items` function
+                const scratchBlocksMenuObject = this; // eslint-disable-line no-invalid-this
+                return extensionManager._getExtensionMenuItems(
+                    serviceObject, menuItemFunctionName, scratchBlocksMenuObject);
+            };
+        };
+
         for (let i = 0; i < menuNames.length; i++) {
             const menuName = menuNames[i];
             let menuInfo = menus[menuName];
@@ -447,8 +469,7 @@ class ExtensionManager {
             if (typeof menuInfo.items === 'string') {
                 const menuItemFunctionName = menuInfo.items;
                 const serviceObject = dispatch.services[serviceName];
-                // Bind the function here so we can pass a simple item generation function to Scratch Blocks later.
-                menuInfo.items = this._getExtensionMenuItems.bind(this, serviceObject, menuItemFunctionName);
+                menuInfo.items = makeGetItemsShim(serviceObject, menuItemFunctionName);
             }
         }
         return menus;
@@ -458,19 +479,27 @@ class ExtensionManager {
      * Fetch the items for a particular extension menu, providing the target ID for context.
      * @param {object} extensionObject - the extension object providing the menu.
      * @param {string} menuItemFunctionName - the name of the menu function to call.
+     * @param {object} scratchBlocksMenuObject - the scratch-blocks menu object, for access to its current state.
      * @returns {Array} menu items ready for scratch-blocks.
      * @private
      */
-    _getExtensionMenuItems (extensionObject, menuItemFunctionName) {
+    _getExtensionMenuItems (extensionObject, menuItemFunctionName, scratchBlocksMenuObject) {
         // Fetch the items appropriate for the target currently being edited. This assumes that menus only
         // collect items when opened by the user while editing a particular target.
         const editingTarget = this.runtime.getEditingTarget() || this.runtime.getTargetForStage();
         const editingTargetID = editingTarget ? editingTarget.id : null;
         const extensionMessageContext = this.runtime.makeMessageContextForTarget(editingTarget);
 
+        // trim the menu state down to structured-copy-compatible properties that extensions might need
+        const menuState = {
+            selectedValue: scratchBlocksMenuObject.getValue(),
+            sourceBlock: scratchBlocksMenuObject.sourceBlock_,
+            state: scratchBlocksMenuObject,
+        };
+
         // TODO: Fix this to use dispatch.call when extensions are running in workers.
         const menuFunc = extensionObject[menuItemFunctionName];
-        const menuItems = menuFunc.call(extensionObject, editingTargetID).map(
+        const menuItems = menuFunc.call(extensionObject, editingTargetID, menuState).map(
             item => {
                 item = maybeFormatMessage(item, extensionMessageContext);
                 switch (typeof item) {
@@ -514,6 +543,19 @@ class ExtensionManager {
             arguments: {}
         }, blockInfo);
         blockInfo.text = blockInfo.text || blockInfo.opcode;
+
+        if (blockInfo.customContextMenu && blockInfo.customContextMenu.length > 0) {
+            // Replace all the string callback names of the context menu items
+            // with the actual function call.
+            blockInfo.customContextMenu = blockInfo.customContextMenu.map(contextMenuOption => {
+                if (typeof contextMenuOption.callback === 'string') {
+                    const callbackName = this._sanitizeID(contextMenuOption.callback);
+                    contextMenuOption.callback = args =>
+                        dispatch.call(serviceName, callbackName, args);
+                }
+                return contextMenuOption;
+            });
+        }
 
         switch (blockInfo.blockType) {
         case BlockType.EVENT:
@@ -560,15 +602,6 @@ class ExtensionManager {
                                     return result;
                                 }
                                 return `${result}`;
-                            })
-                            // When an error happens, instead of returning undefined, we'll return a stringified
-                            // version of the error so that it can be debugged.
-                            .catch(err => {
-                                // We want the full error including stack to be printed but the log helper
-                                // messes with that.
-                                // eslint-disable-next-line no-console
-                                console.error('Custom extension block error', err);
-                                return `${err}`;
                             });
                 }
 

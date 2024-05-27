@@ -5,7 +5,7 @@ if (typeof TextEncoder === 'undefined') {
     _TextEncoder = TextEncoder;
 }
 const EventEmitter = require('events');
-const JSZip = require('jszip');
+const JSZip = require('@turbowarp/jszip');
 
 const Buffer = require('buffer').Buffer;
 const centralDispatch = require('./dispatch/central-dispatch');
@@ -21,6 +21,9 @@ const formatMessage = require('format-message');
 const Variable = require('./engine/variable');
 const newBlockIds = require('./util/new-block-ids');
 
+const BLE = require('./io/ble');
+const BT = require('./io/bt');
+
 const {loadCostume} = require('./import/load-costume.js');
 const {loadSound} = require('./import/load-sound.js');
 const {serializeSounds, serializeCostumes} = require('./serialization/serialize-assets');
@@ -28,7 +31,7 @@ require('canvas-toBlob');
 const {exportCostume} = require('./serialization/tw-costume-import-export');
 const Base64Util = require('./util/base64-util');
 
-const RESERVED_NAMES = ['_mouse_', '_stage_', '_edge_', '_myself_', '_random_'];
+const RESERVED_NAMES = ['_mouse_', '_stage_', '_edge_', '_myself_', '_random_', '_camera_'];
 
 const CORE_EXTENSIONS = [
     // 'motion',
@@ -70,6 +73,11 @@ class VirtualMachine extends EventEmitter {
         centralDispatch.setService('runtime', createRuntimeService(this.runtime)).catch(e => {
             log.error(`Failed to register runtime service: ${JSON.stringify(e)}`);
         });
+
+        this.io = {
+            BLE,
+            BT
+        };
 
         /**
          * The "currently editing"/selected target ID for the VM.
@@ -135,6 +143,9 @@ class VirtualMachine extends EventEmitter {
         });
         this.runtime.on(Runtime.BLOCKS_NEED_UPDATE, () => {
             this.emitWorkspaceUpdate();
+        });
+        this.runtime.on(Runtime.BLOCK_UPDATE, (blockId, blockInfo) => {
+            this.emit(Runtime.BLOCK_UPDATE, blockId, blockInfo);
         });
         this.runtime.on(Runtime.TOOLBOX_EXTENSIONS_NEED_UPDATE, () => {
             this.extensionManager.refreshBlocks();
@@ -228,7 +239,8 @@ class VirtualMachine extends EventEmitter {
                     JSGenerator: require('./compiler/jsgen.js'),
                     IRGenerator: require('./compiler/irgen.js').IRGenerator,
                     ScriptTreeGenerator: require('./compiler/irgen.js').ScriptTreeGenerator,
-                    Thread: require('./engine/thread.js')
+                    Thread: require('./engine/thread.js'),
+                    execute: require('./engine/execute.js')
                 });
             }
         };
