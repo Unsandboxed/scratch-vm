@@ -1445,6 +1445,7 @@ const deserializeMonitor = function (monitorData, runtime, targets, extensions) 
         } else if (monitorData.opcode === 'data_listcontents') {
             const field = monitorBlock.fields.LIST;
             field.id = monitorData.id;
+            field.locked = monitorData = monitorData.locked;
             field.variableType = Variable.LIST_TYPE;
         }
 
