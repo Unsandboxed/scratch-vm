@@ -17,6 +17,7 @@ const MonitorRecord = Record({
     y: null,
     width: 0,
     height: 0,
+    locked: false,
     visible: true
 });
 
