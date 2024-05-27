@@ -696,7 +696,6 @@ const serializeMonitors = function (monitors, runtime, extensions) {
                 value: Array.isArray(monitorData.value) ? [] : 0,
                 width: monitorData.width,
                 height: monitorData.height,
-                locked: monitorData.locked,
                 x: monitorData.x - xOffset,
                 y: monitorData.y - yOffset,
                 visible: monitorData.visible
@@ -705,6 +704,7 @@ const serializeMonitors = function (monitors, runtime, extensions) {
                 serializedMonitor.sliderMin = monitorData.sliderMin;
                 serializedMonitor.sliderMax = monitorData.sliderMax;
                 serializedMonitor.isDiscrete = monitorData.isDiscrete;
+                serializedMonitor.locked = monitorData.locked;
             }
             return serializedMonitor;
         })
