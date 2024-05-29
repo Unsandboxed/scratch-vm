@@ -924,12 +924,14 @@ class JSGenerator {
             this.source += `}\n`;
             break;
 
-        case 'control.allAtOnce':
+        case 'control.allAtOnce': {
+            // eslint-disable-next-line no-case-declarations
             const previousWarp = this.isWarp;
             this.isWarp = true;
             this.descendStack(node.code, new Frame(false, 'control.allAtOnce'));
             this.isWarp = previousWarp;
             break;
+        }
 
         case 'counter.clear':
             this.source += 'runtime.ext_scratch3_control._counter = 0;\n';
