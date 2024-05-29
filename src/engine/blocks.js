@@ -711,7 +711,7 @@ class Blocks {
 
             // Update block value
             if (!block.fields[args.name]) return;
-            if (typeof block.fields[args.name].variableType !== 'undefined') {
+            if (block.fields[args.name].variableType) {
                 // Get variable name using the id in args.value.
                 const variable = this.runtime.getEditingTarget().lookupVariableById(args.value);
                 if (variable) {
@@ -979,7 +979,7 @@ class Blocks {
 
         const variableBlocks = [];
         for (const blockId in this._blocks) {
-            if (!this._blocks.hasOwnProperty(blockId)) continue;
+            if (!this._blocks.hasOwn(blockId)) continue;
             const block = this._blocks[blockId];
             // Check for blocks with fields referencing variable/list, otherwise variable/list reporters
             if (block.fields[fieldName] &&
