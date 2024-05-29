@@ -488,6 +488,7 @@ const serializeSound = function (sound) {
 // as it will fail validation in scratch-parser.
 // To avoid this, we'll convert those objects to strings before saving them.
 const isVariableValueSafeForJSON = value => (
+    typeof value === 'object' ||
     typeof value === 'number' ||
     typeof value === 'string' ||
     typeof value === 'boolean'
