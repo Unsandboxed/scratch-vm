@@ -1,5 +1,4 @@
 const Color = require('../util/color');
-const log = require('./log');
 
 /**
  * @fileoverview
