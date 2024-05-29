@@ -38,8 +38,7 @@ class Variable {
     toXML (isLocal) {
         isLocal = (isLocal === true);
         return `<variable type="${this.type}" id="${this.id}" islocal="${isLocal
-        }" iscloud="${this.isCloud}" islocked="${this.locked
-        }">${xmlEscape(this.name)}</variable>`;
+        }" iscloud="${this.isCloud}">${xmlEscape(this.name)}</variable>`;
     }
 
     /**

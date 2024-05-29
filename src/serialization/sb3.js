@@ -56,8 +56,8 @@ const CORE_EXTENSIONS = [
     'operator',
     'procedures',
     'sensing',
-    'string',
-    'sound'
+    'sound',
+    'string'
 ];
 
 // Constants referring to 'primitive' blocks that are usually shadows,
@@ -536,12 +536,7 @@ const serializeVariables = function (variables) {
             continue;
         }
         if (v.type === Variable.LIST_TYPE) {
-            obj.lists[varId] = [
-                v.name, 
-                makeSafeForJSON(v.value), 
-                false, 
-                v.locked
-            ];
+            obj.lists[varId] = [v.name, makeSafeForJSON(v.value)];
             continue;
         }
 
@@ -696,7 +691,6 @@ const serializeMonitors = function (monitors, runtime, extensions) {
                 value: Array.isArray(monitorData.value) ? [] : 0,
                 width: monitorData.width,
                 height: monitorData.height,
-                locked: monitorData.locked,
                 x: monitorData.x - xOffset,
                 y: monitorData.y - yOffset,
                 visible: monitorData.visible
@@ -797,14 +791,6 @@ const serialize = function (runtime, targetId, {allowOptimization = true} = {}) 
     if (runtime.origin) {
         meta.origin = runtime.origin;
     }
-
-    // USB: A few mods have agreed to list our platform's name inside of the project json.
-    // We also add a couple more bits specific to Unsandboxed.
-    const platformMeta = Object.create(null);
-    platformMeta.name = 'Unsandboxed';
-    platformMeta.url = 'https://unsandboxed.org/';
-    platformMeta.version = 'alpha';
-    meta.platform = platformMeta;
 
     // Attach full user agent string to metadata if available
     meta.agent = '';
@@ -1255,8 +1241,7 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
                 listId,
                 list[0],
                 Variable.LIST_TYPE,
-                false,
-                list[3],
+                false
             );
             newList.value = list[1];
             target.variables[newList.id] = newList;
@@ -1445,7 +1430,6 @@ const deserializeMonitor = function (monitorData, runtime, targets, extensions) 
         } else if (monitorData.opcode === 'data_listcontents') {
             const field = monitorBlock.fields.LIST;
             field.id = monitorData.id;
-            field.locked = monitorData = monitorData.locked;
             field.variableType = Variable.LIST_TYPE;
         }
 
