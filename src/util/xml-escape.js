@@ -11,7 +11,7 @@ const Cast = require('./cast');
  */
 const xmlEscape = function (unsafe) {
     if (typeof unsafe !== 'string') {
-        if (typeof unsafe === "object") {
+        if (typeof unsafe === 'object') {
             // This happens when we have hacked blocks from 2.0
             // See #1030
             unsafe = Cast.toString(unsafe);

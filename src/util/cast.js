@@ -109,7 +109,7 @@ class Cast {
 
         // Numbers are finicky with JSON.parse. The output of this
         // should ALWAYS be an array.
-        if (typeof value === "number") {
+        if (typeof value === 'number') {
             return [];
         }
 
@@ -127,13 +127,13 @@ class Cast {
      */
     static toObject (value) {
         // Already an object?
-        if (typeof value === "object" && !Array.isArray(value)) {
+        if (typeof value === 'object' && !Array.isArray(value)) {
             return value;
         }
 
         // Numbers are finicky with JSON.parse. The output of this
         // should ALWAYS be an object.
-        if (typeof value === "number") {
+        if (typeof value === 'number') {
             return Object.create(null);
         }
 
@@ -150,9 +150,9 @@ class Cast {
      * @return {any} Sanitized json value.
      */
     static sanitize (value) {
-        if (typeof value === "object") {
+        if (typeof value === 'object') {
             return JSON.stringify(value);
-        } else return value;
+        } return value;
     }
 
     /**
