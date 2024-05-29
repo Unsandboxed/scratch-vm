@@ -73,11 +73,11 @@ class Scratch3CameraBlocks {
         this.runtime.camera.setXY(this.runtime.camera.x, newY);
     }
 
-    getCameraX (args) {
+    getCameraX () {
         return this.runtime.camera.x;
     }
 
-    getCameraY (args) {
+    getCameraY () {
         return this.runtime.camera.y;
     }
 }
