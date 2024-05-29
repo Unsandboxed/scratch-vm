@@ -313,7 +313,7 @@ class BlockCached {
 
         // Store the static fields onto _argValues.
         for (const fieldName in fields) {
-            if (typeof fields[fieldName].variableType !== 'undefined') {
+            if (fields[fieldName].variableType) {
                 this._argValues[fieldName] = {
                     id: fields[fieldName].id,
                     name: fields[fieldName].value
