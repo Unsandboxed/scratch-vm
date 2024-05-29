@@ -1,5 +1,4 @@
 const Cast = require('../util/cast.js');
-const MathUtil = require('../util/math-util.js');
 
 class Scratch3StringBlocks {
     constructor (runtime) {
