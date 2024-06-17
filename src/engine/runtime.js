@@ -592,11 +592,6 @@ class Runtime extends EventEmitter {
         this.ArgumentTypeMap = ArgumentTypeMap;
 
         this.FieldTypeMap = FieldTypeMap;
-
-        /**
-         *  Information used for converting Extension argument types into scratch-blocks data.
-         */
-        this.extensionBlockShapes = {};
     }
 
     /**
@@ -1381,7 +1376,7 @@ class Runtime extends EventEmitter {
         };
     }
 
-    _buildCustomShapeInfo (shapeName, shapeInfo, extensionId, categoryInfo) {
+    _buildCustomShapeInfo (shapeName, shapeInfo, extensionId, _categoryInfo) {
         const extendedName = `${extensionId}_${shapeName}`;
         shapeInfo.output = shapeInfo.output || null;
         shapeInfo.outputShape = shapeInfo.outputShape || shapeName;
@@ -1389,29 +1384,11 @@ class Runtime extends EventEmitter {
             shapeName: shapeName,
             extendedName: extendedName,
             argumentTypeInfo: {
+                output: shapeInfo.output,
+                outputShape: shapeInfo.outputShape,
                 shadow: {
                     type: extendedName,
-                    fieldName: `shape_${extendedName}`
-                },
-                output: shapeInfo.output,
-                outputShape: shapeInfo.outputShape
-            },
-            scratchBlocksDefinition: {
-                json: {
-                    type: shapeName,
-                    message0: '%1',
-                    inputsInline: true,
-                    output: shapeInfo.output,
-                    colour: categoryInfo.color1,
-                    colourSecondary: categoryInfo.color2,
-                    colourTertiary: categoryInfo.color3,
-                    outputShape: shapeInfo.outputShape,
-                    args0: [
-                        {
-                            name: `shape_${shapeName}`,
-                            type: `shape_${shapeName}`
-                        }
-                    ]
+                    fieldName: `field_${extendedName}`
                 }
             },
             shapeImplementation: shapeInfo
