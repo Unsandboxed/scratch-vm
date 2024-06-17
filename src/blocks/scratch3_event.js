@@ -67,7 +67,7 @@ class Scratch3EventBlocks {
         };
     }
 
-    when (args, util) {
+    when (args) {
         const condition = Cast.toBoolean(args.CONDITION);
         return condition;
     }

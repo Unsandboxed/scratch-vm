@@ -925,6 +925,7 @@ class JSGenerator {
             break;
 
         case 'control.allAtOnce':
+            // eslint-disable-next-line no-case-declarations
             const previousWarp = this.isWarp;
             this.isWarp = true;
             this.descendStack(node.code, new Frame(false, 'control.allAtOnce'));

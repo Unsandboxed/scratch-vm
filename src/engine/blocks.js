@@ -711,14 +711,7 @@ class Blocks {
 
             // Update block value
             if (!block.fields[args.name]) return;
-            if (typeof block.fields[args.name].variableType !== 'undefined') {
-                // Get variable name using the id in args.value.
-                const variable = this.runtime.getEditingTarget().lookupVariableById(args.value);
-                if (variable) {
-                    block.fields[args.name].value = variable.name;
-                    block.fields[args.name].id = args.value;
-                }
-            } else {
+            if (typeof block.fields[args.name].variableType === 'undefined') {
                 // Changing the value in a dropdown
                 block.fields[args.name].value = args.value;
 
@@ -740,6 +733,13 @@ class Blocks {
                         id: flyoutBlock.id,
                         params: this._getBlockParams(flyoutBlock)
                     }));
+                }
+            } else {
+                // Get variable name using the id in args.value.
+                const variable = this.runtime.getEditingTarget().lookupVariableById(args.value);
+                if (variable) {
+                    block.fields[args.name].value = variable.name;
+                    block.fields[args.name].id = args.value;
                 }
             }
             break;
@@ -979,7 +979,7 @@ class Blocks {
 
         const variableBlocks = [];
         for (const blockId in this._blocks) {
-            if (!this._blocks.hasOwnProperty(blockId)) continue;
+            if (!Object.prototype.hasOwnProperty.call(this._blocks, blockId)) continue;
             const block = this._blocks[blockId];
             // Check for blocks with fields referencing variable/list, otherwise variable/list reporters
             if (block.fields[fieldName] &&
