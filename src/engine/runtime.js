@@ -1233,6 +1233,11 @@ class Runtime extends EventEmitter {
         for (const blockShapeName in extensionInfo.customBlockShapes) {
             if (Object.prototype.hasOwnProperty.call(extensionInfo.customBlockShapes, blockShapeName)) {
                 const blockShape = extensionInfo.customBlockShapes[blockShapeName];
+
+                this.ArgumentTypeMap[blockShapeName] = blockShape.argInfo;
+                const argInfo = this.ArgumentTypeMap[blockShapeName];
+                argInfo.check = argInfo.check ?? blockShapeName;
+
                 const blockShapeInfo = this._buildCustomShapeInfo(
                     blockShapeName,
                     blockShape,
@@ -1378,18 +1383,12 @@ class Runtime extends EventEmitter {
 
     _buildCustomShapeInfo (shapeName, shapeInfo, extensionId, _categoryInfo) {
         const extendedName = `${extensionId}_${shapeName}`;
-        shapeInfo.output = shapeInfo.output || null;
-        shapeInfo.outputShape = shapeInfo.outputShape || shapeName;
+        shapeInfo.blockInfo = shapeInfo.blockInfo || {};
+        shapeInfo.argInfo = shapeInfo.argInfo || {};
         return {
             shapeName: shapeName,
             extendedName: extendedName,
             argumentTypeInfo: {
-                output: shapeInfo.output,
-                outputShape: shapeInfo.outputShape,
-                shadow: {
-                    type: extendedName,
-                    fieldName: `field_${extendedName}`
-                }
             },
             shapeImplementation: shapeInfo
         };
@@ -1568,10 +1567,13 @@ class Runtime extends EventEmitter {
             break;
         default:
             if (categoryInfo.customBlockShapes && categoryInfo.customBlockShapes[blockInfo.blockType]) {
-                const argumentTypeInfo = categoryInfo.customBlockShapes[blockInfo.blockType].argumentTypeInfo;
-                for (const prop of Object.keys(argumentTypeInfo)) {
-                    blockJSON[prop] = argumentTypeInfo[prop];
+                const shapeInfo = categoryInfo.customBlockShapes[blockInfo.blockType];
+                const blockTypeInfo =
+                    shapeInfo.shapeImplementation.blockInfo;
+                for (const prop of Object.keys(blockTypeInfo)) {
+                    blockJSON[prop] = blockTypeInfo[prop];
                 }
+                blockJSON.extensions.push(`output_${shapeInfo.extendedName}`);
             }
         }
 
@@ -1788,16 +1790,15 @@ class Runtime extends EventEmitter {
     _convertPlaceholders (context, match, placeholder) {
         // Determine whether the argument type is one of the known standard field types
         const argInfo = context.blockInfo.arguments[placeholder] || {};
-        let argTypeInfo = ArgumentTypeMap[argInfo.type] || {};
+        let argTypeInfo = this.ArgumentTypeMap[argInfo.type] || {};
 
         // Field type not a standard field type, see if extension has registered custom field type
-        if (!ArgumentTypeMap[argInfo.type]) {
+        if (!this.ArgumentTypeMap[argInfo.type]) {
             if (context.categoryInfo.customFieldTypes[argInfo.type]) {
                 argTypeInfo = context.categoryInfo.customFieldTypes[argInfo.type].argumentTypeInfo;
-            } else if (context.categoryInfo.customBlockShapes[argInfo.type]) {
-                argTypeInfo = context.categoryInfo.customBlockShapes[argInfo.type].argumentTypeInfo;
             }
         }
+        console.log(argInfo.type, this.ArgumentTypeMap[argInfo.type]);
 
         // Start to construct the scratch-blocks style JSON defining how the block should be
         // laid out
@@ -1834,6 +1835,14 @@ class Runtime extends EventEmitter {
                 // input slot on the block accepts Boolean reporters, so it should be
                 // shaped like a hexagon
                 argJSON.check = argTypeInfo.check;
+            }
+
+            if (context.categoryInfo.customBlockShapes[argInfo.type]) {
+                for (const prop in argTypeInfo) {
+                    argJSON[prop] = argTypeInfo[prop];
+                }
+                argJSON.type = argTypeInfo.output;
+                console.log('arg json', argJSON);
             }
 
             let valueName;
