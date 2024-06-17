@@ -1566,7 +1566,7 @@ class Runtime extends EventEmitter {
         const mutation = blockInfo.isDynamic ? `<mutation blockInfo="${xmlEscape(JSON.stringify(blockInfo))}"/>` : '';
         const inputs = context.inputList.join('');
         const toolboxIdXml = blockInfo.isDynamic && blockInfo.paletteKey ?
-        ` id="${xmlEscape(blockInfo.paletteKey)}"` : '';
+            ` id="${xmlEscape(blockInfo.paletteKey)}"` : '';
         const blockXML = `<block type="${xmlEscape(extendedOpcode)}"${toolboxIdXml}>${mutation}${inputs}</block>`;
 
         if (blockInfo.extensions) {

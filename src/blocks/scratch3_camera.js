@@ -1,6 +1,4 @@
 const Cast = require('../util/cast');
-const MathUtil = require('../util/math-util');
-const Timer = require('../util/timer');
 
 class Scratch3CameraBlocks {
     constructor (runtime) {
@@ -39,13 +37,13 @@ class Scratch3CameraBlocks {
         };
     }
 
-    moveToXY (args, util) {
+    moveToXY (args) {
         const x = Cast.toNumber(args.X);
         const y = Cast.toNumber(args.Y);
         this.runtime.camera.setXY(x, y);
     }
 
-    changeByXY (args, util) {
+    changeByXY (args) {
         const x = Cast.toNumber(args.X);
         const y = Cast.toNumber(args.Y);
         const newX = x + this.runtime.camera.x;
@@ -53,33 +51,33 @@ class Scratch3CameraBlocks {
         this.runtime.camera.setXY(newX, newY);
     }
 
-    setX (args, util) {
+    setX (args) {
         const x = Cast.toNumber(args.X);
         this.runtime.camera.setXY(x, this.runtime.camera.y);
     }
 
-    changeX (args, util) {
+    changeX (args) {
         const x = Cast.toNumber(args.X);
         const newX = x + this.runtime.camera.x;
         this.runtime.camera.setXY(newX, this.runtime.camera.y);
     }
 
-    setY (args, util) {
+    setY (args) {
         const y = Cast.toNumber(args.Y);
         this.runtime.camera.setXY(this.runtime.camera.x, y);
     }
 
-    changeY (args, util) {
+    changeY (args) {
         const y = Cast.toNumber(args.Y);
         const newY = y + this.runtime.camera.y;
         this.runtime.camera.setXY(this.runtime.camera.x, newY);
     }
 
-    getCameraX (args, util) {
+    getCameraX () {
         return this.runtime.camera.x;
     }
 
-    getCameraY (args, util) {
+    getCameraY () {
         return this.runtime.camera.y;
     }
 }

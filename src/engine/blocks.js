@@ -979,7 +979,7 @@ class Blocks {
 
         const variableBlocks = [];
         for (const blockId in this._blocks) {
-            if (!this._blocks.hasOwnProperty(blockId)) continue;
+            if (!Object.prototype.hasOwnProperty.call(this._blocks, blockId)) continue;
             const block = this._blocks[blockId];
             // Check for blocks with fields referencing variable/list, otherwise variable/list reporters
             if (block.fields[fieldName] &&

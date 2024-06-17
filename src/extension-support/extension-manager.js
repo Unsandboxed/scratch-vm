@@ -494,7 +494,7 @@ class ExtensionManager {
         const menuState = {
             selectedValue: scratchBlocksMenuObject.getValue(),
             sourceBlock: scratchBlocksMenuObject.sourceBlock_,
-            state: scratchBlocksMenuObject,
+            state: scratchBlocksMenuObject
         };
 
         // TODO: Fix this to use dispatch.call when extensions are running in workers.
