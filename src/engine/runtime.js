@@ -584,6 +584,19 @@ class Runtime extends EventEmitter {
          * Total number of finished or errored scratch-storage load() requests since the runtime was created or cleared.
          */
         this.finishedAssetRequests = 0;
+
+        /**
+         * Information used for converting Scratch argument types into scratch-blocks data.
+         * @type {object.<ArgumentType, {shadowType: string, fieldType: string}>}
+         */
+        this.ArgumentTypeMap = ArgumentTypeMap;
+
+        this.FieldTypeMap = FieldTypeMap;
+
+        /**
+         *  Information used for converting Extension argument types into scratch-blocks data.
+         */
+        this.extensionBlockShapes = {};
     }
 
     /**
@@ -854,6 +867,14 @@ class Runtime extends EventEmitter {
      */
     static get EXTENSION_FIELD_ADDED () {
         return 'EXTENSION_FIELD_ADDED';
+    }
+
+    /**
+     * Event name for reporting that an extension as asked for a custom block shape to be added
+     * @const {string}
+     */
+    static get EXTENSION_SHAPE_ADDED () {
+        return 'EXTENSION_SHAPE_ADDED';
     }
 
     /**
@@ -1141,6 +1162,18 @@ class Runtime extends EventEmitter {
             }
         }
 
+        for (const blockShapeName in categoryInfo.customBlockShapes) {
+            if (Object.prototype.hasOwnProperty.call(extensionInfo.customBlockShapes, blockShapeName)) {
+                const blockShapeInfo = categoryInfo.customBlockShapes[blockShapeName];
+
+                // Emit events for custom block shapes from extension
+                this.emit(Runtime.EXTENSION_SHAPE_ADDED, {
+                    name: blockShapeName,
+                    implementation: blockShapeInfo
+                });
+            }
+        }
+
         this.emit(Runtime.EXTENSION_ADDED, categoryInfo);
     }
 
@@ -1169,6 +1202,7 @@ class Runtime extends EventEmitter {
     _fillExtensionCategory (categoryInfo, extensionInfo) {
         categoryInfo.blocks = [];
         categoryInfo.customFieldTypes = {};
+        categoryInfo.customBlockShapes = {};
         categoryInfo.menus = [];
         categoryInfo.menuInfo = {};
         categoryInfo.convertedMenuInfo = {};
@@ -1199,6 +1233,19 @@ class Runtime extends EventEmitter {
                 );
 
                 categoryInfo.customFieldTypes[fieldTypeName] = fieldTypeInfo;
+            }
+        }
+        for (const blockShapeName in extensionInfo.customBlockShapes) {
+            if (Object.prototype.hasOwnProperty.call(extensionInfo.customBlockShapes, blockShapeName)) {
+                const blockShape = extensionInfo.customBlockShapes[blockShapeName];
+                const blockShapeInfo = this._buildCustomShapeInfo(
+                    blockShapeName,
+                    blockShape,
+                    extensionInfo.id,
+                    categoryInfo
+                );
+
+                categoryInfo.customBlockShapes[blockShapeName] = blockShapeInfo;
             }
         }
 
@@ -1331,6 +1378,43 @@ class Runtime extends EventEmitter {
                 categoryInfo
             ),
             fieldImplementation: fieldInfo.implementation
+        };
+    }
+
+    _buildCustomShapeInfo (shapeName, shapeInfo, extensionId, categoryInfo) {
+        const extendedName = `${extensionId}_${shapeName}`;
+        shapeInfo.output = shapeInfo.output || null;
+        shapeInfo.outputShape = shapeInfo.outputShape || shapeName;
+        return {
+            shapeName: shapeName,
+            extendedName: extendedName,
+            argumentTypeInfo: {
+                shadow: {
+                    type: extendedName,
+                    fieldName: `shape_${extendedName}`
+                },
+                output: shapeInfo.output,
+                outputShape: shapeInfo.outputShape
+            },
+            scratchBlocksDefinition: {
+                json: {
+                    type: shapeName,
+                    message0: '%1',
+                    inputsInline: true,
+                    output: shapeInfo.output,
+                    colour: categoryInfo.color1,
+                    colourSecondary: categoryInfo.color2,
+                    colourTertiary: categoryInfo.color3,
+                    outputShape: shapeInfo.outputShape,
+                    args0: [
+                        {
+                            name: `shape_${shapeName}`,
+                            type: `shape_${shapeName}`
+                        }
+                    ]
+                }
+            },
+            shapeImplementation: shapeInfo
         };
     }
 
@@ -1505,6 +1589,13 @@ class Runtime extends EventEmitter {
             blockJSON.output = 'Object';
             blockJSON.outputShape = ScratchBlocksConstants.OUTPUT_SHAPE_OBJECT;
             break;
+        default:
+            if (categoryInfo.customBlockShapes && categoryInfo.customBlockShapes[blockInfo.blockType]) {
+                const argumentTypeInfo = categoryInfo.customBlockShapes[blockInfo.blockType].argumentTypeInfo;
+                for (const prop of Object.keys(argumentTypeInfo)) {
+                    blockJSON[prop] = argumentTypeInfo[prop];
+                }
+            }
         }
 
         const blockText = Array.isArray(blockInfo.text) ? blockInfo.text : [blockInfo.text];
@@ -1723,8 +1814,12 @@ class Runtime extends EventEmitter {
         let argTypeInfo = ArgumentTypeMap[argInfo.type] || {};
 
         // Field type not a standard field type, see if extension has registered custom field type
-        if (!ArgumentTypeMap[argInfo.type] && context.categoryInfo.customFieldTypes[argInfo.type]) {
-            argTypeInfo = context.categoryInfo.customFieldTypes[argInfo.type].argumentTypeInfo;
+        if (!ArgumentTypeMap[argInfo.type]) {
+            if (context.categoryInfo.customFieldTypes[argInfo.type]) {
+                argTypeInfo = context.categoryInfo.customFieldTypes[argInfo.type].argumentTypeInfo;
+            } else if (context.categoryInfo.customBlockShapes[argInfo.type]) {
+                argTypeInfo = context.categoryInfo.customBlockShapes[argInfo.type].argumentTypeInfo;
+            }
         }
 
         // Start to construct the scratch-blocks style JSON defining how the block should be
@@ -2953,6 +3048,7 @@ class Runtime extends EventEmitter {
                     menuIconURI: `data:image/svg+xml;,${encodeURIComponent(ICON)}`,
                     blocks: [],
                     customFieldTypes: {},
+                    customBlockShapes: {},
                     menus: []
                 };
                 this._blockInfo.unshift(blockInfo);
