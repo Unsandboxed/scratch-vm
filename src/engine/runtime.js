@@ -585,6 +585,20 @@ class Runtime extends EventEmitter {
          * Total number of finished or errored scratch-storage load() requests since the runtime was created or cleared.
          */
         this.finishedAssetRequests = 0;
+
+        /**
+         * Export some internal values for extensions.
+         */
+        this.exports = {
+            i_will_not_ask_for_help_when_these_break: () => {
+                console.warn('You are using unsupported APIs. WHEN your code breaks, do not expect help.');
+                return ({
+                    ScratchBlocksConstants,
+                    ArgumentTypeMap,
+                    FieldTypeMap
+                });
+            }
+        };
     }
 
     /**
@@ -1507,6 +1521,19 @@ class Runtime extends EventEmitter {
             blockJSON.outputShape = ScratchBlocksConstants.OUTPUT_SHAPE_OBJECT;
             break;
         }
+
+        if (blockInfo.blockShape ?? blockInfo.outputShape) {
+            blockJSON.outputShape = blockInfo.blockShape ?? blockInfo.outputShape;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(blockInfo, 'output')) {
+            blockJSON.output = blockInfo.output;
+        }
+
+        if (blockInfo.mutator) {
+            blockJSON.mutator = blockInfo.mutator;
+        }
+
 
         const blockText = Array.isArray(blockInfo.text) ? blockInfo.text : [blockInfo.text];
         let inTextNum = 0; // text for the next block "arm" is blockText[inTextNum]
@@ -2874,8 +2901,9 @@ class Runtime extends EventEmitter {
                     height / 2
                 );
             }
+
+            this.emit(Runtime.STAGE_SIZE_CHANGED, width, height);
         }
-        this.emit(Runtime.STAGE_SIZE_CHANGED, width, height);
     }
 
     /**
@@ -3238,7 +3266,7 @@ class Runtime extends EventEmitter {
      * @param {string} value Value to show associated with the block.
      */
     visualReport (blockId, value) {
-        this.emit(Runtime.VISUAL_REPORT, {id: blockId, value: Cast.toString(value)});
+        this.emit(Runtime.VISUAL_REPORT, {id: blockId, value: Cast.toString(value), type: typeof value});
     }
 
     /**

@@ -433,14 +433,31 @@ class JSGenerator {
         case 'addons.call':
             return new TypedInput(`(${this.descendAddonCall(node)})`, TYPE_UNKNOWN);
 
-        case 'args.boolean':
-            return new TypedInput(`toBoolean(p${node.index})`, TYPE_BOOLEAN);
-        case 'args.stringNumber':
-            return new TypedInput(`p${node.index}`, TYPE_UNKNOWN);
         case 'args.parameter':
             return new TypedInput(`(thread.getParam("${node.name}") ?? 0)`, TYPE_UNKNOWN);
 
         case 'compat':
+            if (node.blockType === BlockType.INLINE) {
+                const branchVariable = this.localVariables.next();
+                const returnVariable = this.localVariables.next();
+                let source = '(yield* (function*() {\n';
+                source += `let ${returnVariable} = undefined;\n`;
+                source += `const ${branchVariable} = createBranchInfo(false);\n`;
+                source += `${returnVariable} = (${this.generateCompatibilityLayerCall(node, false, branchVariable)});\n`;
+                source += `${branchVariable}.branch = globalState.blockUtility._startedBranch[0];\n`;
+                source += `switch (${branchVariable}.branch) {\n`;
+                for (const index in node.substacks) {
+                    source += `case ${+index}: {\n`;
+                    source += this.descendStackForSource(node.substacks[index], new Frame(false));
+                    source += `break;\n`;
+                    source += `}\n`; // close case
+                }
+                source += '}\n'; // close switch
+                source += `if (${branchVariable}.onEnd[0]) yield ${branchVariable}.onEnd.shift()(${branchVariable});\n`;
+                source += `return ${returnVariable};\n`;
+                source += '})())'; // close function and yield
+                return new TypedInput(source, TYPE_UNKNOWN);
+            }
             // Compatibility layer inputs never use flags.
             return new TypedInput(`(${this.generateCompatibilityLayerCall(node, false)})`, TYPE_UNKNOWN);
 
@@ -609,8 +626,8 @@ class JSGenerator {
             const right = this.descendInput(node.right);
             return new TypedInput(`(${left.asUnknown()} <= ${right.asUnknown()})`, TYPE_BOOLEAN);
         }
-        //        case 'op.letterOf':
-        //            return new TypedInput(`((${this.descendInput(node.string).asString()})[(${this.descendInput(node.letter).asNumber()} | 0) - 1] || "")`, TYPE_STRING);
+        // case 'op.letterOf':
+        //     return new TypedInput(`((${this.descendInput(node.string).asString()})[(${this.descendInput(node.letter).asNumber()} | 0) - 1] || "")`, TYPE_STRING);
         case 'op.lettersOf':
             return new TypedInput(`((${this.descendInput(node.string).asString()}).substring(${this.descendInput(node.left).asNumber() - 1}, ${this.descendInput(node.right).asNumber()}) || "")`, TYPE_STRING);
         case 'op.ln':
@@ -691,6 +708,8 @@ class JSGenerator {
             }
             return new TypedInput(`${procedureReference}(${joinedArgs})`, TYPE_UNKNOWN);
         }
+        case 'procedures.argument':
+            return new TypedInput(`p${node.index}`, TYPE_UNKNOWN);
 
         case 'sensing.answer':
             return new TypedInput(`runtime.ext_scratch3_sensing._answer`, TYPE_STRING);
@@ -770,7 +789,6 @@ class JSGenerator {
                 return new TypedInput(`${str.toUpperCase() === str}`, TYPE_BOOLEAN);
             }
             return new TypedInput(`${str.toLowerCase() === str}`, TYPE_BOOLEAN);
-            
         }
         case 'str.repeat':
             return new TypedInput(`(${this.descendInput(node.str).asString()}.repeat(${this.descendInput(node.num).asNumber()}))`, TYPE_STRING);
@@ -828,6 +846,7 @@ class JSGenerator {
                     this.source += `}\n`; // close case
                 }
                 this.source += '}\n'; // close switch
+                this.source += `if (${branchVariable}.onEnd[0]) yield ${branchVariable}.onEnd.shift()(${branchVariable});\n`;
                 this.source += `if (!${branchVariable}.isLoop) break;\n`;
                 this.yieldLoop();
                 this.source += '}\n'; // close while
@@ -1271,6 +1290,16 @@ class JSGenerator {
         // TODO: in if/else this might create an extra unused object
         this.resetVariableInputs();
         this.popFrame();
+    }
+
+    descendStackForSource (nodes, frame) {
+        // Wrapper for descendStack to get the source
+        const oldSource = this.source;
+        this.source = '';
+        this.descendStack(nodes, frame);
+        const stackSource = this.source;
+        this.source = oldSource;
+        return stackSource;
     }
 
     descendVariable (variable) {

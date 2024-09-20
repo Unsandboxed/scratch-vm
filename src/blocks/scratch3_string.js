@@ -133,8 +133,8 @@ class Scratch3StringBlocks {
         if (textCase === 'lowercase') {
             return string.toLowerCase();
         }
+
         return string.toUpperCase();
-        
     }
 
     indexOf (args) { // usb
@@ -187,7 +187,6 @@ class Scratch3StringBlocks {
             return str.toLowerCase() === str;
         }
         return str.toUpperCase() === str;
-        
     }
 
 }

@@ -313,13 +313,13 @@ class BlockCached {
 
         // Store the static fields onto _argValues.
         for (const fieldName in fields) {
-            if (fields[fieldName].variableType) {
+            if (typeof fields[fieldName].variableType === 'undefined') {
+                this._argValues[fieldName] = fields[fieldName].value;
+            } else {
                 this._argValues[fieldName] = {
                     id: fields[fieldName].id,
                     name: fields[fieldName].value
                 };
-            } else {
-                this._argValues[fieldName] = fields[fieldName].value;
             }
         }
 
