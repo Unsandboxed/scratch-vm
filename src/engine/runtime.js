@@ -1644,7 +1644,7 @@ class Runtime extends EventEmitter {
             xml: `<label text="${xmlEscape(blockInfo.text)}"></label>`
         };
     }
-    
+
     /**
      * Convert a button for scratch-blocks. A button has no opcode but specifies a callback name in the `func` field.
      * @param {ExtensionBlockMetadata} buttonInfo - the button to convert
@@ -1781,6 +1781,18 @@ class Runtime extends EventEmitter {
                 type: 'input_value',
                 name: placeholder
             };
+
+            if (argInfo.type === ArgumentType.NUMBER) {
+                if (Object.prototype.hasOwnProperty.call(argInfo, 'min')) {
+                    argJSON.min = argInfo.min;
+                }
+                if (Object.prototype.hasOwnProperty.call(argInfo, 'max')) {
+                    argJSON.max = argInfo.max;
+                }
+                if (Object.prototype.hasOwnProperty.call(argInfo, 'precision')) {
+                    argJSON.precision = argInfo.precision;
+                }
+            }
 
             // TO DO: make it impossible to connect anything in here.
             if (argInfo.type === ArgumentType.PARAMETER) {
