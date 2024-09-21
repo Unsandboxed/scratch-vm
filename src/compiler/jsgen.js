@@ -125,9 +125,10 @@ class TypedInput {
  * @implements {Input}
  */
 class ConstantInput {
-    constructor (constantValue, safe) {
+    constructor (constantValue, safe, likelyType) {
         this.constantValue = constantValue;
         this.safe = safe;
+        this.likelyType = likelyType || TYPE_UNKNOWN;
     }
 
     asNumber () {
@@ -557,9 +558,12 @@ class JSGenerator {
             return new TypedInput(`(${this.descendInput(node.string).asString()}.toLowerCase().indexOf(${this.descendInput(node.contains).asString()}.toLowerCase()) !== -1)`, TYPE_BOOLEAN);
         case 'op.cos':
             return new TypedInput(`(Math.round(Math.cos((Math.PI * ${this.descendInput(node.value).asNumber()}) / 180) * 1e10) / 1e10)`, TYPE_NUMBER_NAN);
-        case 'op.divide':
+        case 'op.divide': {
             // Needs to be marked as NaN because 0 / 0 === NaN
-            return new TypedInput(this.precalc.attempt(node.left, node.right, 4) ?? `(${this.descendInput(node.left).asNumber()} / ${this.descendInput(node.right).asNumber()})`, TYPE_NUMBER_NAN);
+            const precalc = this.precalc.attempt(node.left, node.right, 1);
+            if (precalc) return new ConstantInput(precalc, TYPE_NUMBER_NAN);
+            return new TypedInput(`(${this.descendInput(node.left).asNumber()} / ${this.descendInput(node.right).asNumber()})`, TYPE_NUMBER_NAN);
+        }
         case 'op.equals': {
             const left = this.descendInput(node.left);
             const right = this.descendInput(node.right);
@@ -583,8 +587,11 @@ class JSGenerator {
             // No compile-time optimizations possible - use fallback method.
             return new TypedInput(`compareEqual(${left.asUnknown()}, ${right.asUnknown()})`, TYPE_BOOLEAN);
         }
-        case 'op.exponent':
-            return new TypedInput(this.precalc.attempt(node.left, node.right, 5) ?? `(${this.descendInput(node.left).asNumber()} ** ${this.descendInput(node.right).asNumber()})`, TYPE_NUMBER);
+        case 'op.exponent': {
+            const precalc = this.precalc.attempt(node.left, node.right, 1);
+            if (precalc) return new ConstantInput(precalc, TYPE_NUMBER_NAN);
+            return new TypedInput(`(${this.descendInput(node.left).asNumber()} ** ${this.descendInput(node.right).asNumber()})`, TYPE_NUMBER);
+        }
         case 'op.e^':
             return new TypedInput(`Math.exp(${this.descendInput(node.value).asNumber()})`, TYPE_NUMBER);
         case 'op.floor':

@@ -88,7 +88,7 @@ function setup({
           temp = this.attempt(n.left, n.right, 4);
           if (temp) val = new ConstantInput(temp);
           break;
-        case 'op.exp':
+        case 'op.exponent':
           temp = this.attempt(n.left, n.right, 5);
           if (temp) val = new ConstantInput(temp);
           break;
