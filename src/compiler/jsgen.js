@@ -4,6 +4,7 @@ const BlockType = require('../extension-support/block-type');
 const VariablePool = require('./variable-pool');
 const jsexecute = require('./jsexecute');
 const environment = require('./environment');
+const setupPrecalc = require('./precalc');
 
 // Imported for JSDoc types, not to actually use
 // eslint-disable-next-line no-unused-vars
@@ -353,6 +354,15 @@ class JSGenerator {
      * @param {Target} target
      */
     constructor (script, ir, target) {
+        this.precalc = setupPrecalc({
+          TYPE_UNKNOWN,
+          TYPE_STRING,
+          TYPE_BOOLEAN,
+          TYPE_NUMBER,
+          TYPE_NUMBER_NAN,
+          ConstantInput,
+          TypedInput
+        });
         this.script = script;
         this.ir = ir;
         this.target = target;
@@ -526,9 +536,12 @@ class JSGenerator {
         case 'op.acos':
             // Needs to be marked as NaN because Math.acos(1.0001) === NaN
             return new TypedInput(`((Math.acos(${this.descendInput(node.value).asNumber()}) * 180) / Math.PI)`, TYPE_NUMBER_NAN);
-        case 'op.add':
+        case 'op.add': {
             // Needs to be marked as NaN because Infinity + -Infinity === NaN
+            const precalc = this.precalc.attempt(node.left, node.right, 1);
+            if (precalc) return new ConstantInput(precalc, TYPE_NUMBER_NAN);
             return new TypedInput(`(${this.descendInput(node.left).asNumber()} + ${this.descendInput(node.right).asNumber()})`, TYPE_NUMBER_NAN);
+        }
         case 'op.and':
             return new TypedInput(`(${this.descendInput(node.left).asBoolean()} && ${this.descendInput(node.right).asBoolean()})`, TYPE_BOOLEAN);
         case 'op.asin':
@@ -546,7 +559,7 @@ class JSGenerator {
             return new TypedInput(`(Math.round(Math.cos((Math.PI * ${this.descendInput(node.value).asNumber()}) / 180) * 1e10) / 1e10)`, TYPE_NUMBER_NAN);
         case 'op.divide':
             // Needs to be marked as NaN because 0 / 0 === NaN
-            return new TypedInput(`(${this.descendInput(node.left).asNumber()} / ${this.descendInput(node.right).asNumber()})`, TYPE_NUMBER_NAN);
+            return new TypedInput(this.precalc.attempt(node.left, node.right, 4) ?? `(${this.descendInput(node.left).asNumber()} / ${this.descendInput(node.right).asNumber()})`, TYPE_NUMBER_NAN);
         case 'op.equals': {
             const left = this.descendInput(node.left);
             const right = this.descendInput(node.right);
@@ -571,7 +584,7 @@ class JSGenerator {
             return new TypedInput(`compareEqual(${left.asUnknown()}, ${right.asUnknown()})`, TYPE_BOOLEAN);
         }
         case 'op.exponent':
-            return new TypedInput(`(${this.descendInput(node.left).asNumber()} ** ${this.descendInput(node.right).asNumber()})`, TYPE_NUMBER);
+            return new TypedInput(this.precalc.attempt(node.left, node.right, 5) ?? `(${this.descendInput(node.left).asNumber()} ** ${this.descendInput(node.right).asNumber()})`, TYPE_NUMBER);
         case 'op.e^':
             return new TypedInput(`Math.exp(${this.descendInput(node.value).asNumber()})`, TYPE_NUMBER);
         case 'op.floor':
@@ -599,8 +612,11 @@ class JSGenerator {
             const right = this.descendInput(node.right);
             return new TypedInput(`(${left.asUnknown()} >= ${right.asUnknown()})`, TYPE_BOOLEAN);
         }
-        case 'op.join':
+        case 'op.join': {
+            const precalc = this.precalc.attempt(node.left, node.right, 0);
+            if (precalc) return new ConstantInput(precalc, TYPE_STRING);
             return new TypedInput(`(${this.descendInput(node.left).asString()} + ${this.descendInput(node.right).asString()})`, TYPE_STRING);
+        }
         case 'op.length':
             return new TypedInput(`${this.descendInput(node.string).asString()}.length`, TYPE_NUMBER);
         case 'op.less': {
@@ -644,9 +660,12 @@ class JSGenerator {
             return new TypedInput(`Math.min(${this.descendInput(node.left).asNumber()}, ${this.descendInput(node.right).asNumber()})`, TYPE_NUMBER);
         case 'op.max':
             return new TypedInput(`Math.max(${this.descendInput(node.left).asNumber()}, ${this.descendInput(node.right).asNumber()})`, TYPE_NUMBER);
-        case 'op.multiply':
+        case 'op.multiply': {
             // Needs to be marked as NaN because Infinity * 0 === NaN
+            const precalc = this.precalc.attempt(node.left, node.right, 3);
+            if (precalc) return new ConstantInput(precalc, TYPE_NUMBER_NAN);
             return new TypedInput(`(${this.descendInput(node.left).asNumber()} * ${this.descendInput(node.right).asNumber()})`, TYPE_NUMBER_NAN);
+        }
         case 'op.not':
             return new TypedInput(`!${this.descendInput(node.operand).asBoolean()}`, TYPE_BOOLEAN);
         case 'op.or':
@@ -669,9 +688,12 @@ class JSGenerator {
         case 'op.sqrt':
             // Needs to be marked as NaN because Math.sqrt(-1) === NaN
             return new TypedInput(`Math.sqrt(${this.descendInput(node.value).asNumber()})`, TYPE_NUMBER_NAN);
-        case 'op.subtract':
+        case 'op.subtract': {
             // Needs to be marked as NaN because Infinity - Infinity === NaN
+            const precalc = this.precalc.attempt(node.left, node.right, 2);
+            if (precalc) return new ConstantInput(precalc, TYPE_NUMBER_NAN);
             return new TypedInput(`(${this.descendInput(node.left).asNumber()} - ${this.descendInput(node.right).asNumber()})`, TYPE_NUMBER_NAN);
+        }
         case 'op.tan':
             return new TypedInput(`tan(${this.descendInput(node.value).asNumber()})`, TYPE_NUMBER_NAN);
         case 'op.10^':

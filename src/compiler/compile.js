@@ -4,6 +4,7 @@ const JSGenerator = require('./jsgen');
 const compile = thread => {
     const irGenerator = new IRGenerator(thread);
     const ir = irGenerator.generate();
+    thread.__COMPILER = { irGenerator, ir };
 
     const procedures = {};
     const target = thread.target;
@@ -15,6 +16,8 @@ const compile = thread => {
 
         const compiler = new JSGenerator(script, ir, target);
         const result = compiler.compile();
+        thread.__COMPILER.compiler = compiler;
+        thread.__COMPILER.result = result;
         script.cachedCompileResult = result;
         return result;
     };
