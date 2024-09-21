@@ -1170,7 +1170,7 @@ class Runtime extends EventEmitter {
 
                 // Emit events for custom shape types from extension
                 this.emit(Runtime.EXTENSION_SHAPE_ADDED, {
-                    implementation: blockShapeInfo,
+                    implementation: blockShapeInfo
                 });
             }
         }
@@ -3313,9 +3313,12 @@ class Runtime extends EventEmitter {
      * @param {string} value Value to show associated with the block.
      */
     visualReport (blockId, value) {
-        this.emit(Runtime.VISUAL_REPORT, {id: blockId, value: ((
-            typeof value === 'object'
-        ) ? value : Cast.toString(value)), type: typeof value});
+        this.emit(Runtime.VISUAL_REPORT, {
+            id: blockId,
+            value: (
+                (typeof value === 'object') ? value : Cast.toString(value)),
+            type: typeof value
+        });
     }
 
     /**
