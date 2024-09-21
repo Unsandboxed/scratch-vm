@@ -104,11 +104,7 @@ function setup({
         if (!b) return undefined;
         switch(op) {
             case 0: {
-                a = this.tryType(a.constantValue);
-                if (a === undefined) return undefined;
-                b = this.tryType(b.constantValue);
-                if (b === undefined) return undefined;
-                return `${a}${b}`;
+                return `${a.constantValue}${b.constantValue}`;
             };
             case 1: {
                 [a, b] = this.tryNumber(a, b);
