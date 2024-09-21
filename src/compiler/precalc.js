@@ -16,8 +16,9 @@ function setup({
         while(str.endsWith(')')) str = str.slice(0, -1);
         return str;
     };
-    this.tryType = str => {
+    this.tryType = (str, es) => {
         str = this.stripParenths(String(str).trim());
+        if (str === '' && (es !== undefined)) return es;
         if (/^".+"$/.test(str)) return str.slice(1, -1);
         if (/^-0$/.test(str)) return -0;
         if (/^-?\d+(.\d+)?$/.test(str)) return Number(str);
@@ -30,28 +31,28 @@ function setup({
     this.isColour = str => /^#[\da-f]{3}([\da-f]{3}([\da-f]{2})?)?$/gi.test(str);
     this.tryNumber = (a, b) => {
         if ((b !== undefined) && (a !== undefined)) {
-            a = this.tryType(a?.constantValue ?? a);
+            a = this.tryType(a?.constantValue ?? a, 0);
             if (typeof a !== 'number') return [NaN, NaN];
-            b = this.tryType(b?.constantValue ?? b);
+            b = this.tryType(b?.constantValue ?? b, 0);
             if (typeof b !== 'number') return [NaN, NaN];
             return [a, b];
         } else {
-            a = this.tryType(a?.constantValue ?? a);
+            a = this.tryType(a?.constantValue ?? a, 0);
             if (typeof a !== 'number') return NaN;
             return a;
         }
     };
     this.tryNumberNull = (a, b) => {
         if ((b !== undefined) && (a !== undefined)) {
-            a = this.tryType(a?.constantValue ?? a);
+            a = this.tryType(a?.constantValue ?? a, 0);
             if (this.sIsNaN(a)) return [NaN, NaN];
             if (typeof a !== 'number') return [null, null];
-            b = this.tryType(b?.constantValue ?? b);
+            b = this.tryType(b?.constantValue ?? b, 0);
             if (this.sIsNaN(b)) return [NaN, NaN];
             if (typeof b !== 'number') return [null, null];
             return [a, b];
         } else {
-            a = this.tryType(a?.constantValue ?? a);
+            a = this.tryType(a?.constantValue ?? a, 0);
             if (this.sIsNaN(a)) return NaN;
             if (typeof a !== 'number') return null;
             return a;
