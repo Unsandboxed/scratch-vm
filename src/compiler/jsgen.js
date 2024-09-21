@@ -560,7 +560,7 @@ class JSGenerator {
             return new TypedInput(`(Math.round(Math.cos((Math.PI * ${this.descendInput(node.value).asNumber()}) / 180) * 1e10) / 1e10)`, TYPE_NUMBER_NAN);
         case 'op.divide': {
             // Needs to be marked as NaN because 0 / 0 === NaN
-            const precalc = this.precalc.attempt(node.left, node.right, 1);
+            const precalc = this.precalc.attempt(node.left, node.right, 4);
             if (precalc) return new ConstantInput(precalc, TYPE_NUMBER_NAN);
             return new TypedInput(`(${this.descendInput(node.left).asNumber()} / ${this.descendInput(node.right).asNumber()})`, TYPE_NUMBER_NAN);
         }
@@ -588,7 +588,7 @@ class JSGenerator {
             return new TypedInput(`compareEqual(${left.asUnknown()}, ${right.asUnknown()})`, TYPE_BOOLEAN);
         }
         case 'op.exponent': {
-            const precalc = this.precalc.attempt(node.left, node.right, 1);
+            const precalc = this.precalc.attempt(node.left, node.right, 5);
             if (precalc) return new ConstantInput(precalc, TYPE_NUMBER_NAN);
             return new TypedInput(`(${this.descendInput(node.left).asNumber()} ** ${this.descendInput(node.right).asNumber()})`, TYPE_NUMBER);
         }
