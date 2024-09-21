@@ -864,11 +864,19 @@ class Runtime extends EventEmitter {
     }
 
     /**
-     * Event name for reporting that an extension as asked for a custom field to be added
+     * Event name for reporting that an extension has asked for a custom field to be added
      * @const {string}
      */
     static get EXTENSION_FIELD_ADDED () {
         return 'EXTENSION_FIELD_ADDED';
+    }
+
+    /**
+     * Event name for reporting that an extension has asked for a custom shape type to be added
+     * @const {string}
+     */
+    static get EXTENSION_SHAPE_ADDED () {
+        return 'EXTENSION_SHAPE_TYPE_ADDED';
     }
 
     /**
@@ -1156,6 +1164,17 @@ class Runtime extends EventEmitter {
             }
         }
 
+        for (const blockShapeName in categoryInfo.customShapes) {
+            if (Object.prototype.hasOwnProperty.call(extensionInfo.customShapes, blockShapeName)) {
+                const blockShapeInfo = categoryInfo.customShapes[blockShapeName];
+
+                // Emit events for custom shape types from extension
+                this.emit(Runtime.EXTENSION_SHAPE_ADDED, {
+                    implementation: blockShapeInfo,
+                });
+            }
+        }
+
         this.emit(Runtime.EXTENSION_ADDED, categoryInfo);
     }
 
@@ -1184,6 +1203,7 @@ class Runtime extends EventEmitter {
     _fillExtensionCategory (categoryInfo, extensionInfo) {
         categoryInfo.blocks = [];
         categoryInfo.customFieldTypes = {};
+        categoryInfo.customShapes = {};
         categoryInfo.menus = [];
         categoryInfo.menuInfo = {};
         categoryInfo.convertedMenuInfo = {};
@@ -1214,6 +1234,12 @@ class Runtime extends EventEmitter {
                 );
 
                 categoryInfo.customFieldTypes[fieldTypeName] = fieldTypeInfo;
+            }
+        }
+        for (const blockShapeName in extensionInfo.customShapes) {
+            if (Object.prototype.hasOwnProperty.call(extensionInfo.customShapes, blockShapeName)) {
+                const shapeType = extensionInfo.customShapes[blockShapeName];
+                categoryInfo.customShapes[blockShapeName] = shapeType;
             }
         }
 
@@ -1520,6 +1546,13 @@ class Runtime extends EventEmitter {
             blockJSON.output = 'Object';
             blockJSON.outputShape = ScratchBlocksConstants.OUTPUT_SHAPE_OBJECT;
             break;
+        default: {
+            if (!categoryInfo.customShapes[blockInfo.blockType]) break;
+            const shape = categoryInfo.customShapes[blockInfo.blockType];
+            shape.output = shape.output || null;
+            shape.outputShape = shape.outputShape || ScratchBlocksConstants.OUTPUT_SHAPE_SQUARE;
+            shape.convertBlockForScratchBlocks(blockJSON);
+        }
         }
 
         if (blockInfo.blockShape ?? blockInfo.outputShape) {
@@ -1534,6 +1567,13 @@ class Runtime extends EventEmitter {
             blockJSON.mutator = blockInfo.mutator;
         }
 
+        if (Object.prototype.hasOwnProperty.call(blockInfo, 'tooltip')) {
+            blockJSON.tooltip = blockInfo.tooltip;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(blockInfo, 'warning')) {
+            blockJSON.warning = blockInfo.warning;
+        }
 
         const blockText = Array.isArray(blockInfo.text) ? blockInfo.text : [blockInfo.text];
         let inTextNum = 0; // text for the next block "arm" is blockText[inTextNum]
@@ -1638,7 +1678,7 @@ class Runtime extends EventEmitter {
             xml: `<label text="${xmlEscape(blockInfo.text)}"></label>`
         };
     }
-    
+
     /**
      * Convert a button for scratch-blocks. A button has no opcode but specifies a callback name in the `func` field.
      * @param {ExtensionBlockMetadata} buttonInfo - the button to convert
@@ -1749,10 +1789,13 @@ class Runtime extends EventEmitter {
         // Determine whether the argument type is one of the known standard field types
         const argInfo = context.blockInfo.arguments[placeholder] || {};
         let argTypeInfo = ArgumentTypeMap[argInfo.type] || {};
+        const customShape = context.categoryInfo.customShapes[argInfo.type] || null;
 
         // Field type not a standard field type, see if extension has registered custom field type
         if (!ArgumentTypeMap[argInfo.type] && context.categoryInfo.customFieldTypes[argInfo.type]) {
             argTypeInfo = context.categoryInfo.customFieldTypes[argInfo.type].argumentTypeInfo;
+        } else if (customShape) {
+            argTypeInfo = customShape.argTypeInfo(context);
         }
 
         // Start to construct the scratch-blocks style JSON defining how the block should be
@@ -1858,6 +1901,10 @@ class Runtime extends EventEmitter {
         if (argJSON) blockArgs.push(argJSON);
         const argNum = blockArgs.length;
         context.argsMap[placeholder] = argNum;
+
+        if (customShape) {
+            customShape.finalizePlaceholder(argsName, blockArgs, argJSON, argNum, context);
+        }
 
         return `%${argNum}`;
     }
@@ -3266,7 +3313,9 @@ class Runtime extends EventEmitter {
      * @param {string} value Value to show associated with the block.
      */
     visualReport (blockId, value) {
-        this.emit(Runtime.VISUAL_REPORT, {id: blockId, value: Cast.toString(value), type: typeof value});
+        this.emit(Runtime.VISUAL_REPORT, {id: blockId, value: ((
+            typeof value === 'object'
+        ) ? value : Cast.toString(value)), type: typeof value});
     }
 
     /**

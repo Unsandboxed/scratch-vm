@@ -537,7 +537,7 @@ const serializeVariables = function (variables) {
             continue;
         }
         if (v.type === Variable.LIST_TYPE) {
-            obj.lists[varId] = [v.name, makeSafeForJSON(v.value)];
+            obj.lists[varId] = [v.name, makeSafeForJSON(v.value), v.locked];
             continue;
         }
 
@@ -696,7 +696,9 @@ const serializeMonitors = function (monitors, runtime, extensions) {
                 y: monitorData.y - yOffset,
                 visible: monitorData.visible
             };
-            if (monitorData.mode !== 'list') {
+            if (monitorData.mode === 'list') {
+                serializedMonitor.locked = monitorData.locked;
+            } else {
                 serializedMonitor.sliderMin = monitorData.sliderMin;
                 serializedMonitor.sliderMax = monitorData.sliderMax;
                 serializedMonitor.isDiscrete = monitorData.isDiscrete;
@@ -1245,6 +1247,7 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
                 false
             );
             newList.value = list[1];
+            newList.locked = list[2] || false;
             target.variables[newList.id] = newList;
         }
     }
