@@ -751,7 +751,8 @@ class Blocks {
             // block but in the case of monitored reporters that have arguments,
             // map the old id to a new id, creating a new monitor block if necessary
             if (block.fields && Object.keys(block.fields).length > 0 &&
-                block.opcode !== 'data_variable' && block.opcode !== 'data_listcontents') {
+                block.opcode !== 'data_variable' && block.opcode !== 'data_listcontents' &&
+                block.opcode !== 'data_listarraycontents') {
 
                 // This block has an argument which needs to get separated out into
                 // multiple monitor blocks with ids based on the selected argument
@@ -778,6 +779,8 @@ class Blocks {
             if (block.opcode === 'data_variable') {
                 isSpriteLocalVariable = !(this.runtime.getTargetForStage().variables[block.fields.VARIABLE.id]);
             } else if (block.opcode === 'data_listcontents') {
+                isSpriteLocalVariable = !(this.runtime.getTargetForStage().variables[block.fields.LIST.id]);
+            } else if (block.opcode === 'data_listarraycontents') {
                 isSpriteLocalVariable = !(this.runtime.getTargetForStage().variables[block.fields.LIST.id]);
             }
 
@@ -806,7 +809,8 @@ class Blocks {
                         params: this._getBlockParams(block),
                         // @todo(vm#565) for numerical values with decimals, some countries use comma
                         value: '',
-                        mode: block.opcode === 'data_listcontents' ? 'list' : 'default'
+                        // @todo let extensions use list monitors!
+                        mode: (block.opcode === 'data_listcontents' || block.opcode === 'data_listarraycontents') ? 'list' : 'default'
                     }));
                 }
             }
@@ -971,7 +975,7 @@ class Blocks {
             truncatedOpcode = 'variable';
         } else if (variable.type === Variable.LIST_TYPE) {
             fieldName = 'LIST';
-            truncatedOpcode = 'listcontents';
+            truncatedOpcode = 'listarraycontents';
         } else {
             // TODO handle broadcast messages later
             return [];
