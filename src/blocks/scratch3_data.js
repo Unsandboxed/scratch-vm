@@ -21,6 +21,7 @@ class Scratch3DataBlocks {
             data_hidevariable: this.hideVariable,
             data_showvariable: this.showVariable,
             data_listcontents: this.getListContents,
+            data_listarraycontents: this.getListArrayContents,
             data_addtolist: this.addToList,
             data_deleteoflist: this.deleteOfList,
             data_deletealloflist: this.deleteAllOfList,
@@ -88,6 +89,23 @@ class Scratch3DataBlocks {
 
     hideList (args) {
         this.changeMonitorVisibility(args.LIST.id, false);
+    }
+
+    getListArrayContents (args, util) {
+        const list = util.target.lookupOrCreateList(
+            args.LIST.id, args.LIST.name);
+
+        // If block is running for monitors, return copy of list as an array if changed.
+        if (util.thread.updateMonitor) {
+            // Return original list value if up-to-date, which doesn't trigger monitor update.
+            if (list._monitorUpToDate) return list.value;
+            // If value changed, reset the flag and return a copy to trigger monitor update.
+            // Because monitors use Immutable data structures, only new objects trigger updates.
+            list._monitorUpToDate = true;
+            return list.value.slice();
+        }
+
+        return list.value;
     }
 
     getListContents (args, util) {
