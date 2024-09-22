@@ -554,6 +554,15 @@ runtimeFunctions.listContents = `const listContents = list => {
 }`;
 
 /**
+ * Get the raw array form of a list.
+ * @param {import('../engine/variable')} list The list.
+ * @returns {string} Stringified form of the list.
+ */
+runtimeFunctions.listArrayContents = `const listArrayContents = list => {
+    return list.value;
+}`;
+
+/**
  * Convert a color to an RGB list
  * @param {*} color The color value to convert
  * @return {Array.<number>} [r,g,b], values between 0-255.
