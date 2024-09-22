@@ -274,6 +274,11 @@ class ScriptTreeGenerator {
                 kind: 'list.contents',
                 list: this.descendVariable(block, 'LIST', LIST_TYPE)
             };
+        case 'data_listarraycontents':
+            return {
+                kind: 'list.arraycontents',
+                list: this.descendVariable(block, 'LIST', LIST_TYPE)
+            };
 
         case 'event_broadcast_menu': {
             const broadcastOption = block.fields.BROADCAST_OPTION;
