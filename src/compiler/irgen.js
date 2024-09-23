@@ -995,6 +995,12 @@ class ScriptTreeGenerator {
                 variable: this.descendVariable(block, 'VARIABLE', SCALAR_TYPE),
                 value: this.descendInputOfBlock(block, 'VALUE')
             };
+        case 'data_setlist':
+            return {
+                kind: 'list.set',
+                list: this.descendVariable(block, 'LIST', LIST_TYPE),
+                array: this.descendInputOfBlock(block, 'ARRAY')
+            };
         case 'data_showlist':
             return {
                 kind: 'list.show',
