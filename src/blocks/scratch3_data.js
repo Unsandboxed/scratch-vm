@@ -1,4 +1,5 @@
 const Cast = require('../util/cast');
+const Clone = require('../util/clone');
 
 class Scratch3DataBlocks {
     constructor (runtime) {
@@ -105,7 +106,7 @@ class Scratch3DataBlocks {
             return list.value.slice();
         }
 
-        return list.value;
+        return Clone.structured(list.value);
     }
 
     getListContents (args, util) {
