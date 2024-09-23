@@ -1082,7 +1082,7 @@ class JSGenerator {
         }
         case 'list.set': {
             const list = this.referenceVariable(node.list);
-            this.source += `if (!${list}.locked) setList(${list}, ${this.descendInput(node.array).asUnknown()});\n`;
+            this.source += `if (!${list}.locked) listSet(${list}, ${this.descendInput(node.array).asUnknown()});\n`;
             break;
         }
         case 'list.show':

@@ -28,7 +28,7 @@ class Scratch3DataBlocks {
             data_deletealloflist: this.deleteAllOfList,
             data_insertatlist: this.insertAtList,
             data_replaceitemoflist: this.replaceItemOfList,
-            data_setList: this.setList,
+            data_setlist: this.setList,
             data_itemoflist: this.getItemOfList,
             data_itemnumoflist: this.getItemNumOfList,
             data_lengthoflist: this.lengthOfList,

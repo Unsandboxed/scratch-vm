@@ -476,7 +476,7 @@ runtimeFunctions.listReplace = `const listReplace = (list, idx, value) => {
  * @param {*} array The new contents.
  */
 runtimeFunctions.listSet = `const listSet = (list, array) => {
-    list.value = Cast.toArray(array);
+    list.value = globalState.Cast.toArray(array);
     list._monitorUpToDate = false;
 }`;
 
@@ -570,7 +570,7 @@ runtimeFunctions.listContents = `const listContents = list => {
  * @returns {string} Stringified form of the list.
  */
 runtimeFunctions.listArrayContents = `const listArrayContents = list => {
-    return Clone.structured(list.value);
+    return globalState.Clone.structured(list.value);
 }`;
 
 /**
