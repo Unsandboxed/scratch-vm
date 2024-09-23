@@ -1080,6 +1080,11 @@ class JSGenerator {
             this.source += `if (!${list}.locked) listReplace(${list}, ${this.descendInput(node.index).asUnknown()}, ${this.descendInput(node.item).asSafe()});\n`;
             break;
         }
+        case 'list.set': {
+            const list = this.referenceVariable(node.list);
+            this.source += `if (!${list}.locked) setList(${list}, ${this.descendInput(node.array).asUnknown()});\n`;
+            break;
+        }
         case 'list.show':
             this.source += `runtime.monitorBlocks.changeBlock({ id: "${sanitize(node.list.id)}", element: "checkbox", value: true }, runtime);\n`;
             break;
