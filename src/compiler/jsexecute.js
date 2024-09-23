@@ -471,6 +471,16 @@ runtimeFunctions.listReplace = `const listReplace = (list, idx, value) => {
 }`;
 
 /**
+ * Set the contents in a list.
+ * @param {import('../engine/variable')} list The list
+ * @param {*} array The new contents.
+ */
+runtimeFunctions.listSet = `const listSet = (list, array) => {
+    list.value = Cast.toArray(array);
+    list._monitorUpToDate = false;
+}`;
+
+/**
  * Insert a value in a list.
  * @param {import('../engine/variable')} list The list.
  * @param {*} idx The Scratch index in the list.
