@@ -10,6 +10,7 @@
 const globalState = {
     Timer: require('../util/timer'),
     Cast: require('../util/cast'),
+    Clone: require('../util/clone'),
     log: require('../util/log'),
     blockUtility: require('./compat-block-utility'),
     thread: null
@@ -559,7 +560,7 @@ runtimeFunctions.listContents = `const listContents = list => {
  * @returns {string} Stringified form of the list.
  */
 runtimeFunctions.listArrayContents = `const listArrayContents = list => {
-    return list.value;
+    return Clone.structured(list.value);
 }`;
 
 /**
