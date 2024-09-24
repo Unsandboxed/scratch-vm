@@ -517,6 +517,9 @@ class Runtime extends EventEmitter {
             enabled: true,
             warpTimer: false
         };
+        this.compilerData = new (require('./usb-compiler'))(this);
+        // We need to setup the blocks soo
+        require('../compiler/setup-compiler')(this);
 
         this.debug = false;
 
