@@ -2,6 +2,7 @@ const EventEmitter = require('events');
 
 const Cast = require('../util/cast');
 const MathUtil = require('../util/math-util');
+const Runtime = require('./engine/runtime');
 
 /**
  * @fileoverview
@@ -119,6 +120,8 @@ class Camera extends EventEmitter {
             this.direction,
             this.zoom
         );
+
+        this.runtime.emit(Runtime.CAMERA_UPDATE, this);
 
         this.runtime.requestRedraw();
     }
