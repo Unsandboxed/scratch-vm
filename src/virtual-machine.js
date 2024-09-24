@@ -120,8 +120,8 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.VISUAL_REPORT, visualReport => {
             this.emit(Runtime.VISUAL_REPORT, visualReport);
         });
-        this.runtime.on(Runtime.CAMERA_UPDATE, emitProjectChanged => {
-            this.emitCameraUpdate(emitProjectChanged);
+        this.runtime.on(Runtime.CAMERA_UPDATE, cameraState => {
+            this.emit(Runtime.CAMERA_UPDATE, cameraState);
         });
         this.runtime.on(Runtime.TARGETS_UPDATE, emitProjectChanged => {
             this.emitTargetsUpdate(emitProjectChanged);
@@ -1661,23 +1661,6 @@ class VirtualMachine extends EventEmitter {
             },
             // Currently editing target id.
             editingTarget: this.editingTarget ? this.editingTarget.id : null
-        });
-        if (triggerProjectChange) {
-            this.runtime.emitProjectChanged();
-        }
-    }
-
-    /**
-     * Emit metadata about the camera instance.
-     * An editor UI could use this to display information about the camera.
-     * @param {bool} triggerProjectChange If true, also emit a project changed event.
-     * Disabled selectively by updates that don't affect project serialization.
-     * Defaults to true.
-     */
-    emitCameraUpdate (triggerProjectChange) {
-        if (typeof triggerProjectChange === 'undefined') triggerProjectChange = true;
-        this.emit('cameraUpdate', {
-            camera: this.runtime.camera
         });
         if (triggerProjectChange) {
             this.runtime.emitProjectChanged();
