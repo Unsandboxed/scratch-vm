@@ -170,8 +170,9 @@ const executeInCompatibilityLayer = function*(inputs, blockFunction, isWarp, use
     if (thread.status === 1 /* STATUS_PROMISE_WAIT */ || thread.status === 4 /* STATUS_DONE */) {
         // Something external is forcing us to stop
         yield;
+        // Check if the killer was able to specify its kill return value otherwise
         // Make up a return value because whatever is forcing us to stop can't specify one
-        return '';
+        return thread.__forcedReturn !== 'undefined' ? thread.__forcedReturn : '';
     }
 
     while (thread.status === 2 /* STATUS_YIELD */ || thread.status === 3 /* STATUS_YIELD_TICK */) {
@@ -365,6 +366,10 @@ runtimeFunctions.randomInt = `const randomInt = (low, high) => low + Math.floor(
  * @returns {number} A random floating point number between low and high.
  */
 runtimeFunctions.randomFloat = `const randomFloat = (low, high) => (Math.random() * (high - low)) + low`;
+
+runtimeFunctions.randomCharacter = `const randomCharacter = (string) => string[Math.round(Math.random() * (string.length - 1))];
+const getCharacter = (string, index) => ((index === 'last' ? string.at(-1) : (index === 'random' ? randomCharacter(string) : string[+index])) || '');`;
+runtimeFunctions.getCharacter = runtimeFunctions.randomCharacter;
 
 /**
  * Create and start a timer.
@@ -574,7 +579,7 @@ runtimeFunctions.listContents = `const listContents = list => {
  * @param {import('../engine/variable')} list The list.
  * @returns {string} Stringified form of the list.
  */
-runtimeFunctions.listArrayContents = `const listArrayContents = list => {
+runtimeFunctions.listContentsArray = `const listContentsArray = list => {
     return globalState.Clone.structured(list.value);
 }`;
 

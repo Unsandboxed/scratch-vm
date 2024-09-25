@@ -204,430 +204,42 @@ class ScriptTreeGenerator {
      * @returns {IntermediateInput} Compiled input node for this input.
      */
     descendInput (block, preserveStrings = false) {
-        switch (block.opcode) {
-        case 'colour_picker':
-            return this.createConstantInput(block.fields.COLOUR.value, true);
-        case 'math_angle':
-        case 'math_integer':
-        case 'math_number':
-        case 'math_positive_number':
-        case 'math_whole_number':
-            return this.createConstantInput(block.fields.NUM.value, preserveStrings);
-        case 'text':
-            return this.createConstantInput(block.fields.TEXT.value, preserveStrings);
-        case 'argument_reporter_string_number': {
-            const name = block.fields.VALUE.value;
-            // lastIndexOf because multiple parameters with the same name will use the value of the last definition
-            const index = this.script.arguments.lastIndexOf(name);
-            if (index === -1) {
-                // Legacy support
-                if (name.toLowerCase() === 'last key pressed') {
-                    return new IntermediateInput(InputOpcode.TW_KEY_LAST_PRESSED, InputType.STRING);
-                }
-            }
-            if (index === -1) {
-                return this.createConstantInput(0);
-            }
-            return new IntermediateInput(InputOpcode.PROCEDURE_ARG_STRING_NUMBER, InputType.ANY, {index});
+        if (!block) console.trace('DI IR');
+        if (this.runtime.compilerData.inputs.has(block.opcode)) {
+            block = this.runtime.compilerData.inputs.get(block.opcode).stg(this, block, preserveStrings);
+            console.log('DI IR', block);
+            return block;
         }
-        case 'argument_reporter_boolean': {
-            // see argument_reporter_string_number above
-            const name = block.fields.VALUE.value;
-            const index = this.script.arguments.lastIndexOf(name);
-            if (index === -1) {
-                if (name.toLowerCase() === 'is compiled?' || name.toLowerCase() === 'is unsandboxed?') {
-                    return this.createConstantInput(true).toType(InputType.BOOLEAN);
-                }
-                return this.createConstantInput(0);
+        
+        const opcodeFunction = this.runtime.getOpcodeFunction(block.opcode);
+        if (opcodeFunction) {
+            // It might be a non-compiled primitive from a standard category
+            if (compatBlocks.inputs.includes(block.opcode)) {
+                return this.descendCompatLayerInput(block);
             }
-            return new IntermediateInput(InputOpcode.PROCEDURE_ARG_BOOLEAN, InputType.BOOLEAN, {index});
-        }
-
-        case 'data_variable':
-            return new IntermediateInput(InputOpcode.VAR_GET, InputType.ANY, {
-                variable: this.descendVariable(block, 'VARIABLE', SCALAR_TYPE)
-            });
-        case 'data_itemoflist':
-            return new IntermediateInput(InputOpcode.LIST_GET, InputType.ANY, {
-                list: this.descendVariable(block, 'LIST', LIST_TYPE),
-                index: this.descendInputOfBlock(block, 'INDEX')
-            });
-        case 'data_lengthoflist':
-            return new IntermediateInput(InputOpcode.LIST_LENGTH, InputType.NUMBER_POS_REAL | InputType.NUMBER_ZERO, {
-                list: this.descendVariable(block, 'LIST', LIST_TYPE)
-            });
-        case 'data_listcontainsitem':
-            return new IntermediateInput(InputOpcode.LIST_CONTAINS, InputType.BOOLEAN, {
-                list: this.descendVariable(block, 'LIST', LIST_TYPE),
-                item: this.descendInputOfBlock(block, 'ITEM')
-            });
-        case 'data_itemnumoflist':
-            return new IntermediateInput(InputOpcode.LIST_INDEX_OF, InputType.NUMBER_POS_REAL | InputType.NUMBER_ZERO, {
-                list: this.descendVariable(block, 'LIST', LIST_TYPE),
-                item: this.descendInputOfBlock(block, 'ITEM')
-            });
-        case 'data_listcontents':
-            return new IntermediateInput(InputOpcode.LIST_CONTENTS, InputType.STRING, {
-                list: this.descendVariable(block, 'LIST', LIST_TYPE)
-            });
-
-        case 'event_broadcast_menu': {
-            const broadcastOption = block.fields.BROADCAST_OPTION;
-            const broadcastVariable = this.target.lookupBroadcastMsg(broadcastOption.id, broadcastOption.value);
-            // TODO: empty string probably isn't the correct fallback
-            const broadcastName = broadcastVariable ? broadcastVariable.name : '';
-            return this.createConstantInput(broadcastName);
-        }
-
-        case 'looks_backdropnumbername':
-            if (block.fields.NUMBER_NAME.value === 'number') {
-                return new IntermediateInput(InputOpcode.LOOKS_BACKDROP_NUMBER, InputType.NUMBER_POS_REAL);
-            }
-            return new IntermediateInput(InputOpcode.LOOKS_BACKDROP_NAME, InputType.STRING);
-        case 'looks_costumenumbername':
-            if (block.fields.NUMBER_NAME.value === 'number') {
-                return new IntermediateInput(InputOpcode.LOOKS_COSTUME_NUMBER, InputType.NUMBER_POS_REAL);
-            }
-            return new IntermediateInput(InputOpcode.LOOKS_COSTUME_NAME, InputType.STRING);
-        case 'looks_size':
-            return new IntermediateInput(InputOpcode.LOOKS_SIZE_GET, InputType.NUMBER_POS_REAL);
-
-        case 'motion_rotationstyle':
-            return {
-                kind: 'motion.rotationStyle'
-            };
-        case 'motion_direction':
-            return new IntermediateInput(InputOpcode.MOTION_DIRECTION_GET, InputType.NUMBER_REAL);
-        case 'motion_xposition':
-            return new IntermediateInput(InputOpcode.MOTION_X_GET, InputType.NUMBER_REAL);
-        case 'motion_yposition':
-            return new IntermediateInput(InputOpcode.MOTION_Y_GET, InputType.NUMBER_REAL);
-
-        case 'operator_add':
-            return new IntermediateInput(InputOpcode.OP_ADD, InputType.NUMBER_OR_NAN, {
-                left: this.descendInputOfBlock(block, 'NUM1').toType(InputType.NUMBER),
-                right: this.descendInputOfBlock(block, 'NUM2').toType(InputType.NUMBER)
-            });
-        case 'operator_and':
-            return new IntermediateInput(InputOpcode.OP_AND, InputType.BOOLEAN, {
-                left: this.descendInputOfBlock(block, 'OPERAND1').toType(InputType.BOOLEAN),
-                right: this.descendInputOfBlock(block, 'OPERAND2').toType(InputType.BOOLEAN)
-            });
-        case 'operator_contains':
-            return new IntermediateInput(InputOpcode.OP_CONTAINS, InputType.BOOLEAN, {
-                string: this.descendInputOfBlock(block, 'STRING1').toType(InputType.STRING),
-                contains: this.descendInputOfBlock(block, 'STRING2').toType(InputType.STRING)
-            });
-        case 'operator_divide':
-            return new IntermediateInput(InputOpcode.OP_DIVIDE, InputType.NUMBER_OR_NAN, {
-                left: this.descendInputOfBlock(block, 'NUM1').toType(InputType.NUMBER),
-                right: this.descendInputOfBlock(block, 'NUM2').toType(InputType.NUMBER)
-            });
-        case 'operator_equals':
-            return new IntermediateInput(InputOpcode.OP_EQUALS, InputType.BOOLEAN, {
-                left: this.descendInputOfBlock(block, 'OPERAND1'),
-                right: this.descendInputOfBlock(block, 'OPERAND2')
-            });
-        case 'operator_gt':
-            return new IntermediateInput(InputOpcode.OP_GREATER, InputType.BOOLEAN, {
-                left: this.descendInputOfBlock(block, 'OPERAND1'),
-                right: this.descendInputOfBlock(block, 'OPERAND2')
-            });
-        case 'operator_join':
-            return new IntermediateInput(InputOpcode.OP_JOIN, InputType.STRING, {
-                left: this.descendInputOfBlock(block, 'STRING1').toType(InputType.STRING),
-                right: this.descendInputOfBlock(block, 'STRING2').toType(InputType.STRING)
-            });
-        case 'operator_length':
-            return new IntermediateInput(InputOpcode.OP_LENGTH, InputType.NUMBER_REAL, {
-                string: this.descendInputOfBlock(block, 'STRING').toType(InputType.STRING)
-            });
-        case 'operator_letter_of':
-            return new IntermediateInput(InputOpcode.OP_LETTER_OF, InputType.STRING, {
-                letter: this.descendInputOfBlock(block, 'LETTER').toType(InputType.NUMBER_INDEX),
-                string: this.descendInputOfBlock(block, 'STRING').toType(InputType.STRING)
-            });
-        case 'operator_lt':
-            return new IntermediateInput(InputOpcode.OP_LESS, InputType.BOOLEAN, {
-                left: this.descendInputOfBlock(block, 'OPERAND1'),
-                right: this.descendInputOfBlock(block, 'OPERAND2')
-            });
-        case 'operator_mathop': {
-            const value = this.descendInputOfBlock(block, 'NUM').toType(InputType.NUMBER);
-            const operator = block.fields.OPERATOR.value.toLowerCase();
-            switch (operator) {
-            case 'abs': return new IntermediateInput(InputOpcode.OP_ABS, InputType.NUMBER_POS | InputType.NUMBER_ZERO, {value});
-            case 'floor': return new IntermediateInput(InputOpcode.OP_FLOOR, InputType.NUMBER, {value});
-            case 'ceiling': return new IntermediateInput(InputOpcode.OP_CEILING, InputType.NUMBER, {value});
-            case 'sqrt': return new IntermediateInput(InputOpcode.OP_SQRT, InputType.NUMBER_OR_NAN, {value});
-            case 'sin': return new IntermediateInput(InputOpcode.OP_SIN, InputType.NUMBER_OR_NAN, {value});
-            case 'cos': return new IntermediateInput(InputOpcode.OP_COS, InputType.NUMBER_OR_NAN, {value});
-            case 'tan': return new IntermediateInput(InputOpcode.OP_TAN, InputType.NUMBER_OR_NAN, {value});
-            case 'asin': return new IntermediateInput(InputOpcode.OP_ASIN, InputType.NUMBER_OR_NAN, {value});
-            case 'acos': return new IntermediateInput(InputOpcode.OP_ACOS, InputType.NUMBER_OR_NAN, {value});
-            case 'atan': return new IntermediateInput(InputOpcode.OP_ATAN, InputType.NUMBER, {value});
-            case 'ln': return new IntermediateInput(InputOpcode.OP_LOG_E, InputType.NUMBER_OR_NAN, {value});
-            case 'log': return new IntermediateInput(InputOpcode.OP_LOG_10, InputType.NUMBER_OR_NAN, {value});
-            case 'e ^': return new IntermediateInput(InputOpcode.OP_POW_E, InputType.NUMBER, {value});
-            case '10 ^': return new IntermediateInput(InputOpcode.OP_POW_10, InputType.NUMBER, {value});
-            default: return this.createConstantInput(0);
-            }
-        }
-        case 'operator_mod':
-            return new IntermediateInput(InputOpcode.OP_MOD, InputType.NUMBER_OR_NAN, {
-                left: this.descendInputOfBlock(block, 'NUM1').toType(InputType.NUMBER),
-                right: this.descendInputOfBlock(block, 'NUM2').toType(InputType.NUMBER)
-            });
-        case 'operator_multiply':
-            return new IntermediateInput(InputOpcode.OP_MULTIPLY, InputType.NUMBER_OR_NAN, {
-                left: this.descendInputOfBlock(block, 'NUM1').toType(InputType.NUMBER),
-                right: this.descendInputOfBlock(block, 'NUM2').toType(InputType.NUMBER)
-            });
-        case 'operator_not':
-            return new IntermediateInput(InputOpcode.OP_NOT, InputType.BOOLEAN, {
-                operand: this.descendInputOfBlock(block, 'OPERAND').toType(InputType.BOOLEAN)
-            });
-        case 'operator_or':
-            return new IntermediateInput(InputOpcode.OP_OR, InputType.BOOLEAN, {
-                left: this.descendInputOfBlock(block, 'OPERAND1').toType(InputType.BOOLEAN),
-                right: this.descendInputOfBlock(block, 'OPERAND2').toType(InputType.BOOLEAN)
-            });
-        case 'operator_random': {
-            const from = this.descendInputOfBlock(block, 'FROM');
-            const to = this.descendInputOfBlock(block, 'TO');
-            // If both values are known at compile time, we can do some optimizations.
-            // TODO: move optimizations to jsgen?
-            if (from.opcode === InputOpcode.CONSTANT && to.opcode === InputOpcode.CONSTANT) {
-                const sFrom = from.inputs.value;
-                const sTo = to.inputs.value;
-                const nFrom = Cast.toNumber(sFrom);
-                const nTo = Cast.toNumber(sTo);
-                // If both numbers are the same, random is unnecessary.
-                // todo: this probably never happens so consider removing
-                if (nFrom === nTo) {
-                    return this.createConstantInput(nFrom);
-                }
-                // If both are ints, hint this to the compiler
-                if (Cast.isInt(sFrom) && Cast.isInt(sTo)) {
-                    // Both inputs are ints, so we know neither are NaN
-                    return new IntermediateInput(InputOpcode.OP_RANDOM, InputType.NUMBER, {
-                        low: (nFrom <= nTo ? from : to).toType(InputType.NUMBER),
-                        high: (nFrom <= nTo ? to : from).toType(InputType.NUMBER),
-                        useInts: true,
-                        useFloats: false
-                    });
-                }
-                // Otherwise hint that these are floats
-                return new IntermediateInput(InputOpcode.OP_RANDOM, InputType.NUMBER_OR_NAN, {
-                    low: (nFrom <= nTo ? from : to).toType(InputType.NUMBER),
-                    high: (nFrom <= nTo ? to : from).toType(InputType.NUMBER),
-                    useInts: false,
-                    useFloats: true
-                });
-            } else if (from.opcode === InputOpcode.CONSTANT) {
-                // If only one value is known at compile-time, we can still attempt some optimizations.
-                if (!Cast.isInt(Cast.toNumber(from.inputs.value))) {
-                    return new IntermediateInput(InputOpcode.OP_RANDOM, InputType.NUMBER_OR_NAN, {
-                        low: from.toType(InputType.NUMBER),
-                        high: to.toType(InputType.NUMBER),
-                        useInts: false,
-                        useFloats: true
-                    });
-                }
-            } else if (to.opcode === InputOpcode.CONSTANT) {
-                if (!Cast.isInt(Cast.toNumber(from.inputs.value))) {
-                    return new IntermediateInput(InputOpcode.OP_RANDOM, InputType.NUMBER_OR_NAN, {
-                        low: from.toType(InputType.NUMBER),
-                        high: to.toType(InputType.NUMBER),
-                        useInts: false,
-                        useFloats: true
-                    });
-                }
-            }
-            // No optimizations possible
-            return new IntermediateInput(InputOpcode.OP_RANDOM, InputType.NUMBER_OR_NAN, {
-                low: from,
-                high: to,
-                useInts: false,
-                useFloats: false
-            });
-        }
-        case 'operator_round':
-            return new IntermediateInput(InputOpcode.OP_ROUND, InputType.NUMBER, {
-                value: this.descendInputOfBlock(block, 'NUM').toType(InputType.NUMBER)
-            });
-        case 'operator_subtract':
-            return new IntermediateInput(InputOpcode.OP_SUBTRACT, InputType.NUMBER_OR_NAN, {
-                left: this.descendInputOfBlock(block, 'NUM1').toType(InputType.NUMBER),
-                right: this.descendInputOfBlock(block, 'NUM2').toType(InputType.NUMBER)
-            });
-
-        case 'procedures_call': {
-            const procedureInfo = this.getProcedureInfo(block);
-            return new IntermediateInput(procedureInfo.opcode, InputType.ANY, procedureInfo.inputs, procedureInfo.yields);
-        }
-
-        case 'sensing_answer':
-            return new IntermediateInput(InputOpcode.SENSING_ANSWER, InputType.STRING);
-
-        case 'sensing_coloristouchingcolor':
-            return new IntermediateInput(InputOpcode.SENSING_COLOR_TOUCHING_COLOR, InputType.BOOLEAN, {
-                target: this.descendInputOfBlock(block, 'COLOR2').toType(InputType.COLOR),
-                mask: this.descendInputOfBlock(block, 'COLOR').toType(InputType.COLOR)
-            });
-        case 'sensing_current':
-            switch (block.fields.CURRENTMENU.value.toLowerCase()) {
-            case 'year': return new IntermediateInput(InputOpcode.SENSING_TIME_YEAR, InputType.NUMBER_POS_REAL | InputType.NUMBER_ZERO);
-            case 'month': return new IntermediateInput(InputOpcode.SENSING_TIME_MONTH, InputType.NUMBER_POS_REAL);
-            case 'date': return new IntermediateInput(InputOpcode.SENSING_TIME_DATE, InputType.NUMBER_POS_REAL);
-            case 'dayofweek': return new IntermediateInput(InputOpcode.SENSING_TIME_WEEKDAY, InputType.NUMBER_POS_REAL);
-            case 'hour': return new IntermediateInput(InputOpcode.SENSING_TIME_HOUR, InputType.NUMBER_POS_REAL | InputType.NUMBER_ZERO);
-            case 'minute': return new IntermediateInput(InputOpcode.SENSING_TIME_MINUTE, InputType.NUMBER_POS_REAL | InputType.NUMBER_ZERO);
-            case 'second': return new IntermediateInput(InputOpcode.SENSING_TIME_SECOND, InputType.NUMBER_POS_REAL | InputType.NUMBER_ZERO);
-            default: return this.createConstantInput(0);
-            }
-        case 'sensing_dayssince2000':
-            return new IntermediateInput(InputOpcode.SENSING_TIME_DAYS_SINCE_2000, InputType.NUMBER);
-        case 'sensing_distanceto':
-            return new IntermediateInput(InputOpcode.SENSING_DISTANCE, InputType.NUMBER_POS_REAL | InputType.NUMBER_ZERO, {
-                target: this.descendInputOfBlock(block, 'DISTANCETOMENU').toType(InputType.STRING)
-            });
-        case 'sensing_keypressed':
-            return new IntermediateInput(InputOpcode.SENSING_KEY_DOWN, InputType.BOOLEAN, {
-                key: this.descendInputOfBlock(block, 'KEY_OPTION', true)
-            });
-        case 'sensing_mousedown':
-            return new IntermediateInput(InputOpcode.SENSING_MOUSE_DOWN, InputType.BOOLEAN);
-        case 'sensing_mousex':
-            return new IntermediateInput(InputOpcode.SENSING_MOUSE_X, InputType.NUMBER);
-        case 'sensing_mousey':
-            return new IntermediateInput(InputOpcode.SENSING_MOUSE_Y, InputType.NUMBER);
-        case 'sensing_of': {
-            const property = block.fields.PROPERTY.value;
-            const object = this.descendInputOfBlock(block, 'OBJECT').toType(InputType.STRING);
-
-            if (object.opcode !== InputOpcode.CONSTANT) {
-                return new IntermediateInput(InputOpcode.SENSING_OF, InputType.ANY, {object, property});
-            }
-
-            if (property === 'volume') {
-                return new IntermediateInput(InputOpcode.SENSING_OF_VOLUME, InputType.NUMBER_POS_REAL | InputType.NUMBER_ZERO, {object, property});
-            }
-
-            if (object.isConstant('_stage_')) {
-                switch (property) {
-                case 'background #': // fallthrough for scratch 1.0 compatibility
-                case 'backdrop #':
-                    return new IntermediateInput(InputOpcode.SENSING_OF_BACKDROP_NUMBER, InputType.NUMBER_POS_REAL);
-                case 'backdrop name':
-                    return new IntermediateInput(InputOpcode.SENSING_OF_BACKDROP_NAME, InputType.STRING);
-                }
-            } else {
-                switch (property) {
-                case 'x position':
-                    return new IntermediateInput(InputOpcode.SENSING_OF_POS_X, InputType.NUMBER_REAL, {object});
-                case 'y position':
-                    return new IntermediateInput(InputOpcode.SENSING_OF_POS_Y, InputType.NUMBER_REAL, {object});
-                case 'direction':
-                    return new IntermediateInput(InputOpcode.SENSING_OF_DIRECTION, InputType.NUMBER_REAL, {object});
-                case 'costume #':
-                    return new IntermediateInput(InputOpcode.SENSING_OF_COSTUME_NUMBER, InputType.NUMBER_POS_REAL, {object});
-                case 'costume name':
-                    return new IntermediateInput(InputOpcode.SENSING_OF_COSTUME_NAME, InputType.STRING, {object});
-                case 'size':
-                    return new IntermediateInput(InputOpcode.SENSING_OF_SIZE, InputType.NUMBER_POS_REAL, {object});
-                }
-            }
-
-            return new IntermediateInput(InputOpcode.SENSING_OF_VAR, InputType.ANY, {object, property});
-        }
-        case 'sensing_timer':
-            this.usesTimer = true;
-            return new IntermediateInput(InputOpcode.SENSING_TIMER_GET, InputType.NUMBER_POS_REAL | InputType.NUMBER_ZERO);
-        case 'sensing_touchingcolor':
-            return new IntermediateInput(InputOpcode.SENSING_TOUCHING_COLOR, InputType.BOOLEAN, {
-                color: this.descendInputOfBlock(block, 'COLOR').toType(InputType.COLOR)
-            });
-        case 'sensing_touchingobject':
-            return new IntermediateInput(InputOpcode.SENSING_TOUCHING_OBJECT, InputType.BOOLEAN, {
-                object: this.descendInputOfBlock(block, 'TOUCHINGOBJECTMENU')
-            });
-        case 'sensing_username':
-            return new IntermediateInput(InputOpcode.SENSING_USERNAME, InputType.STRING);
-
-        case 'string_exactly':
-            return {
-                kind: 'str.exactly',
-                left: this.descendInputOfBlock(block, 'STRING1'),
-                right: this.descendInputOfBlock(block, 'STRING2')
-            };
-        case 'string_is':
-            return {
-                kind: 'str.is',
-                left: this.descendInputOfBlock(block, 'STRING'),
-                right: block.fields.CONVERT.value
-            };
-        case 'string_repeat':
-            return {
-                kind: 'str.repeat',
-                str: this.descendInputOfBlock(block, 'STRING'),
-                num: this.descendInputOfBlock(block, 'NUMBER')
-            };
-        case 'string_replace':
-            return {
-                kind: 'str.replace',
-                left: this.descendInputOfBlock(block, 'REPLACE'),
-                right: this.descendInputOfBlock(block, 'WITH'),
-                str: this.descendInputOfBlock(block, 'STRING')
-            };
-        case 'string_reverse':
-            return {
-                kind: 'str.reverse',
-                str: this.descendInputOfBlock(block, 'STRING')
-            };
-
-        case 'sound_sounds_menu':
-            // This menu is special compared to other menus -- it actually has an opcode function.
-            return this.createConstantInput(block.fields.SOUND_MENU.value);
-
-        case 'control_get_counter':
-            return new IntermediateInput(InputOpcode.CONTROL_COUNTER, InputType.NUMBER_POS_INT | InputType.NUMBER_ZERO);
-
-        case 'tw_getLastKeyPressed':
-            return new IntermediateInput(InputOpcode.TW_KEY_LAST_PRESSED, InputType.STRING);
-
-        default: {
-            const opcodeFunction = this.runtime.getOpcodeFunction(block.opcode);
-            if (opcodeFunction) {
-                // It might be a non-compiled primitive from a standard category
-                if (compatBlocks.inputs.includes(block.opcode)) {
+            // It might be an extension block.
+            const blockInfo = this.getBlockInfo(block.opcode);
+            if (blockInfo) {
+                const type = blockInfo.info.blockType;
+                if (
+                    type === BlockType.ARRAY || type === BlockType.OBJECT ||
+                    type === BlockType.REPORTER || type === BlockType.BOOLEAN ||
+                    type === BlockType.INLINE
+                ) {
                     return this.descendCompatLayerInput(block);
                 }
-                // It might be an extension block.
-                const blockInfo = this.getBlockInfo(block.opcode);
-                if (blockInfo) {
-                    const type = blockInfo.info.blockType;
-                    if (
-                        type === BlockType.ARRAY || type === BlockType.OBJECT ||
-                        type === BlockType.REPORTER || type === BlockType.BOOLEAN ||
-                        type === BlockType.INLINE
-                    ) {
-                        return this.descendCompatLayerInput(block);
-                    }
-                }
             }
-
-            // It might be a menu.
-            const inputs = Object.keys(block.inputs);
-            const fields = Object.keys(block.fields);
-            if (inputs.length === 0 && fields.length === 1) {
-                return this.createConstantInput(block.fields[fields[0]].value, preserveStrings);
-            }
-
-            log.warn(`IR: Unknown input: ${block.opcode}`, block);
-            throw new Error(`IR: Unknown input: ${block.opcode}`);
         }
+
+        // It might be a menu.
+        const inputs = Object.keys(block.inputs);
+        const fields = Object.keys(block.fields);
+        if (inputs.length === 0 && fields.length === 1) {
+            return this.createConstantInput(block.fields[fields[0]].value, preserveStrings);
         }
+
+        log.warn(`IR: Unknown input: ${block.opcode}`, block);
+        throw new Error(`IR: Unknown input: ${block.opcode}`);
     }
 
     /**
@@ -637,14 +249,13 @@ class ScriptTreeGenerator {
      * @returns {IntermediateStackBlock} Compiled node for this block.
      */
     descendStackedBlock (block) {
+        if (!block) console.trace('DSB IR');
+        if (this.runtime.compilerData.stacks.has(block.opcode)) {
+            block = this.runtime.compilerData.stacks.get(block.opcode).stg(this, block, null);
+            console.log('DSB IR', block);
+            return block;
+        }
         switch (block.opcode) {
-        case 'control_all_at_once':
-            // In Scratch 3, this block behaves like "if 1 = 1"
-            return new IntermediateStackBlock(StackOpcode.CONTROL_IF_ELSE, {
-                condition: this.createConstantInput(true).toType(InputType.BOOLEAN),
-                whenTrue: this.descendSubstack(block, 'SUBSTACK'),
-                whenFalse: new IntermediateStack()
-            });
         case 'control_create_clone_of':
             return new IntermediateStackBlock(StackOpcode.CONTROL_CLONE_CREATE, {
                 target: this.descendInputOfBlock(block, 'CLONE_OPTION').toType(InputType.STRING)
@@ -686,7 +297,7 @@ class ScriptTreeGenerator {
             const condition = this.descendInputOfBlock(block, 'CONDITION');
             const needsWarpTimer = this.usesTimer;
             return new IntermediateStackBlock(StackOpcode.CONTROL_WHILE, {
-                condition: new IntermediateInput(InputOpcode.OP_NOT, InputType.BOOLEAN, {
+                condition: new IntermediateInput('operator.not', InputType.BOOLEAN, {
                     operand: condition
                 }),
                 do: this.descendSubstack(block, 'SUBSTACK'),
@@ -733,8 +344,8 @@ class ScriptTreeGenerator {
             const variable = this.descendVariable(block, 'VARIABLE', SCALAR_TYPE);
             return new IntermediateStackBlock(StackOpcode.VAR_SET, {
                 variable,
-                value: new IntermediateInput(InputOpcode.OP_ADD, InputType.NUMBER_OR_NAN, {
-                    left: new IntermediateInput(InputOpcode.VAR_GET, InputType.ANY, {variable}).toType(InputType.NUMBER),
+                value: new IntermediateInput('operator.add', InputType.NUMBER_OR_NAN, {
+                    left: new IntermediateInput('data.variable', InputType.ANY, {variable}).toType(InputType.NUMBER),
                     right: this.descendInputOfBlock(block, 'VALUE').toType(InputType.NUMBER)
                 })
             });
@@ -886,15 +497,15 @@ class ScriptTreeGenerator {
             });
         case 'motion_turnleft':
             return new IntermediateStackBlock(StackOpcode.MOTION_DIRECTION_SET, {
-                direction: new IntermediateInput(InputOpcode.OP_SUBTRACT, InputType.NUMBER, {
-                    left: new IntermediateInput(InputOpcode.MOTION_DIRECTION_GET, InputType.NUMBER),
+                direction: new IntermediateInput('opertor.subtract', InputType.NUMBER, {
+                    left: new IntermediateInput('motion.direction', InputType.NUMBER),
                     right: this.descendInputOfBlock(block, 'DEGREES')
                 })
             });
         case 'motion_turnright':
             return new IntermediateStackBlock(StackOpcode.MOTION_DIRECTION_SET, {
-                direction: new IntermediateInput(InputOpcode.OP_ADD, InputType.NUMBER, {
-                    left: new IntermediateInput(InputOpcode.MOTION_DIRECTION_GET, InputType.NUMBER),
+                direction: new IntermediateInput('operator.add', InputType.NUMBER, {
+                    left: new IntermediateInput('motion.direction', InputType.NUMBER),
                     right: this.descendInputOfBlock(block, 'DEGREES')
                 })
             });

@@ -167,6 +167,10 @@ class JSGenerator {
      * @returns {string} Compiled input.
      */
     descendInput (block) {
+        if (!block) console.trace('DI JS', block);
+        if (this.target.runtime.compilerData.compileFns.has(block.opcode)) {
+            return this.target.runtime.compilerData.compileFns.get(block.opcode)(this, block, true);
+        }
         const node = block.inputs;
         switch (block.opcode) {
             /**
@@ -194,13 +198,6 @@ class JSGenerator {
              */
         case InputOpcode.NOP:
             return `""`;
-
-        case InputOpcode.PROCEDURE_ARG_PARAMATER:
-            return `(thread.getParam("${node.name}") ?? 0)`;
-        case InputOpcode.PROCEDURE_ARG_BOOLEAN:
-            return `toBoolean(p${node.index})`;
-        case InputOpcode.PROCEDURE_ARG_STRING_NUMBER:
-            return `p${node.index}`;
 
         case InputOpcode.ADDON_CALL:
             return `(${this.descendAddonCall(node)})`;
@@ -249,282 +246,6 @@ class JSGenerator {
                 return `"${sanitize(node.value.toString())}"`;
             } throw new Error(`JS: Unknown constant input type '${block.type}'.`);
 
-        case InputOpcode.SENSING_KEY_DOWN:
-            return `runtime.ioDevices.keyboard.getKeyIsDown(${this.descendInput(node.key)})`;
-
-        case InputOpcode.LIST_CONTAINS:
-            return `listContains(${this.referenceVariable(node.list)}, ${this.descendInput(node.item)})`;
-        case InputOpcode.LIST_CONTENTS:
-            return `listContents(${this.referenceVariable(node.list)})`;
-        case InputOpcode.LIST_GET: {
-            if (environment.supportsNullishCoalescing) {
-                if (node.index.isAlwaysType(InputType.NUMBER_INTERPRETABLE | InputType.NUMBER_NAN)) {
-                    return `(${this.referenceVariable(node.list)}.value[${this.descendInput(node.index.toType(InputType.NUMBER_INDEX))} - 1] ?? "")`;
-                }
-                if (node.index.isConstant('last')) {
-                    return `(${this.referenceVariable(node.list)}.value[${this.referenceVariable(node.list)}.value.length - 1] ?? "")`;
-                }
-            }
-            return `listGet(${this.referenceVariable(node.list)}.value, ${this.descendInput(node.index)})`;
-        }
-        case InputOpcode.LIST_INDEX_OF:
-            return `listIndexOf(${this.referenceVariable(node.list)}, ${this.descendInput(node.item)})`;
-        case InputOpcode.LIST_LENGTH:
-            return `${this.referenceVariable(node.list)}.value.length`;
-
-        case InputOpcode.LOOKS_SIZE_GET:
-            return 'Math.round(target.size)';
-        case InputOpcode.LOOKS_BACKDROP_NAME:
-            return 'stage.getCostumes()[stage.currentCostume].name';
-        case InputOpcode.LOOKS_BACKDROP_NUMBER:
-            return '(stage.currentCostume + 1)';
-        case InputOpcode.LOOKS_COSTUME_NAME:
-            return 'target.getCostumes()[target.currentCostume].name';
-        case InputOpcode.LOOKS_COSTUME_NUMBER:
-            return '(target.currentCostume + 1)';
-
-        case InputOpcode.MOTION_ROTATION_STYLE:
-            return new TypedInput('target.rotationStyle', TYPE_NUMBER);
-        case InputOpcode.MOTION_DIRECTION_GET:
-            return 'target.direction';
-        case InputOpcode.MOTION_X_GET:
-            return 'limitPrecision(target.x)';
-        case InputOpcode.MOTION_Y_GET:
-            return 'limitPrecision(target.y)';
-
-        case InputOpcode.SENSING_MOUSE_DOWN:
-            return 'runtime.ioDevices.mouse.getIsDown()';
-        case InputOpcode.SENSING_MOUSE_X:
-            return 'runtime.ioDevices.mouse.getScratchX()';
-        case InputOpcode.SENSING_MOUSE_Y:
-            return 'runtime.ioDevices.mouse.getScratchY()';
-
-        case InputOpcode.OP_ABS:
-            return `Math.abs(${this.descendInput(node.value)})`;
-        case InputOpcode.OP_ACOS:
-            return `((Math.acos(${this.descendInput(node.value)}) * 180) / Math.PI)`;
-        case InputOpcode.OP_ADD:
-            return `(${this.descendInput(node.left)} + ${this.descendInput(node.right)})`;
-        case InputOpcode.OP_AND:
-            return `(${this.descendInput(node.left)} && ${this.descendInput(node.right)})`;
-        case InputOpcode.OP_ASIN:
-            return `((Math.asin(${this.descendInput(node.value)}) * 180) / Math.PI)`;
-        case InputOpcode.OP_ATAN:
-            return `((Math.atan(${this.descendInput(node.value)}) * 180) / Math.PI)`;
-        case InputOpcode.OP_CEILING:
-            return `Math.ceil(${this.descendInput(node.value)})`;
-        case InputOpcode.OP_CONTAINS:
-            return `(${this.descendInput(node.string)}.toLowerCase().indexOf(${this.descendInput(node.contains)}.toLowerCase()) !== -1)`;
-        case InputOpcode.OP_COS:
-            return `(Math.round(Math.cos((Math.PI * ${this.descendInput(node.value)}) / 180) * 1e10) / 1e10)`;
-        case InputOpcode.OP_DIVIDE:
-            return `(${this.descendInput(node.left)} / ${this.descendInput(node.right)})`;
-        case InputOpcode.OP_EQUALS: {
-            const left = node.left;
-            const right = node.right;
-
-            // When both operands are known to be numbers, we can use ===
-            if (left.isAlwaysType(InputType.NUMBER_INTERPRETABLE) && right.isAlwaysType(InputType.NUMBER_INTERPRETABLE)) {
-                return `(${this.descendInput(left.toType(InputType.NUMBER))} === ${this.descendInput(right.toType(InputType.NUMBER))})`;
-            }
-            // In certain conditions, we can use === when one of the operands is known to be a safe number.
-            if (isSafeInputForEqualsOptimization(left, right) || isSafeInputForEqualsOptimization(right, left)) {
-                return `(${this.descendInput(left.toType(InputType.NUMBER))} === ${this.descendInput(right.toType(InputType.NUMBER))})`;
-            }
-            // When either operand is known to never be a number, only use string comparison to avoid all number parsing.
-            if (!left.isSometimesType(InputType.NUMBER_INTERPRETABLE) || !right.isSometimesType(InputType.NUMBER_INTERPRETABLE)) {
-                return `(${this.descendInput(left.toType(InputType.STRING))}.toLowerCase() === ${this.descendInput(right.toType(InputType.STRING))}.toLowerCase())`;
-            }
-            // No compile-time optimizations possible - use fallback method.
-            return `compareEqual(${this.descendInput(left)}, ${this.descendInput(right)})`;
-        }
-        case InputOpcode.OP_POW_E:
-            return `Math.exp(${this.descendInput(node.value)})`;
-        case InputOpcode.OP_FLOOR:
-            return `Math.floor(${this.descendInput(node.value)})`;
-        case InputOpcode.OP_GREATER: {
-            const left = node.left;
-            const right = node.right;
-            // When the left operand is a number and the right operand is a number or NaN, we can use >
-            if (left.isAlwaysType(InputType.NUMBER_INTERPRETABLE) && right.isAlwaysType(InputType.NUMBER_INTERPRETABLE | InputType.NUMBER_NAN)) {
-                return `(${this.descendInput(left.toType(InputType.NUMBER))} > ${this.descendInput(right.toType(InputType.NUMBER_OR_NAN))})`;
-            }
-            // When the left operand is a number or NaN and the right operand is a number, we can negate <=
-            if (left.isAlwaysType(InputType.NUMBER_INTERPRETABLE | InputType.NUMBER_NAN) && right.isAlwaysType(InputType.NUMBER_INTERPRETABLE)) {
-                return `!(${this.descendInput(left.toType(InputType.NUMBER_OR_NAN))} <= ${this.descendInput(right.toType(InputType.NUMBER))})`;
-            }
-            // When either operand is known to never be a number, avoid all number parsing.
-            if (!left.isSometimesType(InputType.NUMBER_INTERPRETABLE) || !right.isSometimesType(InputType.NUMBER_INTERPRETABLE)) {
-                return `(${this.descendInput(left.toType(InputType.STRING))}.toLowerCase() > ${this.descendInput(right.toType(InputType.STRING))}.toLowerCase())`;
-            }
-            // No compile-time optimizations possible - use fallback method.
-            return `compareGreaterThan(${this.descendInput(left)}, ${this.descendInput(right)})`;
-        }
-        case InputOpcode.OP_JOIN:
-            return `(${this.descendInput(node.left)} + ${this.descendInput(node.right)})`;
-        case InputOpcode.OP_LENGTH:
-            return `${this.descendInput(node.string)}.length`;
-        case InputOpcode.OP_LESS: {
-            const left = node.left;
-            const right = node.right;
-            // When the left operand is a number or NaN and the right operand is a number, we can use <
-            if (left.isAlwaysType(InputType.NUMBER_INTERPRETABLE | InputType.NUMBER_NAN) && right.isAlwaysType(InputType.NUMBER_INTERPRETABLE)) {
-                return `(${this.descendInput(left.toType(InputType.NUMBER_OR_NAN))} < ${this.descendInput(right.toType(InputType.NUMBER))})`;
-            }
-            // When the left operand is a number and the right operand is a number or NaN, we can negate >=
-            if (left.isAlwaysType(InputType.NUMBER_INTERPRETABLE) && right.isAlwaysType(InputType.NUMBER_INTERPRETABLE | InputType.NUMBER_NAN)) {
-                return `!(${this.descendInput(left.toType(InputType.NUMBER))} >= ${this.descendInput(right.toType(InputType.NUMBER_OR_NAN))})`;
-            }
-            // When either operand is known to never be a number, avoid all number parsing.
-            if (!left.isSometimesType(InputType.NUMBER_INTERPRETABLE) || !right.isSometimesType(InputType.NUMBER_INTERPRETABLE)) {
-                return `(${this.descendInput(left.toType(InputType.STRING))}.toLowerCase() < ${this.descendInput(right.toType(InputType.STRING))}.toLowerCase())`;
-            }
-            // No compile-time optimizations possible - use fallback method.
-            return `compareLessThan(${this.descendInput(left)}, ${this.descendInput(right)})`;
-        }
-        case InputOpcode.OP_LETTER_OF:
-            return `((${this.descendInput(node.string)})[${this.descendInput(node.letter)} - 1] || "")`;
-        case InputOpcode.OP_LOG_E:
-            return `Math.log(${this.descendInput(node.value)})`;
-        case InputOpcode.OP_LOG_10:
-            return `(Math.log(${this.descendInput(node.value)}) / Math.LN10)`;
-        case InputOpcode.OP_MOD:
-            this.descendedIntoModulo = true;
-            return `mod(${this.descendInput(node.left)}, ${this.descendInput(node.right)})`;
-        case InputOpcode.OP_MULTIPLY:
-            return `(${this.descendInput(node.left)} * ${this.descendInput(node.right)})`;
-        case InputOpcode.OP_NOT:
-            return `!${this.descendInput(node.operand)}`;
-        case InputOpcode.OP_OR:
-            return `(${this.descendInput(node.left)} || ${this.descendInput(node.right)})`;
-        case InputOpcode.OP_RANDOM:
-            if (node.useInts) {
-                return `randomInt(${this.descendInput(node.low)}, ${this.descendInput(node.high)})`;
-            }
-            if (node.useFloats) {
-                return `randomFloat(${this.descendInput(node.low)}, ${this.descendInput(node.high)})`;
-            }
-            return `runtime.ext_scratch3_operators._random(${this.descendInput(node.low)}, ${this.descendInput(node.high)})`;
-        case InputOpcode.OP_ROUND:
-            return `Math.round(${this.descendInput(node.value)})`;
-        case InputOpcode.OP_SIN:
-            return `(Math.round(Math.sin((Math.PI * ${this.descendInput(node.value)}) / 180) * 1e10) / 1e10)`;
-        case InputOpcode.OP_SQRT:
-            return `Math.sqrt(${this.descendInput(node.value)})`;
-        case InputOpcode.OP_SUBTRACT:
-            return `(${this.descendInput(node.left)} - ${this.descendInput(node.right)})`;
-        case InputOpcode.OP_TAN:
-            return `tan(${this.descendInput(node.value)})`;
-        case InputOpcode.OP_POW_10:
-            return `(10 ** ${this.descendInput(node.value)})`;
-
-        case InputOpcode.PROCEDURE_CALL: {
-            const procedureCode = node.code;
-            const procedureVariant = node.variant;
-            const procedureData = this.ir.procedures[procedureVariant];
-            if (procedureData.stack === null) {
-                // TODO still need to evaluate arguments for side effects
-                return '""';
-            }
-
-            // Recursion makes this complicated because:
-            //  - We need to yield *between* each call in the same command block
-            //  - We need to evaluate arguments *before* that yield happens
-
-            const procedureReference = `thread.procedures["${sanitize(procedureVariant)}"]`;
-            const args = [];
-            for (const input of node.arguments) {
-                args.push(this.descendInput(input));
-            }
-            const joinedArgs = args.join(',');
-
-            const yieldForRecursion = !this.isWarp && procedureCode === this.script.procedureCode;
-            const yieldForHat = this.isInHat;
-            if (yieldForRecursion || yieldForHat) {
-                const runtimeFunction = procedureData.yields ? 'yieldThenCallGenerator' : 'yieldThenCall';
-                return `(yield* ${runtimeFunction}(${procedureReference}, ${joinedArgs}))`;
-            }
-            if (procedureData.yields) {
-                return `(yield* ${procedureReference}(${joinedArgs}))`;
-            }
-            return `${procedureReference}(${joinedArgs})`;
-        }
-        case 'procedures.argument':
-            return new TypedInput(`p${node.index}`, TYPE_UNKNOWN);
-
-        case InputOpcode.SENSING_ANSWER:
-            return `runtime.ext_scratch3_sensing._answer`;
-        case InputOpcode.SENSING_COLOR_TOUCHING_COLOR:
-            return `target.colorIsTouchingColor(${this.descendInput(node.target)}, ${this.descendInput(node.mask)})`;
-        case InputOpcode.SENSING_TIME_DATE:
-            return `(new Date().getDate())`;
-        case InputOpcode.SENSING_TIME_WEEKDAY:
-            return `(new Date().getDay() + 1)`;
-        case InputOpcode.SENSING_TIME_DAYS_SINCE_2000:
-            return 'daysSince2000()';
-        case InputOpcode.SENSING_DISTANCE:
-            // TODO: on stages, this can be computed at compile time
-            return `distance(${this.descendInput(node.target)})`;
-        case InputOpcode.SENSING_TIME_HOUR:
-            return `(new Date().getHours())`;
-        case InputOpcode.SENSING_TIME_MINUTE:
-            return `(new Date().getMinutes())`;
-        case InputOpcode.SENSING_TIME_MONTH:
-            return `(new Date().getMonth() + 1)`;
-        case InputOpcode.SENSING_OF:
-            return `runtime.ext_scratch3_sensing.getAttributeOf({OBJECT: ${this.descendInput(node.object)}, PROPERTY: "${sanitize(node.property)}" })`;
-        case InputOpcode.SENSING_OF_VOLUME: {
-            const targetRef = this.descendTargetReference(node.object);
-            return `(${targetRef} ? ${targetRef}.volume : 0)`;
-        } case InputOpcode.SENSING_OF_BACKDROP_NUMBER:
-            return `(stage.currentCostume + 1)`;
-        case InputOpcode.SENSING_OF_BACKDROP_NAME:
-            return `stage.getCostumes()[stage.currentCostume].name`;
-        case InputOpcode.SENSING_OF_POS_X: {
-            const targetRef = this.descendTargetReference(node.object);
-            return `(${targetRef} ? ${targetRef}.x : 0)`;
-        } case InputOpcode.SENSING_OF_POS_Y: {
-            const targetRef = this.descendTargetReference(node.object);
-            return `(${targetRef} ? ${targetRef}.y : 0)`;
-        } case InputOpcode.SENSING_OF_DIRECTION: {
-            const targetRef = this.descendTargetReference(node.object);
-            return `(${targetRef} ? ${targetRef}.direction : 0)`;
-        } case InputOpcode.SENSING_OF_COSTUME_NUMBER: {
-            const targetRef = this.descendTargetReference(node.object);
-            return `(${targetRef} ? ${targetRef}.currentCostume + 1 : 0)`;
-        } case InputOpcode.SENSING_OF_COSTUME_NAME: {
-            const targetRef = this.descendTargetReference(node.object);
-            return `(${targetRef} ? ${targetRef}.getCostumes()[${targetRef}.currentCostume].name : 0)`;
-        } case InputOpcode.SENSING_OF_SIZE: {
-            const targetRef = this.descendTargetReference(node.object);
-            return `(${targetRef} ? ${targetRef}.size : 0)`;
-        } case InputOpcode.SENSING_OF_VAR: {
-            const targetRef = this.descendTargetReference(node.object);
-            const varRef = this.evaluateOnce(`${targetRef} && ${targetRef}.lookupVariableByNameAndType("${sanitize(node.property)}", "", true)`);
-            return `(${varRef} ? ${varRef}.value : 0)`;
-        } case InputOpcode.SENSING_TIME_SECOND:
-            return `(new Date().getSeconds())`;
-        case InputOpcode.SENSING_TOUCHING_OBJECT:
-            return `target.isTouchingObject(${this.descendInput(node.object)})`;
-        case InputOpcode.SENSING_TOUCHING_COLOR:
-            return `target.isTouchingColor(${this.descendInput(node.color)})`;
-        case InputOpcode.SENSING_USERNAME:
-            return 'runtime.ioDevices.userData.getUsername()';
-        case InputOpcode.SENSING_TIME_YEAR:
-            return `(new Date().getFullYear())`;
-
-        case InputOpcode.SENSING_TIMER_GET:
-            return 'runtime.ioDevices.clock.projectTimer()';
-
-        case InputOpcode.CONTROL_COUNTER:
-            return 'runtime.ext_scratch3_control._counter';
-
-        case InputOpcode.TW_KEY_LAST_PRESSED:
-            return 'runtime.ioDevices.keyboard.getLastKeyPressed()';
-
-        case InputOpcode.VAR_GET:
-            return `${this.referenceVariable(node.variable)}.value`;
-
         default:
             log.warn(`JS: Unknown input: ${block.opcode}`, node);
             throw new Error(`JS: Unknown input: ${block.opcode}`);
@@ -535,6 +256,10 @@ class JSGenerator {
      * @param {IntermediateStackBlock} block Stacked block to compile.
      */
     descendStackedBlock (block) {
+        if (!block) console.trace('DSB JS', block);
+        if (this.target.runtime.compilerData.compileFns.has(block.opcode)) {
+            return this.target.runtime.compilerData.compileFns.get(block.opcode)(this, block, false);
+        }
         const node = block.inputs;
         switch (block.opcode) {
         case StackOpcode.ADDON_CALL: {
@@ -1003,14 +728,14 @@ class JSGenerator {
         return stackSource;
     }
 
-    descendVariable (variable) {
+    /*descendVariable (variable) {
         if (Object.prototype.hasOwnProperty.call(this.variableInputs, variable.id)) {
             return this.variableInputs[variable.id];
         }
         const input = new VariableInput(`${this.referenceVariable(variable)}.value`);
         this.variableInputs[variable.id] = input;
         return input;
-    }
+    }*/
 
     referenceVariable (variable) {
         if (variable.scope === 'target') {
