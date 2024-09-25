@@ -2495,6 +2495,56 @@ class Runtime extends EventEmitter {
         return newThreads;
     }
 
+    /**
+     * Start all procedure hats.
+     * @return {Array.<Thread>} List of threads started by this function.
+     */
+    startProcedureHats() {
+        const newThreads = [];
+
+        // tw: By assuming that all new threads will not interfere with eachother, we can optimize the loops
+        // inside the allScriptsByOpcodeDo callback below.
+        const startingThreadListLength = this.threads.length;
+
+        this.allScriptsByOpcodeDo("procedures_call", (script, target) => {
+            const topBlockId = script.blockId;
+
+            // we can't access the script container prematurely.
+            const targetBlocks = target.blocks;
+            const topBlock = targetBlocks._blocks[topBlockId];
+            if (topBlock.mutation.hat === "false") return;
+
+            for (let j = 0; j < startingThreadListLength; j++) {
+                if (this.threads[j].target === target &&
+                    this.threads[j].topBlock === topBlockId &&
+                    // stack click threads and hat threads can coexist
+                    !this.threads[j].stackClick &&
+                    this.threads[j].status !== Thread.STATUS_DONE) {
+                    // Some thread is already running.
+                    return;
+                }
+            }
+
+            newThreads.push(this._pushThread(topBlockId, target));
+        });
+
+        newThreads.forEach(thread => {
+            if (thread.isCompiled) {
+                if (thread.executableHat) {
+                    // It is quite likely that we are currently executing a block, so make sure
+                    // that we leave the compiler's state intact at the end.
+                    compilerExecute.saveGlobalState();
+                    compilerExecute(thread);
+                    compilerExecute.restoreGlobalState();
+                }
+            } else {
+                execute(this.sequencer, thread);
+                thread.goToNextBlock();
+            }
+        });
+
+        return newThreads;
+    }
 
     /**
      * Dispose all targets. Return to clean state.
@@ -2756,10 +2806,11 @@ class Runtime extends EventEmitter {
         this.updateThreadMap();
 
         // Find all edge-activated hats, and add them to threads to be evaluated.
+        this.startProcedureHats();
         for (const hatType in this._hats) {
             if (!Object.prototype.hasOwnProperty.call(this._hats, hatType)) continue;
             const hat = this._hats[hatType];
-            if (hat.edgeActivated) {
+            if (hat.edgeActivated && !hat.procedureHat) {
                 this.startHats(hatType);
             }
         }
