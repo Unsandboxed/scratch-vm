@@ -1472,7 +1472,7 @@ class JSGenerator {
         for (const fieldName of Object.keys(node.fields)) {
             const field = node.fields[fieldName];
             result += `"${sanitize(fieldName)}":"${sanitize(field)}",`;
-        }
+        }z
         const opcodeFunction = this.evaluateOnce(`runtime.getOpcodeFunction("${sanitize(opcode)}")`);
         result += `}, ${opcodeFunction}, ${this.isWarp}, ${setFlags}, "${sanitize(node.id)}", ${frameName})`;
 
