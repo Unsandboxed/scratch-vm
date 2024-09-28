@@ -198,15 +198,6 @@ class BlockUtility {
     }
 
     /**
-     * Retrieve the stored parameter value for a given parameter name.
-     * @param {string} paramName The procedure's parameter name.
-     * @return {*} The parameter's current stored value.
-     */
-    getStack (paramName) {
-        return this.thread.getStack(paramName);
-    }
-
-    /**
      * Start all relevant hats.
      * @param {!string} requestedHat Opcode of hats to start.
      * @param {object=} optMatchFields Optionally, fields to match on the hat.
