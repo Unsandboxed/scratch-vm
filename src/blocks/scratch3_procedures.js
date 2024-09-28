@@ -27,8 +27,6 @@ class Scratch3ProcedureBlocks {
     }
 
     call (args, util) {
-        console.log(args);
-
         const stackFrame = util.stackFrame;
         const isReporter = !!args.mutation.return;
 

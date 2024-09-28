@@ -1479,7 +1479,7 @@ class ScriptTreeGenerator {
 
         const args = [];
         for (let i = 0; i < paramIds.length; i++) {
-            let value;z
+            let value;
             if (block.inputs[paramIds[i]] && block.inputs[paramIds[i]].block) {
                 value = this.descendInputOfBlock(block, paramIds[i]);
             } else {
