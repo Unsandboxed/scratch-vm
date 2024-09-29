@@ -68,7 +68,7 @@ class Scratch3ProcedureBlocks {
                 util.pushParam(paramNames[i], args[paramIds[i]]);
             } else if (paramIds[i].startsWith("SUBSTACK")) {
                 util.pushParam(paramNames[i], {
-                    blockId: util.thread.peekStack(),
+                    blockId: util.thread.peekStackFrame().op.id,
                     fieldId: paramIds[i]
                 });
             } else {
@@ -101,6 +101,7 @@ class Scratch3ProcedureBlocks {
 
     return (args, util) {
         util.stopThisScript();
+
         // If used outside of a custom block, there may be no stackframe.
         if (util.thread.peekStackFrame()) {
             util.stackFrame.returnValue = args.VALUE;
