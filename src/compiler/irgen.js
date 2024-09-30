@@ -1494,12 +1494,12 @@ class ScriptTreeGenerator {
             }
         }
 
-        let substacks = {};
+        const substacks = {};
         const args = [];
         for (let i = 0; i < paramIds.length; i++) {
             let value;
 
-            if (paramIds[i].startsWith("SUBSTACK")) {
+            if (paramIds[i].startsWith('SUBSTACK')) {
                 substacks[paramNames[i]] = this.descendSubstack(block, paramIds[i]);
                 continue;
             }
