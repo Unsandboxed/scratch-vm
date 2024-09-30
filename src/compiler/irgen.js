@@ -99,7 +99,6 @@ class ScriptTreeGenerator {
 
         const [paramNames, _paramIds, _paramDefaults] = paramNamesIdsAndDefaults;
         this.script.arguments = paramNames;
-        this.script.ids = _paramIds; // in an ideal world, we wouldn't have to store these.
     }
 
     enableWarp () {
@@ -800,7 +799,6 @@ class ScriptTreeGenerator {
         case 'argument_statement': {
             const name = block.fields.VALUE.value;
             const index = this.script.arguments.lastIndexOf(name);
-            const id = this.script.ids[index];
             if (index === -1) {
                 return {
                     kind: 'noop'
@@ -809,8 +807,7 @@ class ScriptTreeGenerator {
             this.script.yields = true;
             return {
                 kind: 'procedures.statement',
-                name: name,
-                id
+                name: name
             };
         }
         case 'control_all_at_once':
