@@ -587,6 +587,11 @@ class Runtime extends EventEmitter {
         this.finishedAssetRequests = 0;
 
         /**
+         * Whether or not the project is currently paused
+         */
+        this.paused = false;
+
+        /**
          * Export some internal values for extensions.
          */
         this.exports = {
@@ -754,6 +759,14 @@ class Runtime extends EventEmitter {
      */
     static get PROJECT_START () {
         return 'PROJECT_START';
+    }
+
+    /**
+     * Event name when the project is paused
+     * @const {string}
+     */
+    static get PROJECT_PAUSE () {
+        return 'PROJECT_PAUSE';
     }
 
     /**
@@ -2202,6 +2215,23 @@ class Runtime extends EventEmitter {
     // -----------------------------------------------------------------------------
     // -----------------------------------------------------------------------------
 
+    setPause(status) {
+        status = status || false;
+        const didChange = this.paused !== status;
+        this.paused = status;
+        if (status) {
+            if (!this.ioDevices.clock._paused) {
+                this.ioDevices.clock.pause();
+            }
+            this.audioEngine.audioContext.suspend();
+        }
+        if (!status && didChange) {
+            this.audioEngine.audioContext.resume();
+            this.ioDevices.clock.resume();
+        }
+        this.emit(Runtime.PROJECT_PAUSE, status);
+    }
+
     /**
      * Create a thread and push it to the list of threads.
      * @param {!string} id ID of block that starts the stack.
@@ -2667,6 +2697,7 @@ class Runtime extends EventEmitter {
      */
     greenFlag () {
         this.stopAll();
+        this.setPause(false);
         this.emit(Runtime.PROJECT_START);
         this.updateCurrentMSecs();
         this.ioDevices.clock.resetProjectTimer();
