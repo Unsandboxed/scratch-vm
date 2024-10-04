@@ -592,6 +592,14 @@ class Runtime extends EventEmitter {
         this.paused = false;
 
         /**
+         * The audio settings (runtime)
+         */
+        this.audioSettings = {
+            muted: false,
+            volume: 1
+        };
+
+        /**
          * Export some internal values for extensions.
          */
         this.exports = {
@@ -2164,6 +2172,13 @@ class Runtime extends EventEmitter {
      * @param {!AudioEngine} audioEngine The audio engine to attach
      */
     attachAudioEngine (audioEngine) {
+        if (audioEngine.inputNode && audioEngine.inputNode.gain) {
+            this.audioSettings.volume = audioEngine.inputNode.gain.value;
+            this.audioSettings.muted = this.audioSettings.volume === 0;
+        } else {
+            this.audioSettings.muted = false;
+            this.audioSettings.volume = 1;
+        }
         this.audioEngine = audioEngine;
     }
 
@@ -2223,6 +2238,7 @@ class Runtime extends EventEmitter {
     // -----------------------------------------------------------------------------
     // -----------------------------------------------------------------------------
 
+    // this is a WIP so it should be ignored
     setPause(status) {
         status = status || false;
         const didChange = this.paused !== status;
@@ -2244,10 +2260,20 @@ class Runtime extends EventEmitter {
      * Sets the volume on the audio engine for the project
      * @param {number} volume The volume (in a 0.00 - 1.00 range)
      * @returns {boolean} Whether or not the volume was actually set succesfully
-     * this function also emits an event for the GUI
+     * This function also emits an event for the GUI. Please use this as it updates
+     * other properties and prevents them from becoming dysynced. This will not
+     * update audioSettings.volume if the new volume is 0 (muted), pass -1 to unmute the value.
      */
     setVolume(volume) {
+        if (volume === this.audioSettings.volume) return false;
+        if (volume === -1 && this.audioSettings.muted) {
+            volume = this.audioSettings.volume;
+        }
         // It is safe to assume the engine is setup
+        this.audioSettings.muted = volume === 0;
+        if (volume !== 0) {
+            this.audioSettings.volume = volume;
+        }
         this.audioEngine.inputNode.gain.value = volume;
         this.emit(Runtime.VOLUME_CHANGE, volume);
         return true;
