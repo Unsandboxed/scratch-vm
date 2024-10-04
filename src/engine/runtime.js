@@ -797,6 +797,14 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Event name for when the volume is changed
+     * @const {string}
+     */
+    static get VOLUME_CHANGE () {
+        return 'VOLUME_CHANGE';
+    }
+
+    /**
      * Event name for target being stopped by a stop for target call.
      * Used by blocks that need to stop individual targets.
      * @const {string}
@@ -2230,6 +2238,19 @@ class Runtime extends EventEmitter {
             this.ioDevices.clock.resume();
         }
         this.emit(Runtime.PROJECT_PAUSE, status);
+    }
+
+    /*
+     * Sets the volume on the audio engine for the project
+     * @param {number} volume The volume (in a 0.00 - 1.00 range)
+     * @returns {boolean} Whether or not the volume was actually set succesfully
+     * this function also emits an event for the GUI
+     */
+    setVolume(volume) {
+        // It is safe to assume the engine is setup
+        this.audioEngine.inputNode.gain.value = volume;
+        this.emit(Runtime.VOLUME_CHANGE, volume);
+        return true;
     }
 
     /**
