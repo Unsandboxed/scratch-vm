@@ -427,7 +427,7 @@ class Thread {
      * Continue the current running loop onto the next iteration.
      */
     continueCurrentLoop () {
-      const stackFrame = this.peekStackFrame();
+      const blocks = this.blockContainer, stackFrame = this.peekStackFrame();
 
       if (!stackFrame._continueData) {
         let frameData = false;
