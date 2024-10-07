@@ -34,6 +34,7 @@ const setupUnsandboxedExtensionAPI = vm => new Promise(resolve => {
     // Create a new copy of global.Scratch for each extension
     const Scratch = Object.assign({}, global.Scratch || {}, ScratchCommon);
     Scratch.extensions = {
+        isUSB: true,
         unsandboxed: true,
         register
     };
