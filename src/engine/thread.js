@@ -369,6 +369,8 @@ class Thread {
       if (!loopFrameBlock) return false;
       return [loopFrameBlock, loopFrameIndex];
     }
+    // todo: make this work for extensions that are not intepreter only
+    // (it will probably require some compiler changes for extension blocks)
     breakCurrentLoop () {
       const stackFrame = this.peekStackFrame();
       if (!stackFrame._breakData) {
