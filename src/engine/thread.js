@@ -354,13 +354,13 @@ class Thread {
         return this.stack.length > 0 ? this.stack[this.stack.length - 1] : null;
     }
     
-    // code borrowed from https://github.com/surv-is-a-dev/gallery/edit/main/site-files/extensions/0znzw/tests/breakContinue.js
-    // comments written by other a different Unsandboxed dev
+    // Code borrowed from https://github.com/surv-is-a-dev/gallery/edit/main/site-files/extensions/0znzw/tests/breakContinue.js
+    // Commenting done by the Unsandboxed team.
 
     /**
      * Get the stackframe of the current loop.
      * @param {Thread} thread 
-     * @returns 
+     * @returns {boolean|Array<, number>}
      */
     static getLoopFrame (thread) {
       const stackFrames = thread.stackFrames, frameCount = stackFrames.length;
@@ -385,9 +385,11 @@ class Thread {
     }
 
     /**
-     * Break the current executing loop.
-     * TODO: Make this work for extensions that are not intepreter only.
+     * TODO: Make these work for extensions that are not intepreter only.
      * (It will probably require some compiler changes for extension blocks).
+     */
+    /**
+     * Break the current executing loop.
      */
     breakCurrentLoop () {
       const stackFrame = this.peekStackFrame();
@@ -430,10 +432,13 @@ class Thread {
         stackFrame._continueData = frameData[0];
       }
 
+      // Pop the stack until we are at the loop block
+      // (we make sure to check if the stack exists though to prevent errors)
       while(this.stack[0] && this.stack.at(-1) !== stackFrame._continueData) {
         this.popStack();
       }
 
+      // "run util.yield", and restart the loop block
       this.status = Thread.STATUS_YIELD;
     }
 
@@ -614,5 +619,7 @@ class Thread {
 
 // for extensions
 Thread._StackFrame = _StackFrame;
+// (super duper secret export shhh!!!)
+Thread._compile = () => require('../compiler/compile');
 
 module.exports = Thread;
