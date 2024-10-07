@@ -359,6 +359,7 @@ class Thread {
       const stackFrames = thread.stackFrames, frameCount = stackFrames.length;
       let loopFrameBlock = null, loopFrameIndex = -1;
       for (let i = frameCount - 1; i >= 0; i--) {
+        // this check should literally never pass, but as the garbomuffin once said "just in case"
         if (i < 0) break;
         if (!stackFrames[i].isLoop) continue;
         loopFrameBlock = stackFrames[i].op.id;
