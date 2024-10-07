@@ -154,6 +154,7 @@ class Scratch3ControlBlocks {
     break (_, util) {
         util.thread.breakCurrentLoop();
     }
+
     continue (_, util) {
         util.thread.continueCurrentLoop();
     }
