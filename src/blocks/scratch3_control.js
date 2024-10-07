@@ -151,20 +151,6 @@ class Scratch3ControlBlocks {
         }
     }
 
-    // break and continue code borrowed from
-    // https://github.com/surv-is-a-dev/gallery/blob/main/site-files/extensions/0znzw/tests/breakContinue.js
-    _getLoopFrame(util) {
-        const thread = util.thread, stackFrames = thread.stackFrames, frameCount = stackFrames.length;
-        let loopFrameBlock = null, loopFrameIndex = -1;
-        for (let i = frameCount - 1; i >= 0; i--) {
-            if (!stackFrames[i].isLoop) continue;
-            loopFrameBlock = stackFrames[i].op.id;
-            loopFrameIndex = i;
-            break;
-        }
-        if (!loopFrameBlock) return false;
-        return [loopFrameBlock, loopFrameIndex];
-    }
     break (_, util) {
         util.thread.breakCurrentLoop();
     }
