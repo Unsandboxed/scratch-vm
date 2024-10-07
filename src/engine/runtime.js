@@ -2259,12 +2259,13 @@ class Runtime extends EventEmitter {
     /*
      * Sets the volume on the audio engine for the project
      * @param {number} volume The volume (in a 0.00 - 1.00 range)
+     * @param {?boolean} runEv Whether or not to fire the event
      * @returns {boolean} Whether or not the volume was actually set succesfully
      * This function also emits an event for the GUI. Please use this as it updates
      * other properties and prevents them from becoming dysynced. This will not
      * update audioSettings.volume if the new volume is 0 (muted), pass -1 to unmute the value.
      */
-    setVolume(volume) {
+    setVolume(volume, runEv) {
         if (volume === this.audioSettings.volume) return false;
         if (volume === -1 && this.audioSettings.muted) {
             volume = this.audioSettings.volume;
@@ -2275,7 +2276,7 @@ class Runtime extends EventEmitter {
             this.audioSettings.volume = volume;
         }
         this.audioEngine.inputNode.gain.value = volume;
-        this.emit(Runtime.VOLUME_CHANGE, volume);
+        if (runEv ?? true) this.emit(Runtime.VOLUME_CHANGE, volume);
         return true;
     }
 
