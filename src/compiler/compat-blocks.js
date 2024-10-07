@@ -13,6 +13,8 @@ const stacked = [
     'camera_changex',
     'camera_sety',
     'camera_changey',
+    'camera_setzoom',
+    'camera_changezoom',
 
     'looks_changestretchby',
     'looks_hideallsprites',
@@ -56,7 +58,9 @@ const inputs = [
     'string_item_split',
     'string_convert',
     'string_index_of',
-    'string_ternary'
+    'string_ternary',
+
+    'camera_zoom'
 ];
 
 module.exports = {

@@ -16,6 +16,9 @@ class Scratch3CameraBlocks {
             },
             camera_yposition: {
                 getId: () => 'yposition'
+            },
+            camera_zoom: {
+                getId: () => 'zoom'
             }
         };
     }
@@ -33,7 +36,10 @@ class Scratch3CameraBlocks {
             camera_sety: this.setY,
             camera_changey: this.changeY,
             camera_xposition: this.getCameraX,
-            camera_yposition: this.getCameraY
+            camera_yposition: this.getCameraY,
+            camera_setzoom: this.setZoom,
+            camera_changezoom: this.changeZoom,
+            camera_zoom: this.getCameraZoom
         };
     }
 
@@ -79,6 +85,21 @@ class Scratch3CameraBlocks {
 
     getCameraY () {
         return this.runtime.camera.y;
+    }
+
+    setZoom (args) {
+        const zoom = Math.max(1, Cast.toNumber(args.ZOOM) + 100);
+        this.runtime.camera.setZoom(zoom);
+    }
+
+    changeZoom (args) {
+        const zoom = Cast.toNumber(args.ZOOM);
+        const newZoom = zoom + this.runtime.camera.zoom;
+        this.runtime.camera.setZoom(newZoom);
+    }
+
+    getCameraZoom () {
+        return this.runtime.camera.zoom - 100;
     }
 }
 
