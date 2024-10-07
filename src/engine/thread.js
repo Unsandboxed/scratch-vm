@@ -409,7 +409,7 @@ class Thread {
       let _;
       while ((_ = this.stack.at(-1)) !== loopFrameBlock) {
         // We don't want to exit from a procedure
-        if (blocks.getBlock(_)?.opcode === 'procedures_call') return;
+        if (blocks.getBlock(_)?.opcode === 'procedures_definition') return;
         this.popStack();
       }
 
@@ -440,7 +440,7 @@ class Thread {
       let _;
       while(this.stack[0] && (_ = this.stack.at(-1)) !== stackFrame._continueData) {
         // Same as break.
-        if (blocks.getBlock(_)?.opcode === 'procedures_call') return;
+        if (blocks.getBlock(_)?.opcode === 'procedures_definition') return;
         this.popStack();
       }
 
