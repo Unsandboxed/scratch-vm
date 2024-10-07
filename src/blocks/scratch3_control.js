@@ -166,29 +166,10 @@ class Scratch3ControlBlocks {
         return [loopFrameBlock, loopFrameIndex];
     }
     break (_, util) {
-        const thread = util.thread, stackFrame = thread.peekStackFrame();
-        if (!stackFrame._breakData) {
-            let frameData = false;
-            if (!(frameData = this._getLoopFrame(util))) return console.warn('Not in a loop!');
-            const loopFrameBlock = frameData[0];
-            const afterLoop = thread.blockContainer.getBlock(loopFrameBlock).next;
-            if (!afterLoop) return;
-            stackFrame._breakData = { loopFrameBlock, afterLoop };
-        }
-        const { loopFrameBlock, afterLoop } = stackFrame._breakData;
-        while(thread.stack.at(-1) !== loopFrameBlock) thread.popStack();
-        thread.popStack();
-        thread.pushStack(afterLoop);
+        util.thread.breakCurrentLoop();
     }
     continue (_, util) {
-        const thread = util.thread, blocks = thread.blockContainer, stackFrame = thread.peekStackFrame();
-        if (!stackFrame._continueData) {
-        let frameData = false;
-        if (!(frameData = this._getLoopFrame(util))) return console.warn('Not in a loop!');
-            stackFrame._continueData = frameData[0];
-        }
-        while(thread.stack.at(-1) !== stackFrame._continueData) thread.popStack();
-        thread.status = thread.constructor.STATUS_YIELD;
+        util.thread.continueCurrentLoop();
     }
 
     createClone (args, util) {
