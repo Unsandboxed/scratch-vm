@@ -903,6 +903,16 @@ class ScriptTreeGenerator {
                 kind: 'noop'
             };
         }
+        case 'control_break': {
+            return {
+                kind: 'control.break'
+            };
+        }
+        case 'control_continue': {
+            return {
+                kind: 'control.continue'
+            };
+        }
         case 'control_wait':
             this.script.yields = true;
             return {

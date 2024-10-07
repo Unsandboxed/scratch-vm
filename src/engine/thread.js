@@ -87,6 +87,7 @@ class _StackFrame {
         this.params = null;
         this.executionContext = null;
         this.op = null;
+        this.retired = null;
 
         return this;
     }
@@ -334,6 +335,29 @@ class Thread {
             }
 
             this.popStack();
+            blockID = this.peekStack();
+        }
+
+        if (this.stack.length === 0) {
+            // Clean up!
+            this.requestScriptGlowInFrame = false;
+            this.status = Thread.STATUS_DONE;
+        }
+    }
+
+    /**
+     * Pop back down the stack frame until we hit a valid loop frame
+     */
+    breakThisLoop () {
+        let blockID = this.peekStack();
+        while (blockID !== null) {
+            const block = this.target.blocks.getBlock(blockID);
+            this.popStack();
+            console.log(this.peekStackFrame());
+            if (this.peekStackFrame()?.op?.id === block.id) {
+                this.popStack();
+                break;
+            }
             blockID = this.peekStack();
         }
 
