@@ -360,7 +360,7 @@ class Thread {
     /**
      * Get the stackframe of the current loop.
      * @param {Thread} thread 
-     * @returns {boolean|Array<, number>}
+     * @returns {boolean|Array<any, number>}
      */
     static getLoopFrame (thread) {
       const stackFrames = thread.stackFrames, frameCount = stackFrames.length;
@@ -392,13 +392,13 @@ class Thread {
      * Break the current executing loop.
      */
     breakCurrentLoop () {
-      const stackFrame = this.peekStackFrame();
+      const blocks = this.blockContainer, stackFrame = this.peekStackFrame();
 
       if (!stackFrame._breakData) {
         let frameData = false;
         if (!(frameData = Thread.getLoopFrame(this))) return;
         const loopFrameBlock = frameData[0];
-        const afterLoop = this.blockContainer.getBlock(loopFrameBlock).next;
+        const afterLoop = blocks.getBlock(loopFrameBlock).next;
         stackFrame._breakData = { loopFrameBlock, afterLoop };
       }
 
@@ -406,7 +406,10 @@ class Thread {
 
       // Remove any remaining blocks within the remaining stack
       // until we reach the loop block. 
-      while (this.stack.at(-1) !== loopFrameBlock) {
+      let _;
+      while ((_ = this.stack.at(-1)) !== loopFrameBlock) {
+        // We don't want to exit from a procedure
+        if (blocks.getBlock(_)?.opcode === 'procedures_definition') return;
         this.popStack();
       }
 
@@ -434,7 +437,10 @@ class Thread {
 
       // Pop the stack until we are at the loop block
       // (we make sure to check if the stack exists though to prevent errors)
-      while(this.stack[0] && this.stack.at(-1) !== stackFrame._continueData) {
+      let _;
+      while(this.stack[0] && (_ = this.stack.at(-1)) !== stackFrame._continueData) {
+        // Same as break.
+        if (blocks.getBlock(_)?.opcode === 'procedures_definition') return;
         this.popStack();
       }
 
