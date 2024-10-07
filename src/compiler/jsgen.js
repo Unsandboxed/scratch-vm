@@ -946,12 +946,10 @@ class JSGenerator {
             break;
         case 'control.break':
             const frameLoopsBreak = this.frames.map(frame => frame.isLoop);
-            console.log(frameLoopsBreak, frameLoopsBreak.indexOf(true));
             if (frameLoopsBreak.indexOf(true) !== -1) this.source += 'break;\n';
             break;
         case 'control.continue':
             const frameLoopsCont = this.frames.map(frame => frame.isLoop);
-            console.log(frameLoopsCont, frameLoopsCont.indexOf(true));
             if (frameLoopsCont.indexOf(true) !== -1) this.source += 'continue;\n';
             break;
         case 'control.wait': {

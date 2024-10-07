@@ -87,7 +87,6 @@ class _StackFrame {
         this.params = null;
         this.executionContext = null;
         this.op = null;
-        this.retired = null;
 
         return this;
     }
@@ -353,7 +352,6 @@ class Thread {
         while (blockID !== null) {
             const block = this.target.blocks.getBlock(blockID);
             this.popStack();
-            console.log(this.peekStackFrame());
             if (this.peekStackFrame()?.op?.id === block.id) {
                 this.popStack();
                 break;

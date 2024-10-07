@@ -156,7 +156,6 @@ class Scratch3ControlBlocks {
     }
 
     continue (args, util) {
-        console.log(util.thread.stack)
     }
 
     createClone (args, util) {
