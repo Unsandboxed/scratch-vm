@@ -367,7 +367,8 @@ class Thread {
       let loopFrameBlock = null, loopFrameIndex;
 
       for (let i = frameCount - 1; i >= 0; i--) {
-        // There are no stackFrames.
+        // This check should literally never pass, 
+        // but as GarboMuffin once said, "just in case".
         if (i < 0) break;
         if (!stackFrames[i].isLoop) continue;
         loopFrameBlock = stackFrames[i].op.id;
@@ -385,6 +386,8 @@ class Thread {
 
     /**
      * Break the current executing loop.
+     * TODO: Make this work for extensions that are not intepreter only.
+     * (It will probably require some compiler changes for extension blocks).
      */
     breakCurrentLoop () {
       const stackFrame = this.peekStackFrame();
