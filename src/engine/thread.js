@@ -344,27 +344,7 @@ class Thread {
         }
     }
 
-    /**
-     * Pop back down the stack frame until we hit a valid loop frame
-     */
-    breakThisLoop () {
-        let blockID = this.peekStack();
-        while (blockID !== null) {
-            const block = this.target.blocks.getBlock(blockID);
-            this.popStack();
-            if (this.peekStackFrame()?.op?.id === block.id) {
-                this.popStack();
-                break;
-            }
-            blockID = this.peekStack();
-        }
 
-        if (this.stack.length === 0) {
-            // Clean up!
-            this.requestScriptGlowInFrame = false;
-            this.status = Thread.STATUS_DONE;
-        }
-    }
 
     /**
      * Get top stack item.
@@ -373,8 +353,46 @@ class Thread {
     peekStack () {
         return this.stack.length > 0 ? this.stack[this.stack.length - 1] : null;
     }
-
-
+    
+    // code borrowed from https://github.com/surv-is-a-dev/gallery/edit/main/site-files/extensions/0znzw/tests/breakContinue.js
+    static getLoopFrame (thread) {
+      const stackFrames = thread.stackFrames, frameCount = stackFrames.length;
+      let loopFrameBlock = null, loopFrameIndex = -1;
+      for (let i = frameCount - 1; i >= 0; i--) {
+        if (i < 0) break;
+        if (!stackFrames[i].isLoop) continue;
+        loopFrameBlock = stackFrames[i].op.id;
+        loopFrameIndex = i;
+        break;
+      }
+      if (!loopFrameBlock) return false;
+      return [loopFrameBlock, loopFrameIndex];
+    }
+    breakCurrentLoop () {
+      const stackFrame = this.peekStackFrame();
+      if (!stackFrame._breakData) {
+        let frameData = false;
+        if (!(frameData = Thread.getLoopFrame(this))) return console.warn('Not in a loop!');
+        const loopFrameBlock = frameData[0];
+        const afterLoop = this.blockContainer.getBlock(loopFrameBlock).next;
+        stackFrame._breakData = { loopFrameBlock, afterLoop };
+      }
+      const { loopFrameBlock, afterLoop } = stackFrame._breakData;
+      while(this.stack.at(-1) !== loopFrameBlock) this.popStack();
+      this.popStack();
+      if (afterLoop) this.pushStack(afterLoop);
+    }
+    continueCurrentLoop () {
+      const blocks = this.blockContainer, stackFrame = this.peekStackFrame();
+      if (!stackFrame._continueData) {
+        let frameData = false;
+        if (!(frameData = Thread.getLoopFrame(this))) return console.warn('Not in a loop!');
+        stackFrame._continueData = frameData[0];
+      }
+      while(this.stack[0] && this.stack.at(-1) !== stackFrame._continueData) this.popStack();
+      this.status = Thread.STATUS_YIELD;
+    }
+    
     /**
      * Get top stack frame.
      * @return {?object} Last stack frame stored on this thread.
