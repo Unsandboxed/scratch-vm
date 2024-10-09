@@ -168,6 +168,8 @@ class RenderedTarget extends Target {
         this.onTargetVisualChange = null;
 
         this.interpolationData = null;
+
+        this.saveSpriteSceneState(this.runtime.scene);
     }
 
     /**
@@ -1079,6 +1081,51 @@ class RenderedTarget extends Target {
         if (Object.prototype.hasOwnProperty.call(data, 'size')) {
             this.setSize(data.size);
         }
+    }
+
+    /**
+     * Saves all current values to a scene state.
+     * @param {string} scene - the name of the scene.
+     * @returns {*} the scene state.
+     */
+    saveSpriteSceneState (scene) {
+        if (!scene  || !this.runtime.scenes[scene]) {
+            scene = this.runtime.scene;
+        }
+
+        this.sceneStates[scene] = {
+            x: this.x,
+            y: this.y,
+            direction: this.direction,
+            size: this.size,
+            effects: this.effects,
+            visible: this.visible,
+        }
+    }
+
+    /**
+     * Loads all scene data into current sprite.
+     * @param {string} scene - the name of the scene.
+     * @returns {*} 
+     */
+    loadSpriteSceneState (scene) {
+        if (!scene) {
+            scene = this.runtime.scene;
+        }
+
+        if (!this.runtime.scenes[scene]) return;
+
+        if (!this.sceneStates[scene]) {
+            // If we're here, the scene does exist but
+            // for whatever reason the sprite doesn't
+            // have a state for it.
+            this.saveSpriteSceneState(scene);
+            return;
+        }
+
+        Object.assign(this, this.sceneStates[scene]);
+
+        this.updateAllDrawableProperties();
     }
 
     /**

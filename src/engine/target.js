@@ -76,6 +76,12 @@ class Target extends EventEmitter {
          * @type {Object.<string, object>}
          */
         this.extensionStorage = {};
+
+        /**
+         * Maps of various "scene states" for each scene in the runtime.
+         * @type {Object.<string, *>}
+         */
+        this.sceneStates = {};
     }
 
     /**

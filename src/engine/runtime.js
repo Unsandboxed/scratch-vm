@@ -507,6 +507,11 @@ class Runtime extends EventEmitter {
 
         this.camera = new Camera(this);
 
+        this.scene = "my scene";
+        this.scenes = {
+            "my scene": {}
+        }
+
         this.runtimeOptions = {
             maxClones: Runtime.MAX_CLONES,
             miscLimits: false,
@@ -3544,6 +3549,38 @@ class Runtime extends EventEmitter {
      */
     clonesAvailable () {
         return this._cloneCounter < this.runtimeOptions.maxClones;
+    }
+
+    /**
+     * Create a new scene object.
+     * @param {string} scene the name of the scene.
+     * @param {object} optScene an old scene object to base on.
+     * @returns {object} the new scene object.
+     */
+    createScene (scene, optScene) {
+        if (this.scenes[scene]) return;
+
+        this.scenes[scene] = {};
+    }
+
+    /**
+     * Load into a scene and update all targets.
+     * @param {string} scene the name of the scene.
+     * @return
+     */
+    loadScene (scene) {
+        const oldScene = this.scene;
+        this.scene = scene;
+
+        if (!this.scenes[scene]) {
+            this.createScene(scene);            
+        }
+
+        for (let i = 0; i < this.targets.length; i++) {
+            const target = this.targets[i];
+            target.saveSpriteSceneState(oldScene);
+            target.loadSpriteSceneState(scene);
+        }
     }
 
     /**
