@@ -788,9 +788,13 @@ const serialize = function (runtime, targetId, {allowOptimization = true} = {}) 
         obj.customFonts = fonts;
     }
 
+    const camera = runtime.camera;
+    if (camera) {
+        obj.camera = camera;
+    }
+
     const scene = runtime.scene;
     const scenes = runtime.scenes;
-
     if (scene) {
         obj.scene = scene;
         obj.scenes = scenes;
