@@ -1580,6 +1580,10 @@ const deserialize = async function (json, runtime, zip, isSingleSprite) {
         runtime.scenes = json.scenes;
     }
 
+    if (json.camera) {
+        runtime.camera = json.camera;
+    }
+
     // Extract any custom fonts before loading costumes.
     let fontPromise;
     if (json.customFonts) {
