@@ -607,6 +607,7 @@ const serializeTarget = function (target, extensions) {
     obj.currentCostume = target.currentCostume;
     obj.costumes = target.costumes.map(serializeCostume);
     obj.sounds = target.sounds.map(serializeSound);
+    obj.sceneStates = target.sceneStates;
     if (Object.prototype.hasOwnProperty.call(target, 'volume')) obj.volume = target.volume;
     if (Object.prototype.hasOwnProperty.call(target, 'layerOrder')) obj.layerOrder = target.layerOrder;
     if (obj.isStage) { // Only the stage should have these properties
@@ -785,6 +786,14 @@ const serialize = function (runtime, targetId, {allowOptimization = true} = {}) 
 
     if (fonts) {
         obj.customFonts = fonts;
+    }
+
+    const scene = runtime.scene;
+    const scenes = runtime.scenes;
+
+    if (scene) {
+        obj.scene = scene;
+        obj.scenes = scenes;
     }
 
     // Assemble metadata
@@ -1323,6 +1332,9 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
     if (Object.prototype.hasOwnProperty.call(object, 'extensionStorage')) {
         target.extensionStorage = object.extensionStorage;
     }
+    if (Object.prototype.hasOwnProperty.call(object, 'sceneStates')) {
+        target.sceneStates = object.sceneStates;
+    }
     Promise.all(costumePromises).then(costumes => {
         sprite.costumes = costumes;
     });
@@ -1555,6 +1567,13 @@ const deserialize = async function (json, runtime, zip, isSingleSprite) {
         for (const [id, url] of Object.entries(json.extensionURLs)) {
             extensions.extensionURLs.set(id, url);
         }
+    }
+
+    console.log(json);
+
+    if (json.scene) {
+        runtime.scene = json.scene;
+        runtime.scenes = json.scenes;
     }
 
     // Extract any custom fonts before loading costumes.

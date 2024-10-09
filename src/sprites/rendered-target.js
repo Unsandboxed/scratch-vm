@@ -1167,6 +1167,7 @@ class RenderedTarget extends Target {
             variables: this.variables,
             costumes: costumes,
             sounds: this.getSounds(),
+            sceneStates: this.sceneStates,
             textToSpeechLanguage: this.textToSpeechLanguage,
             tempo: this.tempo,
             volume: this.volume,
