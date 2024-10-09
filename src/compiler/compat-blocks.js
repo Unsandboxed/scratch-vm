@@ -14,6 +14,8 @@ const stacked = [
     'camera_sety',
     'camera_changey',
 
+    'scenes_switch',
+
     'looks_changestretchby',
     'looks_hideallsprites',
     'looks_say',
@@ -51,6 +53,8 @@ const inputs = [
     'sensing_loudness',
     'sensing_userid',
     'sound_volume',
+
+    'scenes_scene',
 
     'operator_letter_of',
     'string_item_split',

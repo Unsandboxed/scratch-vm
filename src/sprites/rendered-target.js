@@ -1100,6 +1100,7 @@ class RenderedTarget extends Target {
             size: this.size,
             effects: this.effects,
             visible: this.visible,
+            currentCostume: this.currentCostume,
         }
     }
 
