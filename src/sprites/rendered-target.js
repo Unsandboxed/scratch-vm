@@ -169,7 +169,7 @@ class RenderedTarget extends Target {
 
         this.interpolationData = null;
 
-        this.saveSpriteSceneState(this.runtime.scene);
+        this.saveSceneState(this.runtime.scene);
     }
 
     /**
@@ -1088,7 +1088,7 @@ class RenderedTarget extends Target {
      * @param {string} scene - the name of the scene.
      * @returns {*} the scene state.
      */
-    saveSpriteSceneState (scene) {
+    saveSceneState (scene) {
         if (!scene  || !this.runtime.scenes[scene]) {
             scene = this.runtime.scene;
         }
@@ -1104,11 +1104,11 @@ class RenderedTarget extends Target {
     }
 
     /**
-     * Loads all scene data into current sprite.
+     * Loads all scene state data into the sprite.
      * @param {string} scene - the name of the scene.
      * @returns {*} 
      */
-    loadSpriteSceneState (scene) {
+    loadSceneState (scene) {
         if (!scene) {
             scene = this.runtime.scene;
         }
@@ -1119,7 +1119,7 @@ class RenderedTarget extends Target {
             // If we're here, the scene does exist but
             // for whatever reason the sprite doesn't
             // have a state for it.
-            this.saveSpriteSceneState(scene);
+            this.saveSceneState(scene);
             return;
         }
 

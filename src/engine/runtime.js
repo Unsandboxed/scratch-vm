@@ -3578,9 +3578,12 @@ class Runtime extends EventEmitter {
 
         for (let i = 0; i < this.targets.length; i++) {
             const target = this.targets[i];
-            target.saveSpriteSceneState(oldScene);
-            target.loadSpriteSceneState(scene);
+            target.saveSceneState(oldScene);
+            target.loadSceneState(scene);
         }
+
+        this.camera.saveSceneState(oldScene);
+        this.camera.loadSceneState(scene);
     }
 
     /**

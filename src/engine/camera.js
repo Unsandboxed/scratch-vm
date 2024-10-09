@@ -53,6 +53,14 @@ class Camera extends EventEmitter {
          * Interpolation data used by tw-interpolate.
          */
         this.interpolationData = null;
+
+        /**
+         * Maps of various "scene states" for each scene in the runtime.
+         * @type {Object.<string, *>}
+         */
+        this.sceneStates = {};
+
+        this.saveSceneState(this.runtime.scene);
     }
 
     /**
@@ -106,6 +114,50 @@ class Camera extends EventEmitter {
      */
     setEnabled (enabled) {
         this.enabled = enabled;
+    }
+
+    /**
+     * Saves all current values to a scene state.
+     * @param {string} scene - the name of the scene.
+     * @returns {*} the scene state.
+     */
+    saveSceneState (scene) {
+        if (!scene  || !this.runtime.scenes[scene]) {
+            scene = this.runtime.scene;
+        }
+
+        this.sceneStates[scene] = {
+            x: this.x,
+            y: this.y,
+            direction: this.direction,
+            zoom: this.zoom,
+            enabled: this.enabled,
+        }
+    }
+
+    /**
+     * Loads all scene state data into the camera.
+     * @param {string} scene - the name of the scene.
+     * @returns {*} 
+     */
+    loadSceneState (scene) {
+        if (!scene) {
+            scene = this.runtime.scene;
+        }
+
+        if (!this.runtime.scenes[scene]) return;
+
+        if (!this.sceneStates[scene]) {
+            // If we're here, the scene does exist but
+            // for whatever reason the sprite doesn't
+            // have a state for it.
+            this.saveSceneState(scene);
+            return;
+        }
+
+        Object.assign(this, this.sceneStates[scene]);
+
+        this.emitCameraUpdate();
     }
 
     /**

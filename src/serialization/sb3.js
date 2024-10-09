@@ -1573,8 +1573,6 @@ const deserialize = async function (json, runtime, zip, isSingleSprite) {
         }
     }
 
-    console.log(json);
-
     if (json.scene) {
         runtime.scene = json.scene;
         runtime.scenes = json.scenes;
