@@ -603,6 +603,17 @@ class Runtime extends EventEmitter {
         };
 
         /**
+         * A temporary storage area that gets cleared when the project starts or stops
+         */
+        this.temporaryStorage = {};
+        this.on(Runtime.PROJECT_START, () => {
+            this.temporaryStorage = {};
+        });
+        this.on(Runtime.PROJECT_STOP_ALL, () => {
+            this.temporaryStorage = {};
+        });
+
+        /**
          * Export some internal values for extensions.
          */
         this.exports = {
