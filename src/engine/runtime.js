@@ -3562,7 +3562,8 @@ class Runtime extends EventEmitter {
             [defaultSceneId]: {
                 name: "my scene",
                 id: defaultSceneId,
-                preview: undefined
+                preview: undefined,
+                temporary: false
             }
         }
 
@@ -3575,7 +3576,7 @@ class Runtime extends EventEmitter {
      * @param {object} optScene an old scene object to base on.
      * @returns {*}
      */
-    createScene (scene, optScene) {
+    createScene (scene, temporary, optScene) {
         const usedNames = Object.values(this.scenes).map(s => s.name);
         scene = StringUtil.unusedName(scene, usedNames);
 
@@ -3584,10 +3585,13 @@ class Runtime extends EventEmitter {
         this.scenes[sceneId] = {
             name: scene,
             id: sceneId,
-            preview: undefined
+            preview: undefined,
+            temporary: !!temporary
         };
 
         this.updateScenePreview(sceneId);
+
+        return this.scenes[sceneId];
     }
 
     /**
@@ -3625,6 +3629,26 @@ class Runtime extends EventEmitter {
 
         this.camera.saveSceneState(oldScene);
         this.camera.loadSceneState(sceneId);
+    }
+
+    /**
+     * Load into a scene by its name.
+     * @param {string} sceneName the name of the scene. 
+     */
+    createOrLoadSceneFromName(sceneName) {
+        const usedNames = Object.values(this.scenes).map(s => s.name);
+
+        if (!usedNames.includes(sceneName)) {
+            const newScene = this.createScene(sceneName, true);
+            this.loadScene(newScene.id);
+        } else {
+            let scenesByName = {}
+            for (const s in this.scenes) {
+                scenesByName[s.name] = s.id;
+            }
+    
+            this.loadScene(scenesByName[sceneName]);
+        }
     }
 
     /**
