@@ -1109,7 +1109,7 @@ class RenderedTarget extends Target {
      * @param {string} sceneId - the id of the scene.
      * @returns {*} 
      */
-    loadSceneState (sceneId) {
+    loadSceneState (sceneId, sceneState) {
         if (!sceneId) {
             sceneId = this.runtime.scene;
         }
@@ -1120,8 +1120,8 @@ class RenderedTarget extends Target {
             // If we're here, the scene does exist but
             // for whatever reason the sprite doesn't
             // have a state for it.
+            this.setVisible(false);
             this.saveSceneState(sceneId);
-            return;
         }
 
         Object.assign(this, this.sceneStates[sceneId]);

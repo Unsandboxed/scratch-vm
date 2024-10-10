@@ -2799,11 +2799,7 @@ class Runtime extends EventEmitter {
 
         for (const scene in this.scenes) {
             if (scene.temporary) {
-                if (scene.id === this.scene) {
-                    this.scene = Object.keys(this.scenes)[0];
-                }
-
-                delete this.scenes[scene.id];
+                this.deleteScene(scene.id);
             }
         }
 
@@ -3576,7 +3572,7 @@ class Runtime extends EventEmitter {
      * @param {string} name The name of the new the scene.
      * @return {object} The scene state.
      */
-    initDefaultScene(name) {
+    initDefaultScene (name) {
         const defaultSceneId = name+uid();
 
         this.scenes = {
@@ -3658,7 +3654,7 @@ class Runtime extends EventEmitter {
      * Load into a scene by its name.
      * @param {string} sceneName the name of the scene. 
      */
-    createOrLoadSceneFromName(sceneName) {
+    createOrLoadSceneFromName (sceneName) {
         const usedNames = Object.values(this.scenes).map(s => s.name);
 
         if (!usedNames.includes(sceneName)) {
@@ -3674,6 +3670,27 @@ class Runtime extends EventEmitter {
     
             return this.loadScene(scenesByName[sceneName]);
         }
+    }
+
+    /**
+     * Removes a scene by its id.
+     * @param {string} sceneId the id of the scene.
+     */
+    removeScene (sceneId) {
+        if (this.scenes.length === 1) return;
+
+        const isCurrentScene = sceneId === this.scene;
+        const firstScene = Object.keys(this.scenes)[0];
+
+        for (const target of this.targets) {
+            if (target.sceneStates[sceneId]) {
+                delete target.sceneStates[sceneId];
+            }
+            if (isCurrentScene) target.loadSceneState(firstScene);
+        }
+
+        delete this.scenes[sceneId];
+        if (isCurrentScene) this.scene = firstScene;
     }
 
     /**
