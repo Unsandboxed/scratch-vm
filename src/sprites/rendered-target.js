@@ -1085,15 +1085,15 @@ class RenderedTarget extends Target {
 
     /**
      * Saves all current values to a scene state.
-     * @param {string} scene - the name of the scene.
+     * @param {string} sceneId - the id of the scene.
      * @returns {*} the scene state.
      */
-    saveSceneState (scene) {
-        if (!scene  || !this.runtime.scenes[scene]) {
-            scene = this.runtime.scene;
+    saveSceneState (sceneId) {
+        if (!sceneId  || !this.runtime.scenes[sceneId]) {
+            sceneId = this.runtime.scene;
         }
 
-        this.sceneStates[scene] = {
+        this.sceneStates[sceneId] = {
             x: this.x,
             y: this.y,
             direction: this.direction,
@@ -1106,25 +1106,25 @@ class RenderedTarget extends Target {
 
     /**
      * Loads all scene state data into the sprite.
-     * @param {string} scene - the name of the scene.
+     * @param {string} sceneId - the id of the scene.
      * @returns {*} 
      */
-    loadSceneState (scene) {
-        if (!scene) {
-            scene = this.runtime.scene;
+    loadSceneState (sceneId) {
+        if (!sceneId) {
+            sceneId = this.runtime.scene;
         }
 
-        if (!this.runtime.scenes[scene]) return;
+        if (!this.runtime.scenes[sceneId]) return;
 
-        if (!this.sceneStates[scene]) {
+        if (!this.sceneStates[sceneId]) {
             // If we're here, the scene does exist but
             // for whatever reason the sprite doesn't
             // have a state for it.
-            this.saveSceneState(scene);
+            this.saveSceneState(sceneId);
             return;
         }
 
-        Object.assign(this, this.sceneStates[scene]);
+        Object.assign(this, this.sceneStates[sceneId]);
 
         this.updateAllDrawableProperties();
     }

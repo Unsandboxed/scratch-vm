@@ -508,10 +508,7 @@ class Runtime extends EventEmitter {
 
         this.camera = new Camera(this);
 
-        this.scene = "my scene";
-        this.scenes = {
-            "my scene": {}
-        }
+        this.initDefaultScene("my scene");
 
         this.runtimeOptions = {
             maxClones: Runtime.MAX_CLONES,
@@ -3553,38 +3550,81 @@ class Runtime extends EventEmitter {
     }
 
     /**
-     * Create a new scene object.
-     * @param {string} scene the name of the scene.
-     * @param {object} optScene an old scene object to base on.
-     * @returns {object} the new scene object.
+     * Initialise the runtime scene object and create the default project scene.
+     * This differs from creating a new scene as we're not accessing the renderer.
+     * @param {string} name The name of the new the scene.
+     * @return {object} The scene state.
      */
-    createScene (scene, optScene) {
-        if (this.scenes[scene]) return;
+    initDefaultScene(name) {
+        const defaultSceneId = name+uid();
 
-        this.scenes[scene] = {};
+        this.scenes = {
+            [defaultSceneId]: {
+                name: "my scene",
+                id: defaultSceneId,
+                preview: undefined
+            }
+        }
+
+        this.scene = defaultSceneId;
     }
 
     /**
-     * Load into a scene and update all targets.
+     * Create a new scene object.
      * @param {string} scene the name of the scene.
+     * @param {object} optScene an old scene object to base on.
+     * @returns {*}
+     */
+    createScene (scene, optScene) {
+        const usedNames = Object.values(this.scenes).map(s => s.name);
+        scene = StringUtil.unusedName(scene, usedNames);
+
+        this.renderer.snapshotQuality = 0.2;
+        const sceneId = uid();
+        this.scenes[sceneId] = {
+            name: scene,
+            id: sceneId,
+            preview: undefined
+        };
+
+        this.updateScenePreview(sceneId);
+    }
+
+    /**
+     * Update the preview image of a scene.
+     * @param {string} sceneId the id of the scene.
+     * @returns {*} the updated scene object.
+     */
+    async updateScenePreview (sceneId = this.scene) {
+        if (!this.scenes[sceneId]) return;
+
+        this.renderer.snapshotQuality = 0.1;
+        this.scenes[sceneId].preview = await new Promise((resolve) => {
+            this.renderer.requestSnapshot((uri) => {
+                resolve(uri);
+            });
+        });
+    };
+
+    /**
+     * Load into a scene and update all targets.
+     * @param {string} sceneId the id of the scene.
      * @return
      */
-    loadScene (scene) {
+    loadScene (sceneId) {
         const oldScene = this.scene;
-        this.scene = scene;
+        this.scene = sceneId;
 
-        if (!this.scenes[scene]) {
-            this.createScene(scene);            
-        }
+        if (!this.scenes[sceneId]) return;
 
         for (let i = 0; i < this.targets.length; i++) {
             const target = this.targets[i];
             target.saveSceneState(oldScene);
-            target.loadSceneState(scene);
+            target.loadSceneState(sceneId);
         }
 
         this.camera.saveSceneState(oldScene);
-        this.camera.loadSceneState(scene);
+        this.camera.loadSceneState(sceneId);
     }
 
     /**
@@ -3792,6 +3832,7 @@ class Runtime extends EventEmitter {
      */
     requestRedraw () {
         this.redrawRequested = true;
+        this.updateScenePreview();
     }
 
     /**
