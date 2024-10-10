@@ -2797,13 +2797,17 @@ class Runtime extends EventEmitter {
         this.threads = [];
         this.threadMap.clear();
 
-        for (const scene in this.scenes) {
-            if (scene.temporary) {
-                this.deleteScene(scene.id);
-            }
-        }
+        this._clearTemporaryScenes();
 
+        // Remove all temporary scenes created during the project's run.
         this.resetRunId();
+    }
+
+    _clearTemporaryScenes () {
+        for (const sceneId in this.scenes) {
+            const scene = this.scenes[sceneId];
+            if (scene.temporary) this.removeScene(sceneId);
+        }
     }
 
     _renderInterpolatedPositions () {
