@@ -30,11 +30,12 @@ class Scratch3ScenesBlocks {
 
     switchScene (args) {
         const scene = Cast.toString(args.SCENES);
-        this.runtime.loadScene(scene);
+        this.runtime.createOrLoadSceneFromName(scene);
     }
 
     getScene () {
-        return this.runtime.scene;
+        const sceneId = this.runtime.scene;
+        return this.runtime.scenes[sceneId].name;
     }
 }
 

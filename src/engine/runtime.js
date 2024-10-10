@@ -2797,6 +2797,16 @@ class Runtime extends EventEmitter {
         this.threads = [];
         this.threadMap.clear();
 
+        for (const scene in this.scenes) {
+            if (scene.temporary) {
+                if (scene.id === this.scene) {
+                    this.scene = Object.keys(this.scenes)[0];
+                }
+
+                delete this.scenes[scene.id];
+            }
+        }
+
         this.resetRunId();
     }
 
@@ -3640,6 +3650,8 @@ class Runtime extends EventEmitter {
 
         this.camera.saveSceneState(oldScene);
         this.camera.loadSceneState(sceneId);
+
+        return this.scenes[sceneId];
     }
 
     /**
@@ -3652,13 +3664,15 @@ class Runtime extends EventEmitter {
         if (!usedNames.includes(sceneName)) {
             const newScene = this.createScene(sceneName, true);
             this.loadScene(newScene.id);
+
+            return newScene;
         } else {
             let scenesByName = {}
             for (const s in this.scenes) {
                 scenesByName[s.name] = s.id;
             }
     
-            this.loadScene(scenesByName[sceneName]);
+            return this.loadScene(scenesByName[sceneName]);
         }
     }
 
