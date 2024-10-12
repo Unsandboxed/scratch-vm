@@ -3655,6 +3655,20 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Rename a scene, keeping the name unique.
+     * @param {string} sceneId 
+     * @param {string} sceneName 
+     */
+    renameScene (sceneId, sceneName) {
+        const usedNames = Object.values(this.scenes)
+            .filter((scene) => scene.id !== sceneId)
+            .map(s => s.name);
+
+        const newUnusedName = StringUtil.unusedName(sceneName, usedNames);
+        this.scenes[sceneId].name = newUnusedName;
+    }
+
+    /**
      * Load into a scene by its name.
      * @param {string} sceneName the name of the scene. 
      */
@@ -3682,6 +3696,7 @@ class Runtime extends EventEmitter {
      */
     removeScene (sceneId) {
         if (this.scenes.length === 1) return;
+        if (!this.scenes[sceneId]) return;
 
         const isCurrentScene = sceneId === this.scene;
         const firstScene = Object.keys(this.scenes)[0];
