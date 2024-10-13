@@ -361,7 +361,7 @@ const isSafeConstantForEqualsOptimization = input => {
  * A frame contains some information about the current substack being compiled.
  */
 class Frame {
-    constructor (isLoop) {
+    constructor (isLoop, isBreakable) {
         /**
          * Whether the current stack runs in a loop (while, for)
          * @type {boolean}
@@ -374,6 +374,13 @@ class Frame {
          * @type {boolean}
          */
         this.isLastBlock = false;
+
+        /**
+         * Whether or not the current stack can be broken by continue or break
+         * @type {boolean}
+         * @readonly
+         */
+        this.isBreakable = isLoop ? true : (isBreakable ?? false);
     }
 }
 
@@ -479,7 +486,7 @@ class JSGenerator {
                 source += `switch (${branchVariable}.branch) {\n`;
                 for (const index in node.substacks) {
                     source += `case ${+index}: {\n`;
-                    source += this.descendStackForSource(node.substacks[index], new Frame(false));
+                    source += this.descendStackForSource(node.substacks[index], new Frame(false, node.breakable));
                     source += `break;\n`;
                     source += `}\n`; // close case
                 }
@@ -874,7 +881,7 @@ class JSGenerator {
                 this.source += `switch (${branchVariable}.branch) {\n`;
                 for (const index in node.substacks) {
                     this.source += `case ${+index}: {\n`;
-                    this.descendStack(node.substacks[index], new Frame(false));
+                    this.descendStack(node.substacks[index], new Frame(false, node.breakable));
                     this.source += `break;\n`;
                     this.source += `}\n`; // close case
                 }
@@ -945,12 +952,10 @@ class JSGenerator {
             this.stopScript();
             break;
         case 'control.break':
-            const frameLoopsBreak = this.frames.map(frame => frame.isLoop);
-            if (frameLoopsBreak.indexOf(true) !== -1) this.source += 'break;\n';
+            if (this.frames.find(frame =>  frame.isLoop || frame.isBreakable)) this.source += 'break;\n';
             break;
         case 'control.continue':
-            const frameLoopsCont = this.frames.map(frame => frame.isLoop);
-            if (frameLoopsCont.indexOf(true) !== -1) this.source += 'continue;\n';
+            if (this.frames.find(frame =>  frame.isLoop || frame.isBreakable)) this.source += 'continue;\n';
             break;
         case 'control.wait': {
             const duration = this.localVariables.next();
@@ -988,7 +993,7 @@ class JSGenerator {
             // eslint-disable-next-line no-case-declarations
             const previousWarp = this.isWarp;
             this.isWarp = true;
-            this.descendStack(node.code, new Frame(false, 'control.allAtOnce'));
+            this.descendStack(node.code, new Frame(false));
             this.isWarp = previousWarp;
             break;
         }
