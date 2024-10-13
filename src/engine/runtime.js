@@ -3673,7 +3673,9 @@ class Runtime extends EventEmitter {
      * @param {string} sceneName the name of the scene. 
      */
     createOrLoadSceneFromName (sceneName) {
-        const usedNames = Object.values(this.scenes).map(s => s.name);
+        const usedNames = Object.values(this.scenes)
+            .filter((scene) => scene.id !== sceneId)
+            .map(s => s.name);
 
         if (!usedNames.includes(sceneName)) {
             const newScene = this.createScene(sceneName, true);
