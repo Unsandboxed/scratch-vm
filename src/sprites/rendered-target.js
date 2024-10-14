@@ -1110,23 +1110,20 @@ class RenderedTarget extends Target {
      * @returns {*} 
      */
     loadSceneState (sceneId, sceneState) {
-        if (!sceneId) {
-            sceneId = this.runtime.scene;
-        }
-
+        if (!sceneId) sceneId = this.runtime.scene;
         if (!this.runtime.scenes[sceneId]) return;
 
         if (!this.sceneStates[sceneId]) {
             // If we're here, the scene does exist but
             // for whatever reason the sprite doesn't
             // have a state for it.
+            // In this case, we'll inherit the previous
+            // state's properties.
+            this.setVisible(false);
             this.saveSceneState(sceneId);
-
-            // this.setVisible(false);
         }
 
         Object.assign(this, this.sceneStates[sceneId]);
-
         this.updateAllDrawableProperties();
     }
 

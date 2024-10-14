@@ -3673,9 +3673,7 @@ class Runtime extends EventEmitter {
      * @param {string} sceneName the name of the scene. 
      */
     createOrLoadSceneFromName (sceneName) {
-        const usedNames = Object.values(this.scenes)
-            .filter((scene) => scene.id !== sceneId)
-            .map(s => s.name);
+        const usedNames = Object.values(this.scenes).map(s => s.name);
 
         if (!usedNames.includes(sceneName)) {
             const newScene = this.createScene(sceneName, true);
@@ -3700,6 +3698,8 @@ class Runtime extends EventEmitter {
         if (this.scenes.length === 1) return;
         if (!this.scenes[sceneId]) return;
 
+        delete this.scenes[sceneId];
+
         const isCurrentScene = sceneId === this.scene;
         const firstScene = Object.keys(this.scenes)[0];
 
@@ -3710,7 +3710,6 @@ class Runtime extends EventEmitter {
             if (isCurrentScene) target.loadSceneState(firstScene);
         }
 
-        delete this.scenes[sceneId];
         if (isCurrentScene) this.scene = firstScene;
     }
 
