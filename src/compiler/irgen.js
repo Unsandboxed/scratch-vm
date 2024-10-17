@@ -796,6 +796,20 @@ class ScriptTreeGenerator {
      */
     descendStackedBlock (block) {
         switch (block.opcode) {
+        case 'argument_statement': {
+            const name = block.fields.VALUE.value;
+            const index = this.script.arguments.lastIndexOf(name);
+            if (index === -1) {
+                return {
+                    kind: 'noop'
+                };
+            }
+            this.script.yields = true;
+            return {
+                kind: 'procedures.statement',
+                name: name
+            };
+        }
         case 'control_all_at_once':
             // In Unsandboxed, attempts to run the script in 1 frame.
             return {
@@ -1487,9 +1501,16 @@ class ScriptTreeGenerator {
             }
         }
 
+        const substacks = {};
         const args = [];
         for (let i = 0; i < paramIds.length; i++) {
             let value;
+
+            if (paramIds[i].startsWith('SUBSTACK')) {
+                substacks[paramNames[i]] = this.descendSubstack(block, paramIds[i]);
+                continue;
+            }
+
             if (block.inputs[paramIds[i]] && block.inputs[paramIds[i]].block) {
                 value = this.descendInputOfBlock(block, paramIds[i]);
             } else {
@@ -1505,7 +1526,8 @@ class ScriptTreeGenerator {
             kind: 'procedures.call',
             code: procedureCode,
             variant,
-            arguments: args
+            arguments: args,
+            substacks
         };
     }
 

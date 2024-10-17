@@ -16,6 +16,7 @@ class Scratch3ProcedureBlocks {
             procedures_definition: this.definition,
             procedures_call: this.call,
             procedures_return: this.return,
+            argument_statement: this.argumentStatement,
             argument_reporter_string_number: this.argumentReporterStringNumber,
             argument_reporter_boolean: this.argumentReporterBoolean
         };
@@ -65,6 +66,11 @@ class Scratch3ProcedureBlocks {
         for (let i = 0; i < paramIds.length; i++) {
             if (Object.prototype.hasOwnProperty.call(args, paramIds[i])) {
                 util.pushParam(paramNames[i], args[paramIds[i]]);
+            } else if (paramIds[i].startsWith("SUBSTACK")) {
+                util.pushParam(paramNames[i], {
+                    blockId: util.thread.peekStackFrame().op.id,
+                    fieldId: paramIds[i]
+                });
             } else {
                 util.pushParam(paramNames[i], paramDefaults[i]);
             }
@@ -95,6 +101,7 @@ class Scratch3ProcedureBlocks {
 
     return (args, util) {
         util.stopThisScript();
+
         // If used outside of a custom block, there may be no stackframe.
         if (util.thread.peekStackFrame()) {
             util.stackFrame.returnValue = args.VALUE;
@@ -131,6 +138,22 @@ class Scratch3ProcedureBlocks {
             return 0;
         }
         return value;
+    }
+
+    argumentStatement (args, util) {
+        const branchInfo = util.getParam(args.VALUE) || {};
+        if (!branchInfo.fieldId) return;
+
+        const blockId = branchInfo.blockId;
+        const block = util.target.blocks.getBlock(blockId);
+        if (!block) return;
+
+        const branch = block.inputs[branchInfo.fieldId];
+        if (!branch) return;
+        const branchId = branch.block;
+
+        // todo: should we wait for the branch to finish?
+        util.thread.pushStack(branchId);
     }
 }
 

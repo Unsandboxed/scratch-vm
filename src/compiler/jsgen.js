@@ -729,6 +729,7 @@ class JSGenerator {
             const procedureCode = node.code;
             const procedureVariant = node.variant;
             const procedureData = this.ir.procedures[procedureVariant];
+
             if (procedureData.stack === null) {
                 // TODO still need to evaluate arguments for side effects
                 return new TypedInput('""', TYPE_STRING);
@@ -1254,10 +1255,13 @@ class JSGenerator {
             const procedureCode = node.code;
             const procedureVariant = node.variant;
             const procedureData = this.ir.procedures[procedureVariant];
+            this.substacks = node.substacks;
             if (procedureData.stack === null) {
                 // TODO still need to evaluate arguments
                 break;
             }
+
+            this.ir.procedures[procedureVariant].substacks = node.substacks;
 
             const yieldForRecursion = !this.isWarp && procedureCode === this.script.procedureCode;
             if (yieldForRecursion) {
@@ -1281,7 +1285,15 @@ class JSGenerator {
         case 'procedures.return':
             this.stopScriptAndReturn(this.descendInput(node.value).asSafe());
             break;
+        case 'procedures.statement': {
+            const procedureVariant = this.script.procedureVariant;
+            const procedureData = this.ir.procedures[procedureVariant];
+            const substacks = procedureData.substacks;
 
+            this.descendStack(substacks[node.name], new Frame(false));
+
+            break;
+        }
         case 'timer.reset':
             this.source += 'runtime.ioDevices.clock.resetProjectTimer();\n';
             break;
