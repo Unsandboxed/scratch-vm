@@ -41,20 +41,10 @@ class Compiler {
         }
         // eslint-disable-next-line no-unused-vars
         useMethods(dynamicChanges, stg, compile) {
-            if (compile) {
-                this._callCompile = compile;
-                // eslint-disable-next-line no-unused-vars
-                this.compile = (typeof compile === 'string' ? (function(...args) {
-                    return this._callCompile;
-                }) : this._callCompile).bind(this);
-            }
-            if (stg) {
-                this._callStg = stg;
-                // eslint-disable-next-line no-unused-vars
-                this.stg = (typeof stg === 'string' ? (function(...args) {
-                    return this._callStg;
-                }) : this._callStg).bind(this);
-            }
+            compile = (typeof compile === 'function' ? compile : (() => compile)).bind(this);
+            stg = (typeof stg === 'function' ? stg : (() => stg)).bind(this);
+            this.compile = compile;
+            this.stg = stg;
         }
     };
     constructor(runtime) {
@@ -73,9 +63,7 @@ class Compiler {
         } else {
             this.stacks.set(block.extended_opcode, block);
         }
-        if (block.compile) {
-            this.registerCompileFn(block.ir_opcode, block.compile);
-        }
+        this.registerCompileFn(block.ir_opcode, block?.compile?.bind?.(block));
     }
     registerCompileFn(ir_opcode, fn) {
         if (fn) {
