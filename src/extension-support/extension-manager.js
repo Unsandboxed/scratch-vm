@@ -133,6 +133,14 @@ class ExtensionManager {
     }
 
     /**
+     * Prematurely load the "Scratch" object.
+     * @return Promise<Object> The Scratch object/
+     */
+    _getScratch() {
+        return require('./tw-unsandboxed-extension-runner').setupUnsandboxedExtensionAPI(this.vm, true);
+    }
+
+    /**
      * Check whether an extension is registered or is in the process of loading. This is intended to control loading or
      * adding extensions so it may return `true` before the extension is ready to be used. Use the promise returned by
      * `loadExtensionURL` if you need to wait until the extension is truly ready.

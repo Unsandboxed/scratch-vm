@@ -1490,7 +1490,8 @@ const checkPlatformCompatibility = (json, runtime) => {
     }
 
     const projectPlatform = json.meta.platform.name;
-    if (projectPlatform === runtime.platform.name) {
+    const isNativePlatform = projectPlatform === runtime.platform.name;
+    if (isNativePlatform) {
         return;
     }
 
@@ -1503,11 +1504,26 @@ const checkPlatformCompatibility = (json, runtime) => {
         runtime.emit(Runtime.PLATFORM_MISMATCH, json.meta.platform, () => {
             pending--;
             if (pending === 0) {
+                if (!isNativePlatform) {
+                    applyCompatibilityOptions(runtime);
+                }
                 resolve();
             }
         });
     });
 };
+
+/**
+ * Attempts to apply legacy runtime settings that are used by
+ * the majority of TurboWarp and Scratch projects.
+ * These will be overwritten if a magic comment is found.
+ * @param {Runtime} runtime 
+ */
+const applyCompatibilityOptions = (runtime) => {
+    runtime.setFramerate(30);
+    runtime.setStageSize(480, 360);
+    runtime.setRuntimeOptions({"fencing": true});
+}
 
 /**
  * Deserialize the specified representation of a VM runtime and loads it into the provided runtime instance.

@@ -94,6 +94,8 @@ Object.assign(global.Scratch, ScratchCommon, {
  */
 const extensionWorker = new ExtensionWorker();
 global.Scratch.extensions = {
+    isPremature: false,
+    isUSB: true,
     register: extensionWorker.register.bind(extensionWorker)
 };
 

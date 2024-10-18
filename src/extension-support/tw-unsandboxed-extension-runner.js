@@ -22,18 +22,24 @@ const parseURL = url => {
 /**
  * Sets up the global.Scratch API for an unsandboxed extension.
  * @param {VirtualMachine} vm
+ * @param {boolean} pre Whether or not this is a "pre-mature" load
  * @returns {Promise<object[]>} Resolves with a list of extension objects when Scratch.extensions.register is called.
  */
-const setupUnsandboxedExtensionAPI = vm => new Promise(resolve => {
+const setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
+    pre = pre || false;
     const extensionObjects = [];
-    const register = extensionObject => {
+    const register = pre ? (_ => {
+        throw new Error('Unable to register extension as this is a pre-mature instance.');
+    }) : (extensionObject => {
         extensionObjects.push(extensionObject);
         resolve(extensionObjects);
-    };
+    });
 
     // Create a new copy of global.Scratch for each extension
     const Scratch = Object.assign({}, global.Scratch || {}, ScratchCommon);
     Scratch.extensions = {
+        isPremature: pre,
+        isUSB: true,
         unsandboxed: true,
         register
     };
@@ -129,10 +135,17 @@ const setupUnsandboxedExtensionAPI = vm => new Promise(resolve => {
 
     Scratch.translate = createTranslate(vm);
 
-    global.Scratch = Scratch;
-    global.ScratchExtensions = createScratchX(Scratch);
+    const ScratchExtensions =  createScratchX(Scratch);
 
-    vm.emit('CREATE_UNSANDBOXED_EXTENSION_API', Scratch);
+    // We want Scratch.gui even when it is loaded prematurly as it gives access to some fancy API's in the GUI
+    vm.emit('CREATE_UNSANDBOXED_EXTENSION_API', Scratch, pre);
+    
+    if (pre) {
+        resolve({ Scratch, ScratchExtensions });
+    } else {
+        global.Scratch = Scratch;
+        global.ScratchExtensions = ScratchExtensions;
+    }
 });
 
 /**
