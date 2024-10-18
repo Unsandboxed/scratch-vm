@@ -1,22 +1,24 @@
-const Cast = require('../util/cast');
+// @ts-check
+
 const StringUtil = require('../util/string-util');
 const BlockType = require('../extension-support/block-type');
 const Variable = require('../engine/variable');
 const log = require('../util/log');
-const {IntermediateScript, IntermediateRepresentation} = require('./intermediate');
 const compatBlocks = require('./compat-blocks');
+const {StackOpcode, InputOpcode, InputType} = require('./enums.js');
+const {
+    IntermediateStackBlock,
+    IntermediateInput,
+    IntermediateStack,
+    IntermediateScript,
+    IntermediateRepresentation
+} = require('./intermediate');
 
 /**
  * @fileoverview Generate intermediate representations from Scratch blocks.
  */
 
-const SCALAR_TYPE = '';
-const LIST_TYPE = 'list';
-
-/**
- * @typedef {Object.<string, *>} Node
- * @property {string} kind
- */
+/* eslint-disable max-len */
 
 /**
  * Create a variable codegen object.
@@ -82,6 +84,19 @@ class ScriptTreeGenerator {
         this.variableCache = {};
 
         this.usesTimer = false;
+
+        this.namesOfCostumesAndSounds = new Set();
+        for (const target of this.runtime.targets) {
+            if (target.isOriginal) {
+                const sprite = target.sprite;
+                for (const costume of sprite.costumes) {
+                    this.namesOfCostumesAndSounds.add(costume.name);
+                }
+                for (const sound of sprite.sounds) {
+                    this.namesOfCostumesAndSounds.add(sound.name);
+                }
+            }
+        }
     }
 
     setProcedureVariant (procedureVariant) {
@@ -126,1184 +141,152 @@ class ScriptTreeGenerator {
         return blockInfo;
     }
 
+    createConstantInput (constant, preserveStrings = false) {
+        if (constant === null) throw new Error('IR: Constant cannot have a null value.');
+
+        constant += '';
+        const numConstant = +constant;
+        const preserve = preserveStrings && this.namesOfCostumesAndSounds.has(constant);
+
+        if (!Number.isNaN(numConstant) && (constant.trim() !== '' || constant.includes('\t'))) {
+            if (!preserve && numConstant.toString() === constant) {
+                return new IntermediateInput(InputOpcode.CONSTANT, IntermediateInput.getNumberInputType(numConstant), {value: numConstant});
+            }
+            return new IntermediateInput(InputOpcode.CONSTANT, InputType.STRING_NUM, {value: constant});
+        }
+
+        if (!preserve) {
+            if (constant === 'true') {
+                return new IntermediateInput(InputOpcode.CONSTANT, InputType.STRING_BOOLEAN, {value: constant});
+            } else if (constant === 'false') {
+                return new IntermediateInput(InputOpcode.CONSTANT, InputType.STRING_BOOLEAN, {value: constant});
+            }
+        }
+
+        return new IntermediateInput(InputOpcode.CONSTANT, InputType.STRING_NAN, {value: constant});
+    }
+
     /**
      * Descend into a child input of a block. (eg. the input STRING of "length of ( )")
      * @param {*} parentBlock The parent Scratch block that contains the input.
      * @param {string} inputName The name of the input to descend into.
+     * @param {boolean} preserveStrings Should this input keep the names of costumes and sounds at strings.
      * @private
-     * @returns {Node} Compiled input node for this input.
+     * @returns {IntermediateInput} Compiled input node for this input.
      */
-    descendInputOfBlock (parentBlock, inputName) {
+    descendInputOfBlock (parentBlock, inputName, preserveStrings = false) {
         const input = parentBlock.inputs[inputName];
         if (!input) {
             log.warn(`IR: ${parentBlock.opcode}: missing input ${inputName}`, parentBlock);
-            return {
-                kind: 'constant',
-                value: 0
-            };
+            return this.createConstantInput(0);
         }
         const inputId = input.block;
         const block = this.getBlockById(inputId);
         if (!block) {
             log.warn(`IR: ${parentBlock.opcode}: could not find input ${inputName} with ID ${inputId}`);
-            return {
-                kind: 'constant',
-                value: 0
-            };
+            return this.createConstantInput(0);
         }
 
-        return this.descendInput(block);
+        const intermediate = this.descendInput(block, preserveStrings);
+        this.script.yields = this.script.yields || intermediate.yields;
+        return intermediate;
     }
 
     /**
      * Descend into an input. (eg. "length of ( )")
      * @param {*} block The parent Scratch block input.
+     * @param {boolean} preserveStrings Should this input keep the names of costumes and sounds at strings.
      * @private
-     * @returns {Node} Compiled input node for this input.
+     * @returns {IntermediateInput} Compiled input node for this input.
      */
-    descendInput (block) {
-        switch (block.opcode) {
-        case 'colour_picker':
-            return {
-                kind: 'constant',
-                value: block.fields.COLOUR.value
-            };
-        case 'math_angle':
-        case 'math_integer':
-        case 'math_number':
-        case 'math_positive_number':
-        case 'math_whole_number':
-            return {
-                kind: 'constant',
-                value: block.fields.NUM.value
-            };
-        case 'text':
-            return {
-                kind: 'constant',
-                value: block.fields.TEXT.value
-            };
-
-        case 'argument_reporter_string_number': {
-            const name = block.fields.VALUE.value;
-            // lastIndexOf because multiple parameters with the same name will use the value of the last definition
-            const index = this.script.arguments.lastIndexOf(name);
-            if (index === -1) {
-                // Legacy support
-                if (name.toLowerCase() === 'last key pressed') {
-                    return {
-                        kind: 'tw.lastKeyPressed'
-                    };
-                }
-
-                return {
-                    kind: 'args.parameter',
-                    name: name
-                };
-            }
-            return {
-                kind: 'procedures.argument',
-                index: index
-            };
+    descendInput (block, preserveStrings = false) {
+        if (!block) console.trace('DI IR');
+        if (this.runtime.compilerData.inputs.has(block.opcode)) {
+            block = this.runtime.compilerData.inputs.get(block.opcode).stg(this, block, preserveStrings);
+            console.log('DI IR', block);
+            return block;
         }
-        case 'argument_reporter_boolean': {
-            // see argument_reporter_string_number above
-            const name = block.fields.VALUE.value;
-            const index = this.script.arguments.lastIndexOf(name);
-            if (index === -1) {
-                if (name.toLowerCase() === 'is compiled?' || name.toLowerCase() === 'is unsandboxed?') {
-                    return {
-                        kind: 'constant',
-                        value: true
-                    };
-                }
-                return {
-                    kind: 'constant',
-                    value: 0
-                };
+        
+        const opcodeFunction = this.runtime.getOpcodeFunction(block.opcode);
+        if (opcodeFunction) {
+            // It might be a non-compiled primitive from a standard category
+            if (compatBlocks.inputs.includes(block.opcode)) {
+                return this.descendCompatLayerInput(block);
             }
-            return {
-                kind: 'procedures.argument',
-                index: index
-            };
+            // It might be an extension block.
+            const blockInfo = this.getBlockInfo(block.opcode);
+            if (blockInfo) {
+                const type = blockInfo.info.blockType;
+                if (
+                    type === BlockType.ARRAY || type === BlockType.OBJECT ||
+                    type === BlockType.REPORTER || type === BlockType.BOOLEAN ||
+                    type === BlockType.INLINE
+                ) {
+                    return this.descendCompatLayerInput(block);
+                }
+            }
         }
 
-        case 'camera_xposition':
-            return {
-                kind: 'camera.x'
-            };
-        case 'camera_yposition':
-            return {
-                kind: 'camera.y'
-            };
-
-        case 'control_get_counter':
-            return {
-                kind: 'counter.get'
-            };
-
-        case 'data_variable':
-            return {
-                kind: 'var.get',
-                variable: this.descendVariable(block, 'VARIABLE', SCALAR_TYPE)
-            };
-        case 'data_itemoflist':
-            return {
-                kind: 'list.get',
-                list: this.descendVariable(block, 'LIST', LIST_TYPE),
-                index: this.descendInputOfBlock(block, 'INDEX')
-            };
-        case 'data_lengthoflist':
-            return {
-                kind: 'list.length',
-                list: this.descendVariable(block, 'LIST', LIST_TYPE)
-            };
-        case 'data_listcontainsitem':
-            return {
-                kind: 'list.contains',
-                list: this.descendVariable(block, 'LIST', LIST_TYPE),
-                item: this.descendInputOfBlock(block, 'ITEM')
-            };
-        case 'data_itemnumoflist':
-            return {
-                kind: 'list.indexOf',
-                list: this.descendVariable(block, 'LIST', LIST_TYPE),
-                item: this.descendInputOfBlock(block, 'ITEM')
-            };
-        case 'data_listcontents':
-            return {
-                kind: 'list.contents',
-                list: this.descendVariable(block, 'LIST', LIST_TYPE)
-            };
-        case 'data_listarraycontents':
-            return {
-                kind: 'list.arraycontents',
-                list: this.descendVariable(block, 'LIST', LIST_TYPE)
-            };
-
-        case 'event_broadcast_menu': {
-            const broadcastOption = block.fields.BROADCAST_OPTION;
-            const broadcastVariable = this.target.lookupBroadcastMsg(broadcastOption.id, broadcastOption.value);
-            // TODO: empty string probably isn't the correct fallback
-            const broadcastName = broadcastVariable ? broadcastVariable.name : '';
-            return {
-                kind: 'constant',
-                value: broadcastName
-            };
+        // It might be a menu.
+        const inputs = Object.keys(block.inputs);
+        const fields = Object.keys(block.fields);
+        if (inputs.length === 0 && fields.length === 1) {
+            return this.createConstantInput(block.fields[fields[0]].value, preserveStrings);
         }
 
-        case 'looks_backdropnumbername':
-            if (block.fields.NUMBER_NAME.value === 'number') {
-                return {
-                    kind: 'looks.backdropNumber'
-                };
-            }
-            return {
-                kind: 'looks.backdropName'
-            };
-        case 'looks_costumenumbername':
-            if (block.fields.NUMBER_NAME.value === 'number') {
-                return {
-                    kind: 'looks.costumeNumber'
-                };
-            }
-            return {
-                kind: 'looks.costumeName'
-            };
-        case 'looks_size':
-            return {
-                kind: 'looks.size'
-            };
-
-        case 'motion_rotationstyle':
-            return {
-                kind: 'motion.rotationStyle'
-            };
-        case 'motion_direction':
-            return {
-                kind: 'motion.direction'
-            };
-        case 'motion_xposition':
-            return {
-                kind: 'motion.x'
-            };
-        case 'motion_yposition':
-            return {
-                kind: 'motion.y'
-            };
-
-        case 'operator_add':
-            return {
-                kind: 'op.add',
-                left: this.descendInputOfBlock(block, 'NUM1'),
-                right: this.descendInputOfBlock(block, 'NUM2')
-            };
-        case 'operator_and':
-            return {
-                kind: 'op.and',
-                left: this.descendInputOfBlock(block, 'OPERAND1'),
-                right: this.descendInputOfBlock(block, 'OPERAND2')
-            };
-        case 'operator_clamp':
-            return {
-                kind: 'op.clamp',
-                num: this.descendInputOfBlock(block, 'NUM'),
-                left: this.descendInputOfBlock(block, 'FROM'),
-                right: this.descendInputOfBlock(block, 'TO')
-            };
-        case 'operator_contains':
-            return {
-                kind: 'op.contains',
-                string: this.descendInputOfBlock(block, 'STRING1'),
-                contains: this.descendInputOfBlock(block, 'STRING2')
-            };
-        case 'operator_divide':
-            return {
-                kind: 'op.divide',
-                left: this.descendInputOfBlock(block, 'NUM1'),
-                right: this.descendInputOfBlock(block, 'NUM2')
-            };
-        case 'operator_exponent':
-            return {
-                kind: 'op.exponent',
-                left: this.descendInputOfBlock(block, 'NUM1'),
-                right: this.descendInputOfBlock(block, 'NUM2')
-            };
-        case 'operator_equals':
-            return {
-                kind: 'op.equals',
-                left: this.descendInputOfBlock(block, 'OPERAND1'),
-                right: this.descendInputOfBlock(block, 'OPERAND2')
-            };
-        case 'operator_gt':
-            return {
-                kind: 'op.greater',
-                left: this.descendInputOfBlock(block, 'OPERAND1'),
-                right: this.descendInputOfBlock(block, 'OPERAND2')
-            };
-        case 'operator_gt_equals':
-            return {
-                kind: 'op.greaterEqual',
-                left: this.descendInputOfBlock(block, 'OPERAND1'),
-                right: this.descendInputOfBlock(block, 'OPERAND2')
-            };
-        case 'operator_join':
-            return {
-                kind: 'op.join',
-                left: this.descendInputOfBlock(block, 'STRING1'),
-                right: this.descendInputOfBlock(block, 'STRING2')
-            };
-        case 'operator_length':
-            return {
-                kind: 'op.length',
-                string: this.descendInputOfBlock(block, 'STRING')
-            };
-            //        case 'operator_letter_of':
-            //            return {
-            //                kind: 'op.letterOf',
-            //                letter: this.descendInputOfBlock(block, 'LETTER'),
-            //                string: this.descendInputOfBlock(block, 'STRING')
-            //            };
-        case 'operator_letters_of':
-            return {
-                kind: 'op.lettersOf',
-                left: this.descendInputOfBlock(block, 'LETTER1'),
-                right: this.descendInputOfBlock(block, 'LETTER2'),
-                string: this.descendInputOfBlock(block, 'STRING')
-            };
-        case 'operator_lt':
-            return {
-                kind: 'op.less',
-                left: this.descendInputOfBlock(block, 'OPERAND1'),
-                right: this.descendInputOfBlock(block, 'OPERAND2')
-            };
-        case 'operator_lt_equals':
-            return {
-                kind: 'op.lessEqual',
-                left: this.descendInputOfBlock(block, 'OPERAND1'),
-                right: this.descendInputOfBlock(block, 'OPERAND2')
-            };
-        case 'operator_mathop': {
-            const value = this.descendInputOfBlock(block, 'NUM');
-            const operator = block.fields.OPERATOR.value.toLowerCase();
-            switch (operator) {
-            case 'abs': return {
-                kind: 'op.abs',
-                value
-            };
-            case 'floor': return {
-                kind: 'op.floor',
-                value
-            };
-            case 'ceiling': return {
-                kind: 'op.ceiling',
-                value
-            };
-            case 'sqrt': return {
-                kind: 'op.sqrt',
-                value
-            };
-            case 'sin': return {
-                kind: 'op.sin',
-                value
-            };
-            case 'cos': return {
-                kind: 'op.cos',
-                value
-            };
-            case 'tan': return {
-                kind: 'op.tan',
-                value
-            };
-            case 'asin': return {
-                kind: 'op.asin',
-                value
-            };
-            case 'acos': return {
-                kind: 'op.acos',
-                value
-            };
-            case 'atan': return {
-                kind: 'op.atan',
-                value
-            };
-            case 'ln': return {
-                kind: 'op.ln',
-                value
-            };
-            case 'log': return {
-                kind: 'op.log',
-                value
-            };
-            case 'e ^': return {
-                kind: 'op.e^',
-                value
-            };
-            case '10 ^': return {
-                kind: 'op.10^',
-                value
-            };
-            default: return {
-                kind: 'constant',
-                value: 0
-            };
-            }
-        }
-        case 'operator_mod':
-            return {
-                kind: 'op.mod',
-                left: this.descendInputOfBlock(block, 'NUM1'),
-                right: this.descendInputOfBlock(block, 'NUM2')
-            };
-        case 'operator_min':
-            return {
-                kind: 'op.min',
-                left: this.descendInputOfBlock(block, 'NUM1'),
-                right: this.descendInputOfBlock(block, 'NUM2')
-            };
-        case 'operator_max':
-            return {
-                kind: 'op.max',
-                left: this.descendInputOfBlock(block, 'NUM1'),
-                right: this.descendInputOfBlock(block, 'NUM2')
-            };
-        case 'operator_multiply':
-            return {
-                kind: 'op.multiply',
-                left: this.descendInputOfBlock(block, 'NUM1'),
-                right: this.descendInputOfBlock(block, 'NUM2')
-            };
-        case 'operator_not':
-            return {
-                kind: 'op.not',
-                operand: this.descendInputOfBlock(block, 'OPERAND')
-            };
-        case 'operator_or':
-            return {
-                kind: 'op.or',
-                left: this.descendInputOfBlock(block, 'OPERAND1'),
-                right: this.descendInputOfBlock(block, 'OPERAND2')
-            };
-        case 'operator_random': {
-            const from = this.descendInputOfBlock(block, 'FROM');
-            const to = this.descendInputOfBlock(block, 'TO');
-            // If both values are known at compile time, we can do some optimizations.
-            // TODO: move optimizations to jsgen?
-            if (from.kind === 'constant' && to.kind === 'constant') {
-                const sFrom = from.value;
-                const sTo = to.value;
-                const nFrom = Cast.toNumber(sFrom);
-                const nTo = Cast.toNumber(sTo);
-                // If both numbers are the same, random is unnecessary.
-                // todo: this probably never happens so consider removing
-                if (nFrom === nTo) {
-                    return {
-                        kind: 'constant',
-                        value: nFrom
-                    };
-                }
-                // If both are ints, hint this to the compiler
-                if (Cast.isInt(sFrom) && Cast.isInt(sTo)) {
-                    return {
-                        kind: 'op.random',
-                        low: nFrom <= nTo ? from : to,
-                        high: nFrom <= nTo ? to : from,
-                        useInts: true,
-                        useFloats: false
-                    };
-                }
-                // Otherwise hint that these are floats
-                return {
-                    kind: 'op.random',
-                    low: nFrom <= nTo ? from : to,
-                    high: nFrom <= nTo ? to : from,
-                    useInts: false,
-                    useFloats: true
-                };
-            } else if (from.kind === 'constant') {
-                // If only one value is known at compile-time, we can still attempt some optimizations.
-                if (!Cast.isInt(Cast.toNumber(from.value))) {
-                    return {
-                        kind: 'op.random',
-                        low: from,
-                        high: to,
-                        useInts: false,
-                        useFloats: true
-                    };
-                }
-            } else if (to.kind === 'constant') {
-                if (!Cast.isInt(Cast.toNumber(to.value))) {
-                    return {
-                        kind: 'op.random',
-                        low: from,
-                        high: to,
-                        useInts: false,
-                        useFloats: true
-                    };
-                }
-            }
-            // No optimizations possible
-            return {
-                kind: 'op.random',
-                low: from,
-                high: to,
-                useInts: false,
-                useFloats: false
-            };
-        }
-        case 'operator_round':
-            return {
-                kind: 'op.round',
-                value: this.descendInputOfBlock(block, 'NUM')
-            };
-        case 'operator_subtract':
-            return {
-                kind: 'op.subtract',
-                left: this.descendInputOfBlock(block, 'NUM1'),
-                right: this.descendInputOfBlock(block, 'NUM2')
-            };
-        case 'operator_xor':
-            return {
-                kind: 'op.xor',
-                left: this.descendInputOfBlock(block, 'OPERAND1'),
-                right: this.descendInputOfBlock(block, 'OPERAND2')
-            };
-
-        case 'procedures_call':
-            return this.descendProcedure(block);
-
-        case 'sensing_answer':
-            return {
-                kind: 'sensing.answer'
-            };
-        case 'sensing_coloristouchingcolor':
-            return {
-                kind: 'sensing.colorTouchingColor',
-                target: this.descendInputOfBlock(block, 'COLOR2'),
-                mask: this.descendInputOfBlock(block, 'COLOR')
-            };
-        case 'sensing_current':
-            switch (block.fields.CURRENTMENU.value.toLowerCase()) {
-            case 'year':
-                return {
-                    kind: 'sensing.year'
-                };
-            case 'month':
-                return {
-                    kind: 'sensing.month'
-                };
-            case 'date':
-                return {
-                    kind: 'sensing.date'
-                };
-            case 'dayofweek':
-                return {
-                    kind: 'sensing.dayofweek'
-                };
-            case 'hour':
-                return {
-                    kind: 'sensing.hour'
-                };
-            case 'minute':
-                return {
-                    kind: 'sensing.minute'
-                };
-            case 'second':
-                return {
-                    kind: 'sensing.second'
-                };
-            }
-            return {
-                kind: 'constant',
-                value: 0
-            };
-        case 'sensing_dayssince2000':
-            return {
-                kind: 'sensing.daysSince2000'
-            };
-        case 'sensing_distanceto':
-            return {
-                kind: 'sensing.distance',
-                target: this.descendInputOfBlock(block, 'DISTANCETOMENU')
-            };
-        case 'sensing_keypressed':
-            return {
-                kind: 'keyboard.pressed',
-                key: this.descendInputOfBlock(block, 'KEY_OPTION')
-            };
-        case 'sensing_mousedown':
-            return {
-                kind: 'mouse.down'
-            };
-        case 'sensing_mousex':
-            return {
-                kind: 'mouse.x'
-            };
-        case 'sensing_mousey':
-            return {
-                kind: 'mouse.y'
-            };
-        case 'sensing_of':
-            return {
-                kind: 'sensing.of',
-                property: block.fields.PROPERTY.value,
-                object: this.descendInputOfBlock(block, 'OBJECT')
-            };
-        case 'sensing_timer':
-            this.usesTimer = true;
-            return {
-                kind: 'timer.get'
-            };
-        case 'sensing_touchingcolor':
-            return {
-                kind: 'sensing.touchingColor',
-                color: this.descendInputOfBlock(block, 'COLOR')
-            };
-        case 'sensing_touchingobject':
-            return {
-                kind: 'sensing.touching',
-                object: this.descendInputOfBlock(block, 'TOUCHINGOBJECTMENU')
-            };
-        case 'sensing_username':
-            return {
-                kind: 'sensing.username'
-            };
-
-        case 'string_exactly':
-            return {
-                kind: 'str.exactly',
-                left: this.descendInputOfBlock(block, 'STRING1'),
-                right: this.descendInputOfBlock(block, 'STRING2')
-            };
-        case 'string_is':
-            return {
-                kind: 'str.is',
-                left: this.descendInputOfBlock(block, 'STRING'),
-                right: block.fields.CONVERT.value
-            };
-        case 'string_repeat':
-            return {
-                kind: 'str.repeat',
-                str: this.descendInputOfBlock(block, 'STRING'),
-                num: this.descendInputOfBlock(block, 'NUMBER')
-            };
-        case 'string_replace':
-            return {
-                kind: 'str.replace',
-                left: this.descendInputOfBlock(block, 'REPLACE'),
-                right: this.descendInputOfBlock(block, 'WITH'),
-                str: this.descendInputOfBlock(block, 'STRING')
-            };
-        case 'string_reverse':
-            return {
-                kind: 'str.reverse',
-                str: this.descendInputOfBlock(block, 'STRING')
-            };
-
-        case 'sound_sounds_menu':
-            // This menu is special compared to other menus -- it actually has an opcode function.
-            return {
-                kind: 'constant',
-                value: block.fields.SOUND_MENU.value
-            };
-
-        case 'tw_getLastKeyPressed':
-            return {
-                kind: 'tw.lastKeyPressed'
-            };
-
-        default: {
-            const opcodeFunction = this.runtime.getOpcodeFunction(block.opcode);
-            if (opcodeFunction) {
-                // It might be a non-compiled primitive from a standard category
-                if (compatBlocks.inputs.includes(block.opcode)) {
-                    return this.descendCompatLayer(block);
-                }
-                // It might be an extension block.
-                const blockInfo = this.getBlockInfo(block.opcode);
-                if (blockInfo) {
-                    const type = blockInfo.info.blockType;
-                    if (
-                        type === BlockType.ARRAY || type === BlockType.OBJECT ||
-                        type === BlockType.REPORTER || type === BlockType.BOOLEAN ||
-                        type === BlockType.INLINE
-                    ) {
-                        return this.descendCompatLayer(block);
-                    }
-                }
-            }
-
-            // It might be a menu.
-            const inputs = Object.keys(block.inputs);
-            const fields = Object.keys(block.fields);
-            if (inputs.length === 0 && fields.length === 1) {
-                return {
-                    kind: 'constant',
-                    value: block.fields[fields[0]].value
-                };
-            }
-
-            log.warn(`IR: Unknown input: ${block.opcode}`, block);
-            throw new Error(`IR: Unknown input: ${block.opcode}`);
-        }
-        }
+        log.warn(`IR: Unknown input: ${block.opcode}`, block);
+        throw new Error(`IR: Unknown input: ${block.opcode}`);
     }
 
     /**
      * Descend into a stacked block. (eg. "move ( ) steps")
      * @param {*} block The Scratch block to parse.
      * @private
-     * @returns {Node} Compiled node for this block.
+     * @returns {IntermediateStackBlock} Compiled node for this block.
      */
     descendStackedBlock (block) {
-        switch (block.opcode) {
-        case 'control_all_at_once':
-            // In Unsandboxed, attempts to run the script in 1 frame.
-            return {
-                kind: 'control.allAtOnce',
-                condition: {
-                    kind: 'constant',
-                    value: true
-                },
-                code: this.descendSubstack(block, 'SUBSTACK')
-            };
-        case 'control_clear_counter':
-            return {
-                kind: 'counter.clear'
-            };
-        case 'control_create_clone_of':
-            return {
-                kind: 'control.createClone',
-                target: this.descendInputOfBlock(block, 'CLONE_OPTION')
-            };
-        case 'control_delete_this_clone':
-            this.script.yields = true;
-            return {
-                kind: 'control.deleteClone'
-            };
-        case 'control_forever':
-            this.analyzeLoop();
-            return {
-                kind: 'control.while',
-                condition: {
-                    kind: 'constant',
-                    value: true
-                },
-                do: this.descendSubstack(block, 'SUBSTACK')
-            };
-        case 'control_for_each':
-            this.analyzeLoop();
-            return {
-                kind: 'control.for',
-                variable: this.descendVariable(block, 'VARIABLE', SCALAR_TYPE),
-                count: this.descendInputOfBlock(block, 'VALUE'),
-                do: this.descendSubstack(block, 'SUBSTACK')
-            };
-        case 'control_if':
-            return {
-                kind: 'control.if',
-                condition: this.descendInputOfBlock(block, 'CONDITION'),
-                whenTrue: this.descendSubstack(block, 'SUBSTACK'),
-                whenFalse: []
-            };
-        case 'control_if_else':
-            return {
-                kind: 'control.if',
-                condition: this.descendInputOfBlock(block, 'CONDITION'),
-                whenTrue: this.descendSubstack(block, 'SUBSTACK'),
-                whenFalse: this.descendSubstack(block, 'SUBSTACK2')
-            };
-        case 'control_incr_counter':
-            return {
-                kind: 'counter.increment'
-            };
-        case 'control_repeat':
-            this.analyzeLoop();
-            return {
-                kind: 'control.repeat',
-                times: this.descendInputOfBlock(block, 'TIMES'),
-                do: this.descendSubstack(block, 'SUBSTACK')
-            };
-        case 'control_repeat_until': {
-            this.analyzeLoop();
-            // Dirty hack: automatically enable warp timer for this block if it uses timer
-            // This fixes project that do things like "repeat until timer > 0.5"
-            this.usesTimer = false;
-            const condition = this.descendInputOfBlock(block, 'CONDITION');
-            const needsWarpTimer = this.usesTimer;
-            if (needsWarpTimer) {
-                this.script.yields = true;
+        if (!block) console.trace('DSB IR');
+        if (this.runtime.compilerData.stacks.has(block.opcode)) {
+            block = this.runtime.compilerData.stacks.get(block.opcode).stg(this, block, null);
+            console.log('DSB IR', block);
+            return block;
+        }
+        const opcodeFunction = this.runtime.getOpcodeFunction(block.opcode);
+        if (opcodeFunction) {
+            // It might be a non-compiled primitive from a standard category
+            if (compatBlocks.stacked.includes(block.opcode)) {
+                return this.descendCompatLayerStack(block);
             }
-            return {
-                kind: 'control.while',
-                condition: {
-                    kind: 'op.not',
-                    operand: condition
-                },
-                do: this.descendSubstack(block, 'SUBSTACK'),
-                warpTimer: needsWarpTimer
-            };
-        }
-        case 'control_stop': {
-            const level = block.fields.STOP_OPTION.value;
-            if (level === 'all') {
-                this.script.yields = true;
-                return {
-                    kind: 'control.stopAll'
-                };
-            } else if (level === 'other scripts in sprite' || level === 'other scripts in stage') {
-                return {
-                    kind: 'control.stopOthers'
-                };
-            } else if (level === 'this script') {
-                return {
-                    kind: 'control.stopScript'
-                };
-            }
-            return {
-                kind: 'noop'
-            };
-        }
-        case 'control_break': {
-            return {
-                kind: 'control.break'
-            };
-        }
-        case 'control_continue': {
-            return {
-                kind: 'control.continue'
-            };
-        }
-        case 'control_wait':
-            this.script.yields = true;
-            return {
-                kind: 'control.wait',
-                seconds: this.descendInputOfBlock(block, 'DURATION')
-            };
-        case 'control_wait_until':
-            this.script.yields = true;
-            return {
-                kind: 'control.waitUntil',
-                condition: this.descendInputOfBlock(block, 'CONDITION')
-            };
-        case 'control_while':
-            this.analyzeLoop();
-            return {
-                kind: 'control.while',
-                condition: this.descendInputOfBlock(block, 'CONDITION'),
-                do: this.descendSubstack(block, 'SUBSTACK'),
-                // We should consider analyzing this like we do for control_repeat_until
-                warpTimer: false
-            };
-
-        case 'data_addtolist':
-            return {
-                kind: 'list.add',
-                list: this.descendVariable(block, 'LIST', LIST_TYPE),
-                item: this.descendInputOfBlock(block, 'ITEM')
-            };
-        case 'data_changevariableby': {
-            const variable = this.descendVariable(block, 'VARIABLE', SCALAR_TYPE);
-            return {
-                kind: 'var.set',
-                variable,
-                value: {
-                    kind: 'op.add',
-                    left: {
-                        kind: 'var.get',
-                        variable
-                    },
-                    right: this.descendInputOfBlock(block, 'VALUE')
-                }
-            };
-        }
-        case 'data_deletealloflist':
-            return {
-                kind: 'list.deleteAll',
-                list: this.descendVariable(block, 'LIST', LIST_TYPE)
-            };
-        case 'data_deleteoflist': {
-            const index = this.descendInputOfBlock(block, 'INDEX');
-            if (index.kind === 'constant' && index.value === 'all') {
-                return {
-                    kind: 'list.deleteAll',
-                    list: this.descendVariable(block, 'LIST', LIST_TYPE)
-                };
-            }
-            return {
-                kind: 'list.delete',
-                list: this.descendVariable(block, 'LIST', LIST_TYPE),
-                index: index
-            };
-        }
-        case 'data_hidelist':
-            return {
-                kind: 'list.hide',
-                list: this.descendVariable(block, 'LIST', LIST_TYPE)
-            };
-        case 'data_hidevariable':
-            return {
-                kind: 'var.hide',
-                variable: this.descendVariable(block, 'VARIABLE', SCALAR_TYPE)
-            };
-        case 'data_insertatlist':
-            return {
-                kind: 'list.insert',
-                list: this.descendVariable(block, 'LIST', LIST_TYPE),
-                index: this.descendInputOfBlock(block, 'INDEX'),
-                item: this.descendInputOfBlock(block, 'ITEM')
-            };
-        case 'data_replaceitemoflist':
-            return {
-                kind: 'list.replace',
-                list: this.descendVariable(block, 'LIST', LIST_TYPE),
-                index: this.descendInputOfBlock(block, 'INDEX'),
-                item: this.descendInputOfBlock(block, 'ITEM')
-            };
-        case 'data_setvariableto':
-            return {
-                kind: 'var.set',
-                variable: this.descendVariable(block, 'VARIABLE', SCALAR_TYPE),
-                value: this.descendInputOfBlock(block, 'VALUE')
-            };
-        case 'data_setlist':
-            return {
-                kind: 'list.set',
-                list: this.descendVariable(block, 'LIST', LIST_TYPE),
-                array: this.descendInputOfBlock(block, 'ARRAY')
-            };
-        case 'data_showlist':
-            return {
-                kind: 'list.show',
-                list: this.descendVariable(block, 'LIST', LIST_TYPE)
-            };
-        case 'data_showvariable':
-            return {
-                kind: 'var.show',
-                variable: this.descendVariable(block, 'VARIABLE', SCALAR_TYPE)
-            };
-
-        case 'event_broadcast':
-            return {
-                kind: 'event.broadcast',
-                broadcast: this.descendInputOfBlock(block, 'BROADCAST_INPUT')
-            };
-        case 'event_broadcastandwait':
-            this.script.yields = true;
-            return {
-                kind: 'event.broadcastAndWait',
-                broadcast: this.descendInputOfBlock(block, 'BROADCAST_INPUT')
-            };
-
-        case 'looks_changeeffectby':
-            return {
-                kind: 'looks.changeEffect',
-                effect: block.fields.EFFECT.value.toLowerCase(),
-                value: this.descendInputOfBlock(block, 'CHANGE')
-            };
-        case 'looks_changesizeby':
-            return {
-                kind: 'looks.changeSize',
-                size: this.descendInputOfBlock(block, 'CHANGE')
-            };
-        case 'looks_cleargraphiceffects':
-            return {
-                kind: 'looks.clearEffects'
-            };
-        case 'looks_goforwardbackwardlayers':
-            if (block.fields.FORWARD_BACKWARD.value === 'forward') {
-                return {
-                    kind: 'looks.forwardLayers',
-                    layers: this.descendInputOfBlock(block, 'NUM')
-                };
-            }
-            return {
-                kind: 'looks.backwardLayers',
-                layers: this.descendInputOfBlock(block, 'NUM')
-            };
-        case 'looks_gotofrontback':
-            if (block.fields.FRONT_BACK.value === 'front') {
-                return {
-                    kind: 'looks.goToFront'
-                };
-            }
-            return {
-                kind: 'looks.goToBack'
-            };
-        case 'looks_hide':
-            return {
-                kind: 'looks.hide'
-            };
-        case 'looks_nextbackdrop':
-            return {
-                kind: 'looks.nextBackdrop'
-            };
-        case 'looks_nextcostume':
-            return {
-                kind: 'looks.nextCostume'
-            };
-        case 'looks_seteffectto':
-            return {
-                kind: 'looks.setEffect',
-                effect: block.fields.EFFECT.value.toLowerCase(),
-                value: this.descendInputOfBlock(block, 'VALUE')
-            };
-        case 'looks_setsizeto':
-            return {
-                kind: 'looks.setSize',
-                size: this.descendInputOfBlock(block, 'SIZE')
-            };
-        case 'looks_show':
-            return {
-                kind: 'looks.show'
-            };
-        case 'looks_switchbackdropto':
-            return {
-                kind: 'looks.switchBackdrop',
-                backdrop: this.descendInputOfBlock(block, 'BACKDROP')
-            };
-        case 'looks_switchcostumeto':
-            return {
-                kind: 'looks.switchCostume',
-                costume: this.descendInputOfBlock(block, 'COSTUME')
-            };
-
-        case 'motion_changexby':
-            return {
-                kind: 'motion.changeX',
-                dx: this.descendInputOfBlock(block, 'DX')
-            };
-        case 'motion_changeyby':
-            return {
-                kind: 'motion.changeY',
-                dy: this.descendInputOfBlock(block, 'DY')
-            };
-        case 'motion_gotoxy':
-            return {
-                kind: 'motion.setXY',
-                x: this.descendInputOfBlock(block, 'X'),
-                y: this.descendInputOfBlock(block, 'Y')
-            };
-        case 'motion_ifonedgebounce':
-            return {
-                kind: 'motion.ifOnEdgeBounce'
-            };
-        case 'motion_movesteps':
-            return {
-                kind: 'motion.step',
-                steps: this.descendInputOfBlock(block, 'STEPS')
-            };
-        case 'motion_pointindirection':
-            return {
-                kind: 'motion.setDirection',
-                direction: this.descendInputOfBlock(block, 'DIRECTION')
-            };
-        case 'motion_setrotationstyle':
-            return {
-                kind: 'motion.setRotationStyle',
-                style: block.fields.STYLE.value
-            };
-        case 'motion_setx':
-            return {
-                kind: 'motion.setX',
-                x: this.descendInputOfBlock(block, 'X')
-            };
-        case 'motion_sety':
-            return {
-                kind: 'motion.setY',
-                y: this.descendInputOfBlock(block, 'Y')
-            };
-        case 'motion_turnleft':
-            return {
-                kind: 'motion.setDirection',
-                direction: {
-                    kind: 'op.subtract',
-                    left: {
-                        kind: 'motion.direction'
-                    },
-                    right: this.descendInputOfBlock(block, 'DEGREES')
-                }
-            };
-        case 'motion_turnright':
-            return {
-                kind: 'motion.setDirection',
-                direction: {
-                    kind: 'op.add',
-                    left: {
-                        kind: 'motion.direction'
-                    },
-                    right: this.descendInputOfBlock(block, 'DEGREES')
-                }
-            };
-
-        case 'pen_clear':
-            return {
-                kind: 'pen.clear'
-            };
-        case 'pen_changePenColorParamBy':
-            return {
-                kind: 'pen.changeParam',
-                param: this.descendInputOfBlock(block, 'COLOR_PARAM'),
-                value: this.descendInputOfBlock(block, 'VALUE')
-            };
-        case 'pen_changePenHueBy':
-            return {
-                kind: 'pen.legacyChangeHue',
-                hue: this.descendInputOfBlock(block, 'HUE')
-            };
-        case 'pen_changePenShadeBy':
-            return {
-                kind: 'pen.legacyChangeShade',
-                shade: this.descendInputOfBlock(block, 'SHADE')
-            };
-        case 'pen_penDown':
-            return {
-                kind: 'pen.down'
-            };
-        case 'pen_penUp':
-            return {
-                kind: 'pen.up'
-            };
-        case 'pen_setPenColorParamTo':
-            return {
-                kind: 'pen.setParam',
-                param: this.descendInputOfBlock(block, 'COLOR_PARAM'),
-                value: this.descendInputOfBlock(block, 'VALUE')
-            };
-        case 'pen_setPenColorToColor':
-            return {
-                kind: 'pen.setColor',
-                color: this.descendInputOfBlock(block, 'COLOR')
-            };
-        case 'pen_setPenHueToNumber':
-            return {
-                kind: 'pen.legacySetHue',
-                hue: this.descendInputOfBlock(block, 'HUE')
-            };
-        case 'pen_setPenShadeToNumber':
-            return {
-                kind: 'pen.legacySetShade',
-                shade: this.descendInputOfBlock(block, 'SHADE')
-            };
-        case 'pen_setPenSizeTo':
-            return {
-                kind: 'pen.setSize',
-                size: this.descendInputOfBlock(block, 'SIZE')
-            };
-        case 'pen_changePenSizeBy':
-            return {
-                kind: 'pen.changeSize',
-                size: this.descendInputOfBlock(block, 'SIZE')
-            };
-        case 'pen_stamp':
-            return {
-                kind: 'pen.stamp'
-            };
-
-        case 'procedures_call': {
-            const procedureCode = block.mutation.proccode;
-            if (block.mutation.return) {
-                const visualReport = this.descendVisualReport(block);
-                if (visualReport) {
-                    return visualReport;
+            // It might be an extension block.
+            const blockInfo = this.getBlockInfo(block.opcode);
+            if (blockInfo) {
+                const type = blockInfo.info.blockType;
+                if (type === BlockType.COMMAND || type === BlockType.CONDITIONAL || type === BlockType.LOOP) {
+                    return this.descendCompatLayerStack(block);
                 }
             }
-            if (procedureCode === 'tw:debugger;') {
-                return {
-                    kind: 'tw.debugger'
-                };
-            }
-            return this.descendProcedure(block);
         }
-        case 'procedures_return':
-            return {
-                kind: 'procedures.return',
-                value: this.descendInputOfBlock(block, 'VALUE')
-            };
 
-        case 'sensing_resettimer':
-            return {
-                kind: 'timer.reset'
-            };
-
-        default: {
-            const opcodeFunction = this.runtime.getOpcodeFunction(block.opcode);
-            if (opcodeFunction) {
-                // It might be a non-compiled primitive from a standard category
-                if (compatBlocks.stacked.includes(block.opcode)) {
-                    return this.descendCompatLayer(block);
-                }
-                // It might be an extension block.
-                const blockInfo = this.getBlockInfo(block.opcode);
-                if (blockInfo) {
-                    const type = blockInfo.info.blockType;
-                    if (type === BlockType.COMMAND || type === BlockType.CONDITIONAL || type === BlockType.LOOP) {
-                        return this.descendCompatLayer(block);
-                    }
-                }
-            }
-
-            const asVisualReport = this.descendVisualReport(block);
-            if (asVisualReport) {
-                return asVisualReport;
-            }
-
-            log.warn(`IR: Unknown stacked block: ${block.opcode}`, block);
-            throw new Error(`IR: Unknown stacked block: ${block.opcode}`);
+        const asVisualReport = this.descendVisualReport(block);
+        if (asVisualReport) {
+            return asVisualReport;
         }
-        }
+
+        log.warn(`IR: Unknown stacked block: ${block.opcode}`, block);
+        throw new Error(`IR: Unknown stacked block: ${block.opcode}`);
     }
 
     /**
      * Descend into a stack of blocks (eg. the blocks contained within an "if" block)
      * @param {*} parentBlock The parent Scratch block that contains the stack to parse.
-     * @param {*} substackName The name of the stack to descend into.
+     * @param {string} substackName The name of the stack to descend into.
      * @private
-     * @returns {Node[]} List of stacked block nodes.
+     * @returns {IntermediateStack} Stacked blocks.
      */
     descendSubstack (parentBlock, substackName) {
         const input = parentBlock.inputs[substackName];
         if (!input) {
-            return [];
+            return new IntermediateStack();
         }
         const stackId = input.block;
         return this.walkStack(stackId);
@@ -1313,10 +296,10 @@ class ScriptTreeGenerator {
      * Descend into and walk the siblings of a stack.
      * @param {string} startingBlockId The ID of the first block of a stack.
      * @private
-     * @returns {Node[]} List of stacked block nodes.
+     * @returns {IntermediateStack} List of stacked block nodes.
      */
     walkStack (startingBlockId) {
-        const result = [];
+        const result = new IntermediateStack();
         let blockId = startingBlockId;
 
         while (blockId !== null) {
@@ -1326,12 +309,119 @@ class ScriptTreeGenerator {
             }
 
             const node = this.descendStackedBlock(block);
-            result.push(node);
+            this.script.yields = this.script.yields || node.yields;
+            result.blocks.push(node);
 
             blockId = block.next;
         }
 
         return result;
+    }
+
+    /**
+     * @param {*} block
+     * @returns {{
+     *  opcode: StackOpcode & InputOpcode,
+     *  inputs?: *,
+     *  yields: boolean
+     * }}
+     */
+    getProcedureInfo (block) {
+        const procedureCode = block.mutation.proccode;
+        const paramNamesIdsAndDefaults = this.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
+
+        if (paramNamesIdsAndDefaults === null) {
+            return {opcode: StackOpcode.NOP, yields: false};
+        }
+
+        const [paramNames, paramIds, paramDefaults] = paramNamesIdsAndDefaults;
+
+        const addonBlock = this.runtime.getAddonBlock(procedureCode);
+        if (addonBlock) {
+            const args = {};
+            for (let i = 0; i < paramIds.length; i++) {
+                let value;
+                if (block.inputs[paramIds[i]] && block.inputs[paramIds[i]].block) {
+                    value = this.descendInputOfBlock(block, paramIds[i], true);
+                } else {
+                    value = this.createConstantInput(paramDefaults[i], true);
+                }
+                args[paramNames[i]] = value;
+            }
+
+            return {
+                opcode: StackOpcode.ADDON_CALL,
+                inputs: {
+                    code: procedureCode,
+                    arguments: args,
+                    blockId: block.id
+                },
+                yields: true
+            };
+        }
+
+        const definitionId = this.blocks.getProcedureDefinition(procedureCode);
+        const definitionBlock = this.blocks.getBlock(definitionId);
+        if (!definitionBlock) {
+            return {opcode: StackOpcode.NOP, yields: false};
+        }
+        const innerDefinition = this.blocks.getBlock(definitionBlock.inputs.custom_block.block);
+
+        let isWarp = this.script.isWarp;
+        if (!isWarp) {
+            if (innerDefinition && innerDefinition.mutation) {
+                const warp = innerDefinition.mutation.warp;
+                if (typeof warp === 'boolean') {
+                    isWarp = warp;
+                } else if (typeof warp === 'string') {
+                    isWarp = JSON.parse(warp);
+                }
+            }
+        }
+
+        const variant = generateProcedureVariant(procedureCode, isWarp);
+
+        if (!this.script.dependedProcedures.includes(variant)) {
+            this.script.dependedProcedures.push(variant);
+        }
+
+        const args = [];
+        for (let i = 0; i < paramIds.length; i++) {
+            let value;
+            if (block.inputs[paramIds[i]] && block.inputs[paramIds[i]].block) {
+                value = this.descendInputOfBlock(block, paramIds[i], true);
+            } else {
+                value = this.createConstantInput(paramDefaults[i], true);
+            }
+            args.push(value);
+        }
+
+        return {
+            opcode: StackOpcode.PROCEDURE_CALL,
+            inputs: {
+                code: procedureCode,
+                variant,
+                arguments: args
+            },
+            yields: !this.script.isWarp && procedureCode === this.script.procedureCode
+        };
+    }
+
+    /**
+     * @param {*} block
+     * @returns {IntermediateStackBlock | null}
+     */
+    descendVisualReport (block) {
+        if (!this.thread.stackClick || block.next) {
+            return null;
+        }
+        try {
+            return new IntermediateStackBlock(StackOpcode.VISUAL_REPORT, {
+                input: this.descendInput(block)
+            });
+        } catch (e) {
+            return null;
+        }
     }
 
     /**
@@ -1418,110 +508,42 @@ class ScriptTreeGenerator {
         return createVariableData('target', newVariable);
     }
 
-    descendProcedure (block) {
-        const procedureCode = block.mutation.proccode;
-        const paramNamesIdsAndDefaults = this.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
-        if (paramNamesIdsAndDefaults === null) {
-            return {
-                kind: 'noop'
-            };
+    /**
+     * Descend into an input block that uses the compatibility layer.
+     * @param {*} block The block to use the compatibility layer for.
+     * @private
+     * @returns {IntermediateInput} The parsed node.
+     */
+    descendCompatLayerInput (block) {
+        const inputs = {};
+        const fields = {};
+        for (const name of Object.keys(block.inputs)) {
+            inputs[name] = this.descendInputOfBlock(block, name, true);
         }
-
-        const [paramNames, paramIds, paramDefaults] = paramNamesIdsAndDefaults;
-
-        const addonBlock = this.runtime.getAddonBlock(procedureCode);
-        if (addonBlock) {
-            this.script.yields = true;
-            const args = {};
-            for (let i = 0; i < paramIds.length; i++) {
-                let value;
-                if (block.inputs[paramIds[i]] && block.inputs[paramIds[i]].block) {
-                    value = this.descendInputOfBlock(block, paramIds[i]);
-                } else {
-                    value = {
-                        kind: 'constant',
-                        value: paramDefaults[i]
-                    };
-                }
-                args[paramNames[i]] = value;
-            }
-            return {
-                kind: 'addons.call',
-                code: procedureCode,
-                arguments: args,
-                blockId: block.id
-            };
+        for (const name of Object.keys(block.fields)) {
+            fields[name] = block.fields[name].value;
         }
-
-        const definitionId = this.blocks.getProcedureDefinition(procedureCode);
-        const definitionBlock = this.blocks.getBlock(definitionId);
-        if (!definitionBlock) {
-            return {
-                kind: 'noop'
-            };
-        }
-        const innerDefinition = this.blocks.getBlock(definitionBlock.inputs.custom_block.block);
-
-        let isWarp = this.script.isWarp;
-        if (!isWarp) {
-            if (innerDefinition && innerDefinition.mutation) {
-                const warp = innerDefinition.mutation.warp;
-                if (typeof warp === 'boolean') {
-                    isWarp = warp;
-                } else if (typeof warp === 'string') {
-                    isWarp = JSON.parse(warp);
-                }
-            }
-        }
-
-        const variant = generateProcedureVariant(procedureCode, isWarp);
-
-        if (!this.script.dependedProcedures.includes(variant)) {
-            this.script.dependedProcedures.push(variant);
-        }
-
-        // Non-warp direct recursion yields.
-        if (!this.script.isWarp) {
-            if (procedureCode === this.script.procedureCode) {
-                this.script.yields = true;
-            }
-        }
-
-        const args = [];
-        for (let i = 0; i < paramIds.length; i++) {
-            let value;
-            if (block.inputs[paramIds[i]] && block.inputs[paramIds[i]].block) {
-                value = this.descendInputOfBlock(block, paramIds[i]);
-            } else {
-                value = {
-                    kind: 'constant',
-                    value: paramDefaults[i]
-                };
-            }
-            args.push(value);
-        }
-
-        return {
-            kind: 'procedures.call',
-            code: procedureCode,
-            variant,
-            arguments: args
-        };
+        return new IntermediateInput(InputOpcode.COMPATIBILITY_LAYER, InputType.ANY, {
+            opcode: block.opcode,
+            id: block.id,
+            inputs,
+            fields,
+            breakable: false,
+            iterable: false
+        }, true);
     }
 
     /**
-     * Descend into a block that uses the compatibility layer.
+     * Descend into a stack block that uses the compatibility layer.
      * @param {*} block The block to use the compatibility layer for.
      * @private
-     * @returns {Node} The parsed node.
+     * @returns {IntermediateStackBlock} The parsed node.
      */
-    descendCompatLayer (block) {
-        this.script.yields = true;
-
+    descendCompatLayerStack (block) {
         const inputs = {};
         for (const name of Object.keys(block.inputs)) {
             if (!name.startsWith('SUBSTACK')) {
-                inputs[name] = this.descendInputOfBlock(block, name);
+                inputs[name] = this.descendInputOfBlock(block, name, true);
             }
         }
 
@@ -1543,23 +565,20 @@ class ScriptTreeGenerator {
             }
         }
 
-        return {
-            kind: 'compat',
-            id: block.id,
+        return new IntermediateStackBlock(StackOpcode.COMPATIBILITY_LAYER, {
             opcode: block.opcode,
+            id: block.id,
             blockType,
             inputs,
             fields,
             substacks,
             breakable: block.isBreakable ?? false,
             iterable: block.isIterable ?? false
-        };
+        }, true);
     }
 
     analyzeLoop () {
-        if (!this.script.isWarp || this.script.warpTimer) {
-            this.script.yields = true;
-        }
+        return !this.script.isWarp || this.script.warpTimer;
     }
 
     readTopBlockComment (commentId) {
@@ -1593,22 +612,9 @@ class ScriptTreeGenerator {
         }
     }
 
-    descendVisualReport (block) {
-        if (!this.thread.stackClick || block.next) {
-            return null;
-        }
-        try {
-            return {
-                kind: 'visualReport',
-                input: this.descendInput(block)
-            };
-        } catch (e) {
-            return null;
-        }
-    }
-
     /**
-     * @param {Block} hatBlock
+     * @param {*} hatBlock
+     * @returns {IntermediateStack}
      */
     walkHat (hatBlock) {
         const nextBlock = hatBlock.next;
@@ -1620,10 +626,10 @@ class ScriptTreeGenerator {
             // interpreter parity, but the reuslt is ignored.
             const opcodeFunction = this.runtime.getOpcodeFunction(opcode);
             if (opcodeFunction) {
-                return [
-                    this.descendCompatLayer(hatBlock),
-                    ...this.walkStack(nextBlock)
-                ];
+                return new IntermediateStack([
+                    this.descendCompatLayerStack(hatBlock),
+                    ...this.walkStack(nextBlock).blocks
+                ]);
             }
             return this.walkStack(nextBlock);
         }
@@ -1632,14 +638,13 @@ class ScriptTreeGenerator {
             // Edge-activated HAT
             this.script.yields = true;
             this.script.executableHat = true;
-            return [
-                {
-                    kind: 'hat.edge',
+            return new IntermediateStack([
+                new IntermediateStackBlock(StackOpcode.HAT_EDGE, {
                     id: hatBlock.id,
-                    condition: this.descendCompatLayer(hatBlock)
-                },
-                ...this.walkStack(nextBlock)
-            ];
+                    condition: this.descendCompatLayerInput(hatBlock).toType(InputType.BOOLEAN)
+                }),
+                ...this.walkStack(nextBlock).blocks
+            ]);
         }
 
         const opcodeFunction = this.runtime.getOpcodeFunction(opcode);
@@ -1647,13 +652,12 @@ class ScriptTreeGenerator {
             // Predicate-based HAT
             this.script.yields = true;
             this.script.executableHat = true;
-            return [
-                {
-                    kind: 'hat.predicate',
-                    condition: this.descendCompatLayer(hatBlock)
-                },
-                ...this.walkStack(nextBlock)
-            ];
+            return new IntermediateStack([
+                new IntermediateStackBlock(StackOpcode.HAT_PREDICATE, {
+                    condition: this.descendCompatLayerInput(hatBlock).toType(InputType.BOOLEAN)
+                }),
+                ...this.walkStack(nextBlock).blocks
+            ]);
         }
 
         return this.walkStack(nextBlock);
@@ -1806,10 +810,7 @@ class IRGenerator {
         // Analyze scripts until no changes are made.
         while (this.analyzeScript(entry));
 
-        const ir = new IntermediateRepresentation();
-        ir.entry = entry;
-        ir.procedures = this.procedures;
-        return ir;
+        return new IntermediateRepresentation(entry, this.procedures);
     }
 }
 
