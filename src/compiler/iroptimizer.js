@@ -140,7 +140,7 @@ class IROptimizer {
         const inputs = inputBlock.inputs;
 
         switch (inputBlock.opcode) {
-        case InputOpcode.VAR_GET:
+        case 'data.variable':
             return state.getVariableType(inputs.variable);
 
         case InputOpcode.ADDON_CALL:
@@ -156,7 +156,7 @@ class IROptimizer {
             return InputType.NUMBER_OR_NAN;
         }
 
-        case InputOpcode.OP_ADD: {
+        case 'operator.add': {
             const leftType = inputs.left.type;
             const rightType = inputs.right.type;
 
@@ -219,7 +219,7 @@ class IROptimizer {
             return resultType;
         }
 
-        case InputOpcode.OP_SUBTRACT: {
+        case 'operator.subtract': {
             const leftType = inputs.left.type;
             const rightType = inputs.right.type;
 
@@ -282,7 +282,7 @@ class IROptimizer {
             return resultType;
         }
 
-        case InputOpcode.OP_MULTIPLY: {
+        case 'operator.multiply': {
             const leftType = inputs.left.type;
             const rightType = inputs.right.type;
 
@@ -367,7 +367,7 @@ class IROptimizer {
             return resultType;
         }
 
-        case InputOpcode.OP_DIVIDE: {
+        case 'operator.divide': {
             const leftType = inputs.left.type;
             const rightType = inputs.right.type;
 
@@ -478,7 +478,7 @@ class IROptimizer {
         case InputOpcode.ADDON_CALL:
             modified = state.clear() || modified;
             break;
-        case InputOpcode.PROCEDURE_CALL: {
+        case 'procedure.call': {
             modified = this.analyzeInputs(inputs.inputs, state) || modified;
             const script = this.ir.procedures[inputs.variant];
 
@@ -527,22 +527,22 @@ class IROptimizer {
         modified = this.analyzeInputs(inputs, state) || modified;
 
         switch (stackBlock.opcode) {
-        case StackOpcode.VAR_SET:
+        case 'data.setvariableto':
             modified = state.setVariableType(inputs.variable, inputs.value.type) || modified;
             break;
-        case StackOpcode.CONTROL_WHILE:
-        case StackOpcode.CONTROL_FOR:
-        case StackOpcode.CONTROL_REPEAT:
+        case 'control.while':
+        case 'control.for_each':
+        case 'control.repeat':
             modified = this.analyzeLoopedStack(inputs.do, state, stackBlock) || modified;
             break;
-        case StackOpcode.CONTROL_IF_ELSE: {
+        case 'control.if_else': {
             const trueState = state.clone();
             modified = this.analyzeStack(inputs.whenTrue, trueState) || modified;
             modified = this.analyzeStack(inputs.whenFalse, state) || modified;
             modified = state.or(trueState) || modified;
             break;
         }
-        case StackOpcode.PROCEDURE_CALL: {
+        case 'procedure.call': {
             modified = this.analyzeInputs(inputs.inputs, state) || modified;
             const script = this.ir.procedures[inputs.variant];
 
