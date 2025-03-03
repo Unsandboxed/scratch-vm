@@ -118,7 +118,7 @@ const serializePrimitiveBlock = function (block) {
         const primitiveDesc = [primitiveConstant, field.value];
         if (block.opcode === 'event_broadcast_menu') {
             primitiveDesc.push(field.id);
-        } else if (block.opcode === 'data_variable' || block.opcode === 'data_listcontents') {
+        } else if (block.opcode === 'data_variable' || block.opcode === 'data_listcontents' || block.opcode === 'data_listarraycontents') {
             primitiveDesc.push(field.id);
             if (block.topLevel) {
                 primitiveDesc.push(block.x ? Math.round(block.x) : 0);
@@ -690,8 +690,8 @@ const serializeMonitors = function (monitors, runtime, extensions) {
                 opcode: monitorData.opcode,
                 params: monitorData.params,
                 spriteName: monitorData.spriteName,
-                // value: Array.isArray(monitorData.value) ? [] : 0,
-                value: monitorData.value,
+                value: Array.isArray(monitorData.value) ? [] : 0,
+                // value: monitorData.value,
                 width: monitorData.width,
                 height: monitorData.height,
                 x: monitorData.x - xOffset,
@@ -1389,7 +1389,8 @@ const deserializeMonitor = function (monitorData, runtime, targets, extensions) 
     // monitors should already have the correct monitor ID serialized in the monitorData,
     // find the correct id for all other monitors.
     if (monitorData.opcode !== 'data_variable' && monitorData.opcode !== 'data_listcontents' &&
-        monitorBlockInfo && monitorBlockInfo.isSpriteSpecific) {
+        monitorData.opcode !== 'data_listarraycontents' && monitorBlockInfo &&
+        monitorBlockInfo.isSpriteSpecific) {
         monitorData.id = monitorBlockInfo.getId(
             monitorData.targetId, fields);
     } else {
@@ -1433,7 +1434,7 @@ const deserializeMonitor = function (monitorData, runtime, targets, extensions) 
             const field = monitorBlock.fields.VARIABLE;
             field.id = monitorData.id;
             field.variableType = Variable.SCALAR_TYPE;
-        } else if (monitorData.opcode === 'data_listcontents') {
+        } else if (monitorData.opcode === 'data_listcontents' || monitorData.opcode === 'data_listarraycontents') {
             const field = monitorBlock.fields.LIST;
             field.id = monitorData.id;
             field.variableType = Variable.LIST_TYPE;
