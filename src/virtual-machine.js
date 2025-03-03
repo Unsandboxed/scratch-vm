@@ -238,6 +238,7 @@ class VirtualMachine extends EventEmitter {
             Sprite,
             RenderedTarget,
             JSZip,
+            Variable,
             Buffer,
             Base64: Base64Util,
             RESERVED_NAMES,
