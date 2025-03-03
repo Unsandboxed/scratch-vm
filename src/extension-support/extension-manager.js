@@ -286,6 +286,7 @@ class ExtensionManager {
 
     /**
      * Regenerate blockinfo for any loaded extensions
+     * @param {string} [optExtensionId] Optional extension ID for refreshing
      * @returns {Promise} resolved once all the extensions have been reinitialized
      */
     refreshBlocks (optExtensionId) {
