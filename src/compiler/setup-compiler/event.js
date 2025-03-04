@@ -19,7 +19,7 @@ module.exports = function (compilerData, {
     compilerData.registerBlock('event_broadcastandwait', function (stg, block) {
         return new IntermediateStackBlock(this.ir_opcode, {
             broadcast: stg.descendInputOfBlock(block, 'BROADCAST_INPUT').toType(InputType.STRING)
-        });
+        }, this.yields);
     }, function (jsg, block) {
         jsg.source += `yield* waitThreads(startHats("event_whenbroadcastreceived", { BROADCAST_OPTION: ${
             this.descendInput(block.inputs.broadcast)

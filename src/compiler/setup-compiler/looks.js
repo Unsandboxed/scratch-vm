@@ -2,7 +2,8 @@
 module.exports = function (compilerData, {
     IntermediateStackBlock,
     IntermediateInput,
-    InputType
+    InputType,
+    sanitize
 }) {
     /* eslint-disable no-invalid-this,prefer-arrow-callback */
     // Stack
@@ -11,19 +12,31 @@ module.exports = function (compilerData, {
             effect: block.fields.EFFECT.value.toLowerCase(),
             value: stg.descendInputOfBlock(block, 'CHANGE').toType(InputType.NUMBER)
         });
-    }, null, {
+    }, function (jsg, block) {
+        if (Object.prototype.hasOwnProperty.call(this.target.effects, block.inputs.effect)) {
+            jsg.source += `target.setEffect("${
+                sanitize(block.inputs.effect)
+            }", runtime.ext_scratch3_looks.clampEffect("${
+                sanitize(block.inputs.effect)
+            }", ${this.descendInput(block.inputs.value)} + target.effects["${
+                sanitize(block.inputs.effect)
+            }"]));\n`;
+        }
+    }, {
         input: false
     });
     compilerData.registerBlock('looks_changesizeby', function (stg, block) {
         return new IntermediateStackBlock(this.ir_opcode, {
             size: stg.descendInputOfBlock(block, 'CHANGE').toType(InputType.NUMBER)
         });
-    }, null, {
+    }, function (jsg, block) {
+        jsg.source += `target.setSize(target.size + ${jsg.descendInput(block.inputs.size)});\n`;
+    }, {
         input: false
     });
     compilerData.registerBlock('looks_cleargraphiceffects', function () {
         return new IntermediateStackBlock(this.ir_opcode);
-    }, null, {
+    }, `target.clearEffects();\n`, {
         input: false
     });
     compilerData.registerBlock('looks_goforwardbackwardlayers', function (stg, block) {
@@ -38,6 +51,21 @@ module.exports = function (compilerData, {
     }, null, {
         input: false
     });
+    compilerData.registerCompileFn([
+        'looks.forwardlayer',
+        'looks.backwardslayer'
+    ], [
+        function (jsg, block) {
+            if (!jsg.target.isStage) {
+                jsg.source += `target.goBackwardLayers(${jsg.descendInput(block.inputs.layers)});\n`;
+            }
+        },
+        function (jsg, block) {
+            if (!jsg.target.isStage) {
+                jsg.source += `target.goForwardLayers(${jsg.descendInput(block.inputs.layers)});\n`;
+            }
+        }
+    ]);
     compilerData.registerBlock('looks_gotofrontback', function (_, block) {
         if (block.fields.FRONT_BACK.value === 'front') {
             return new IntermediateStackBlock('looks.frontlayer');
@@ -46,19 +74,37 @@ module.exports = function (compilerData, {
     }, null, {
         input: false
     });
+    compilerData.registerCompileFn([
+        'looks.frontlayer',
+        'looks.backlayer'
+    ], [
+        function (jsg) {
+            if (!jsg.target.isStage) {
+                jsg.source += 'target.goToFront();\n';
+            }
+        },
+        function (jsg) {
+            if (!jsg.target.isStage) {
+                jsg.source += 'target.goToBack();\n';
+            }
+        }
+    ]);
     compilerData.registerBlock('looks_hide', function () {
         return new IntermediateStackBlock(this.ir_opcode);
-    }, null, {
+    }, function (jsg) {
+        jsg.source += 'target.setVisible(false);\n';
+        jsg.source += 'runtime.ext_scratch3_looks._renderBubble(target);\n';
+    }, {
         input: false
     });
     compilerData.registerBlock('looks_nextbackdrop', function () {
         return new IntermediateStackBlock(this.ir_opcode);
-    }, null, {
+    }, `runtime.ext_scratch3_looks._setBackdrop(stage, stage.currentCostume + 1, true);\n`, {
         input: false
     });
     compilerData.registerBlock('looks_nextcostume', function () {
         return new IntermediateStackBlock(this.ir_opcode);
-    }, null, {
+    }, `target.setCostume(target.currentCostume + 1);\n`, {
         input: false
     });
     compilerData.registerBlock('looks_seteffectto', function (stg, block) {
@@ -66,33 +112,50 @@ module.exports = function (compilerData, {
             effect: block.fields.EFFECT.value.toLowerCase(),
             value: stg.descendInputOfBlock(block, 'VALUE').toType(InputType.NUMBER)
         });
-    }, null, {
+    }, function (jsg, block) {
+        if (Object.prototype.hasOwnProperty.call(jsg.target.effects, block.inputs.effect)) {
+            jsg.source += `target.setEffect("${
+                sanitize(block.inputs.effect)
+            }", runtime.ext_scratch3_looks.clampEffect("${
+                sanitize(block.inputs.effect)
+            }", ${jsg.descendInput(block.inputs.value)}));\n`;
+        }
+    }, {
         input: false
     });
     compilerData.registerBlock('looks_setsizeto', function (stg, block) {
         return new IntermediateStackBlock(this.ir_opcode, {
             size: stg.descendInputOfBlock(block, 'SIZE').toType(InputType.NUMBER)
         });
-    }, null, {
+    }, function (jsg, block) {
+        jsg.source += `target.setSize(${jsg.descendInput(block.inputs.size)});\n`;
+    }, {
         input: false
     });
     compilerData.registerBlock('looks_show', function () {
         return new IntermediateStackBlock(this.ir_opcode);
-    }, null, {
+    }, function (jsg) {
+        jsg.source += 'target.setVisible(true);\n';
+        jsg.source += 'runtime.ext_scratch3_looks._renderBubble(target);\n';
+    }, {
         input: false
     });
     compilerData.registerBlock('looks_switchbackdropto', function (stg, block) {
         return new IntermediateStackBlock(this.ir_opcode, {
             backdrop: stg.descendInputOfBlock(block, 'BACKDROP', true)
         });
-    }, null, {
+    }, function (jsg, block) {
+        jsg.source += `runtime.ext_scratch3_looks._setBackdrop(stage, ${jsg.descendInput(block.inputs.backdrop)});\n`;
+    }, {
         input: false
     });
     compilerData.registerBlock('looks_switchcostumeto', function (stg, block) {
         return new IntermediateStackBlock(this.ir_opcode, {
             costume: stg.descendInputOfBlock(block, 'COSTUME', true)
         });
-    }, null, {
+    }, function (jsg, block) {
+        jsg.source += `runtime.ext_scratch3_looks._setCostume(target, ${jsg.descendInput(block.inputs.costume)});\n`;
+    }, {
         input: false
     });
     // Inputs

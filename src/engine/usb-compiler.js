@@ -41,8 +41,13 @@ class Compiler {
         }
         // eslint-disable-next-line no-unused-vars
         useMethods (dynamicChanges, stg, compile) {
-            compile = (typeof compile === 'function' ? compile : (() => compile)).bind(this);
-            stg = (typeof stg === 'function' ? stg : (() => stg)).bind(this);
+            compile = (typeof compile === 'function' ? compile : (
+                this.isInput ?
+                    (str => str) :
+                    ((str, jsg) => void (jsg.source += str))
+            ).bind(null, compile)).bind(this);
+            // eslint-disable-next-line no-shadow
+            stg = stg.bind(this);
             this.compile = compile;
             this.stg = stg;
         }
@@ -63,7 +68,8 @@ class Compiler {
         } else {
             this.stacks.set(block.extended_opcode, block);
         }
-        this.registerCompileFn(block.ir_opcode, block?.compile?.bind?.(block));
+        const compile = (block.compile && block.compile.bind(block)) || null;
+        this.registerCompileFn(block.ir_opcode, compile);
     }
     registerCompileFn (irOpcode, fn) {
         if (fn) {
@@ -98,7 +104,7 @@ class Compiler {
             const opcodev = opcode[i];
             const compilev = compileArray ? compile[i] : compile;
             const block = new Compiler.Block(opcodev, opts);
-            block.useMethods((opts?.dynamicChanges || false), stg, compilev);
+            block.useMethods((opts.dynamicChanges || false), stg, compilev);
             this._updateBlock(block, opts);
         }
     }
@@ -128,7 +134,7 @@ class Compiler {
                 blockInfov.opcode ||
                 blockInfov.func
             }`, opts, blockInfov, categoryInfo);
-            block.useMethods((opts?.dynamicChanges || false), stg, compilev);
+            block.useMethods((opts.dynamicChanges || false), stg, compilev);
             this._updateBlock(block);
         }
     }

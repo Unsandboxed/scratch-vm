@@ -5,7 +5,8 @@ module.exports = function (compilerData, {
     InputType,
     LIST_TYPE,
     SCALAR_TYPE,
-    environment
+    environment,
+    sanitize
 }) {
     /* eslint-disable no-invalid-this,prefer-arrow-callback */
     // Stack
@@ -14,7 +15,11 @@ module.exports = function (compilerData, {
             list: stg.descendVariable(block, 'LIST', LIST_TYPE),
             item: stg.descendInputOfBlock(block, 'ITEM', true)
         });
-    }, null, {
+    }, function (jsg, block) {
+        const list = jsg.referenceVariable(block.inputs.list);
+        jsg.source += `${list}.value.push(${jsg.descendInput(block.inputs.item)});\n`;
+        jsg.source += `${list}._monitorUpToDate = false;\n`;
+    }, {
         input: false
     });
     compilerData.registerBlock('data_changevariableby', function (stg, block) {
@@ -33,13 +38,15 @@ module.exports = function (compilerData, {
         return new IntermediateStackBlock(this.ir_opcode, {
             list: stg.descendVariable(block, 'LIST', LIST_TYPE)
         });
-    }, null, {
+    }, function (jsg, block) {
+        jsg.source += `${jsg.referenceVariable(block.inputs.list)}.value = [];\n`;
+    }, {
         input: false
     });
     compilerData.registerBlock('data_deleteoflist', function (stg, block) {
         const index = stg.descendInputOfBlock(block, 'INDEX');
         if (index.isConstant('all')) {
-            return new IntermediateStackBlock('data.list_delete_all', {
+            return new IntermediateStackBlock('data.deletealloflist', {
                 list: stg.descendVariable(block, 'LIST', LIST_TYPE)
             });
         }
@@ -47,21 +54,43 @@ module.exports = function (compilerData, {
             list: stg.descendVariable(block, 'LIST', LIST_TYPE),
             index: index
         });
-    }, null, {
+    }, function (jsg, block) {
+        const list = jsg.referenceVariable(block.inputs.list);
+        if (block.inputs.index.isConstant('last')) {
+            jsg.source += `${list}.value.pop();\n`;
+            jsg.source += `${list}._monitorUpToDate = false;\n`;
+            return;
+        }
+        if (block.inputs.index.isConstant(1)) {
+            jsg.source += `${list}.value.shift();\n`;
+            jsg.source += `${list}._monitorUpToDate = false;\n`;
+            return;
+        }
+        // do not need a special case for all as that is handled in IR generation (list.deleteAll)
+        jsg.source += `listDelete(${list}, ${jsg.descendInput(block.inputs.index)});\n`;
+    }, {
         input: false
     });
     compilerData.registerBlock('data_hidelist', function (stg, block) {
         return new IntermediateStackBlock(this.ir_opcode, {
             list: stg.descendVariable(block, 'LIST', LIST_TYPE)
         });
-    }, null, {
+    }, function (jsg, block) {
+        jsg.source += `runtime.monitorBlocks.changeBlock({ id: "${
+            sanitize(block.inputs.list.id)
+        }", element: "checkbox", value: false }, runtime);\n`;
+    }, {
         input: false
     });
     compilerData.registerBlock('data_hidevariable', function (stg, block) {
         return new IntermediateStackBlock(this.ir_opcode, {
             variable: stg.descendVariable(block, 'VARIABLE', SCALAR_TYPE)
         });
-    }, null, {
+    }, function (jsg, block) {
+        jsg.source += `runtime.monitorBlocks.changeBlock({ id: "${
+            sanitize(block.inputs.variable.id)
+        }", element: "checkbox", value: false }, runtime);\n`;
+    }, {
         input: false
     });
     compilerData.registerBlock('data_insertatlist', function (stg, block) {
@@ -70,7 +99,16 @@ module.exports = function (compilerData, {
             index: stg.descendInputOfBlock(block, 'INDEX'),
             item: stg.descendInputOfBlock(block, 'ITEM', true)
         });
-    }, null, {
+    }, function (jsg, block) {
+        const list = jsg.referenceVariable(block.inputs.list);
+        const item = jsg.descendInput(block.inputs.item);
+        if (block.inputs.index.isConstant(1)) {
+            jsg.source += `${list}.value.unshift(${item});\n`;
+            jsg.source += `${list}._monitorUpToDate = false;\n`;
+            return;
+        }
+        jsg.source += `listInsert(${list}, ${jsg.descendInput(block.inputs.index)}, ${item});\n`;
+    }, {
         input: false
     });
     compilerData.registerBlock('data_replaceitemoflist', function (stg, block) {
@@ -79,7 +117,11 @@ module.exports = function (compilerData, {
             index: stg.descendInputOfBlock(block, 'INDEX'),
             item: stg.descendInputOfBlock(block, 'ITEM', true)
         });
-    }, null, {
+    }, function (jsg, block) {
+        jsg.source += `listReplace(${jsg.referenceVariable(block.inputs.list)}, ${
+            jsg.descendInput(block.inputs.index)
+        }, ${jsg.descendInput(block.inputs.item)});\n`;
+    }, {
         input: false
     });
     compilerData.registerBlock('data_setvariableto', function (stg, block) {
@@ -87,21 +129,37 @@ module.exports = function (compilerData, {
             variable: stg.descendVariable(block, 'VARIABLE', SCALAR_TYPE),
             value: stg.descendInputOfBlock(block, 'VALUE', true)
         });
-    }, null, {
+    }, function (jsg, block) {
+        const varReference = jsg.referenceVariable(block.inputs.variable);
+        jsg.source += `${varReference}.value = ${jsg.descendInput(block.inputs.value)};\n`;
+        if (block.inputs.variable.isCloud) {
+            jsg.source += `runtime.ioDevices.cloud.requestUpdateVariable("${
+                sanitize(block.inputs.variable.name)
+            }", ${varReference}.value);\n`;
+        }
+    }, {
         input: false
     });
     compilerData.registerBlock('data_showlist', function (stg, block) {
         return new IntermediateStackBlock(this.ir_opcode, {
             list: stg.descendVariable(block, 'LIST', LIST_TYPE)
         });
-    }, null, {
+    }, function (jsg, block) {
+        jsg.source += `runtime.monitorBlocks.changeBlock({ id: "${
+            sanitize(block.inputs.list.id)
+        }", element: "checkbox", value: true }, runtime);\n`;
+    }, {
         input: false
     });
     compilerData.registerBlock('data_showvariable', function (stg, block) {
         return new IntermediateStackBlock(this.ir_opcode, {
             variable: stg.descendVariable(block, 'VARIABLE', SCALAR_TYPE)
         });
-    }, null, {
+    }, function (jsg, block) {
+        jsg.source += `runtime.monitorBlocks.changeBlock({ id: "${
+            sanitize(block.inputs.variable.id)
+        }", element: "checkbox", value: true }, runtime);\n`;
+    }, {
         input: false
     });
     // Inputs

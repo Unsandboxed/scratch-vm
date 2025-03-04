@@ -23,17 +23,17 @@ module.exports = function (compilerData, {
     }, {
         input: false
     });
-    compilerData.registerBlock('contorl_create_clone_of', function (stg, block) {
+    compilerData.registerBlock('control_create_clone_of', function (stg, block) {
         return new IntermediateStackBlock(this.ir_opcode, {
             target: stg.descendInputOfBlock(block, 'CLONE_OPTION').toType(InputType.STRING)
         });
     }, function (jsg, block) {
-        jsg.source += `runtime.ext_scratch3_control._createClone(${this.descendInput(block.inputs.target)}, target);\n`;
+        jsg.source += `runtime.ext_scratch3_control._createClone(${jsg.descendInput(block.inputs.target)}, target);\n`;
     }, {
         input: false
     });
     compilerData.registerBlock('control_delete_this_clone', function () {
-        return new IntermediateStackBlock(this.ir_opcode, {}, true);
+        return new IntermediateStackBlock(this.ir_opcode, {}, this.yields);
         // eslint-disable-next-line no-unused-vars
     }, function (jsg, _) {
         jsg.source += 'if (!target.isOriginal) {\n';
@@ -42,7 +42,8 @@ module.exports = function (compilerData, {
         jsg.retire();
         jsg.source += '}\n';
     }, {
-        input: false
+        input: false,
+        yields: true
     });
     compilerData.registerBlock('control_forever', function (stg, block) {
         this.yields = stg.analyzeLoop();
@@ -62,7 +63,16 @@ module.exports = function (compilerData, {
             count: stg.descendInputOfBlock(block, 'VALUE').toType(InputType.NUMBER),
             do: stg.descendSubstack(block, 'SUBSTACK')
         }, this.yields);
-    }, null, {
+    }, function (jsg, block) {
+        const index = jsg.localVariables.next();
+        jsg.source += `var ${index} = 0; `;
+        jsg.source += `while (${index} < ${jsg.descendInput(block.count)}) { `;
+        jsg.source += `${index}++; `;
+        jsg.source += `${jsg.referenceVariable(block.inputs.variable)}.value = ${index};\n`;
+        jsg.descendStack(block.inputs.do, new Frame(true, true));
+        jsg.yieldLoop();
+        jsg.source += '}\n';
+    }, {
         input: false,
         dynamicChanges: true
     });
@@ -81,7 +91,17 @@ module.exports = function (compilerData, {
             whenTrue: stg.descendSubstack(block, 'SUBSTACK'),
             whenFalse: new IntermediateStack()
         });
-    }, null, {
+    }, function (jsg, block) {
+        jsg.source += `if (${jsg.descendInput(block.inputs.condition)}) {\n`;
+        jsg.descendStack(block.inputs.whenTrue, new Frame(false));
+        // only add the else branch if it won't be empty
+        // jsg makes scripts have a bit less useless noise in them
+        if (block.inputs.whenFalse.blocks.length) {
+            jsg.source += `} else {\n`;
+            jsg.descendStack(block.inputs.whenFalse, new Frame(false));
+        }
+        jsg.source += `}\n`;
+    }, {
         input: false
     });
     compilerData.registerBlock('control_repeat', function (stg, block) {
@@ -91,7 +111,13 @@ module.exports = function (compilerData, {
             times: stg.descendInputOfBlock(block, 'TIMES').toType(InputType.NUMBER),
             do: stg.descendSubstack(block, 'SUBSTACK')
         }, this.yields);
-    }, null, {
+    }, function (jsg, block) {
+        const i = jsg.localVariables.next();
+        jsg.source += `for (var ${i} = ${jsg.descendInput(block.inputs.times)}; ${i} >= 0.5; ${i}--) {\n`;
+        jsg.descendStack(block.inputs.do, new Frame(true, true));
+        jsg.yieldLoop();
+        jsg.source += `}\n`;
+    }, {
         input: false,
         dynamicChanges: true
     });
@@ -117,7 +143,8 @@ module.exports = function (compilerData, {
     compilerData.registerBlock('control_stop', function (_, block) {
         const level = block.fields.STOP_OPTION.value;
         if (level === 'all') {
-            return new IntermediateStackBlock('control.stop_all', {}, true);
+            this.yields = true;
+            return new IntermediateStackBlock('control.stop_all', {}, this.yields);
         } else if (level === 'other scripts in sprite' || level === 'other scripts in stage') {
             return new IntermediateStackBlock('control.stop_other');
         } else if (level === 'this script') {
@@ -125,25 +152,79 @@ module.exports = function (compilerData, {
         }
         return new IntermediateStackBlock(StackOpcode.NOP);
     }, null, {
+        input: false,
+        dynamicChanges: true
+    });
+    compilerData.registerCompileFn([
+        'control.stop_all',
+        'control.stop_other',
+        'control.stop_script'
+    ], [
+        function (jsg) {
+            jsg.source += 'runtime.stopAll();\n';
+            jsg.retire();
+        },
+        function (jsg) {
+            jsg.source += 'runtime.stopForTarget(target, thread);\n';
+        },
+        function (jsg) {
+            jsg.stopScript();
+        }
+    ]);
+    // eslint-disable-next-line no-unused-vars
+    compilerData.registerBlock('control_break', function (stg, block) {
+        return new IntermediateStackBlock(this.ir_opcode);
+    }, function (jsg) {
+        if (jsg.frames.find(frame =>
+            frame.isLoop ||
+            frame.isBreakable ||
+            frame.isIterable
+        )) jsg.source += 'break;\n';
+    }, {
+        input: false
+    });
+    // eslint-disable-next-line no-unused-vars
+    compilerData.registerBlock('control_continue', function (stg, block) {
+        return new IntermediateStackBlock(this.ir_opcode);
+    }, function (jsg) {
+        if (
+            jsg.frames.find(frame => frame.isLoop || frame.isIterable)
+        ) jsg.source += 'continue;\n';
+    }, {
         input: false
     });
     compilerData.registerBlock('control_wait', function (stg, block) {
         return new IntermediateStackBlock(this.ir_opcode, {
             seconds: stg.descendInputOfBlock(block, 'DURATION').toType(InputType.NUMBER)
-        }, true);
-    }, null, {
+        }, this.yields);
+    }, function (jsg, block) {
+        const duration = jsg.localVariables.next();
+        jsg.source += `thread.timer = timer();\n`;
+        jsg.source += `var ${duration} = Math.max(0, 1000 * ${jsg.descendInput(block.inputs.seconds)});\n`;
+        jsg.requestRedraw();
+        // always yield at least once, even on 0 second durations
+        jsg.yieldNotWarp();
+        jsg.source += `while (thread.timer.timeElapsed() < ${duration}) {\n`;
+        jsg.yieldStuckOrNotWarp();
+        jsg.source += '}\n';
+        jsg.source += 'thread.timer = null;\n';
+    }, {
         input: false,
         yields: true
     });
     compilerData.registerBlock('control_wait_until', function (stg, block) {
         return new IntermediateStackBlock(this.ir_opcode, {
             condition: stg.descendInputOfBlock(block, 'CONDITION').toType(InputType.BOOLEAN)
-        }, true);
-    }, null, {
+        }, this.yields);
+    }, function (jsg, block) {
+        jsg.source += `while (!${jsg.descendInput(block.inputs.condition)}) {\n`;
+        jsg.yieldStuckOrNotWarp();
+        jsg.source += `}\n`;
+    }, {
         input: false,
         yields: true
     });
-    compilerData.registerBlock('control_wait_until', function (stg, block) {
+    compilerData.registerBlock('control_while', function (stg, block) {
         this.yields = stg.analyzeLoop();
         // @ts-ignore
         return new IntermediateStackBlock(this.ir_opcode, {
@@ -152,20 +233,29 @@ module.exports = function (compilerData, {
             // We should consider analyzing this like we do for control_repeat_until
             warpTimer: false
         }, this.yields);
-    }, null, {
+    }, function (jsg, block) {
+        jsg.source += `while (${jsg.descendInput(block.inputs.condition)}) {\n`;
+        jsg.descendStack(block.inputs.do, new Frame(true, true));
+        if (block.inputs.warpTimer) {
+            jsg.yieldStuckOrNotWarp();
+        } else {
+            jsg.yieldLoop();
+        }
+        jsg.source += `}\n`;
+    }, {
         input: false,
         dynamicChanges: true
     });
     // eslint-disable-next-line no-unused-vars
     compilerData.registerBlock('control_clear_counter', function (stg, block) {
         return new IntermediateStackBlock(this.ir_opcode);
-    }, null, {
+    }, `runtime.ext_scratch3_control._counter = 0;\n`, {
         input: false
     });
     // eslint-disable-next-line no-unused-vars
     compilerData.registerBlock('control_incr_counter', function (stg, block) {
         return new IntermediateStackBlock(this.ir_opcode);
-    }, null, {
+    }, `runtime.ext_scratch3_control._counter++;\n`, {
         input: false
     });
     // Inputs
