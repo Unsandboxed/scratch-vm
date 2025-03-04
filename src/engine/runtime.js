@@ -1219,7 +1219,9 @@ class Runtime extends EventEmitter {
 
                 // Emit events for custom shape types from extension
                 this.emit(Runtime.EXTENSION_SHAPE_ADDED, {
-                    implementation: blockShapeInfo
+                    name: blockShapeName,
+                    implementation: blockShapeInfo,
+                    categoryInfo
                 });
             }
         }
