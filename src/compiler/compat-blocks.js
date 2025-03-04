@@ -35,19 +35,12 @@ const stacked = [
 ];
 
 const inputs = [
-    'looks_effect',
     'motion_xscroll',
     'motion_yscroll',
     'sensing_loud',
     'sensing_loudness',
     'sensing_userid',
-    'sound_volume',
-  
-    'operator_letter_of',
-    'string_item_split',
-    'string_convert',
-    'string_index_of',
-    'string_ternary'
+    'sound_volume'
 ];
 
 module.exports = {

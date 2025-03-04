@@ -559,16 +559,23 @@ class Scratch3PenBlocks {
         if (!Object.prototype.hasOwnProperty.call(rgb, 'a')) {
             rgb.a = 255;
         }
-        this.runtime.renderer._backgroundColor4f[3] = rgb.a / 255;
-        this.runtime.renderer.setBackgroundColor(rgb.r / 255, rgb.g / 255, rgb.b / 255);
+        this._setStageColour([rgb.r, rgb.g, rgb.b, rgb.a]);
+    }
+    _setStageColour ([r, g, b, a]) { // used by compiler
+        a = a ?? 255;
+        this.runtime.renderer._backgroundColor4f[3] = a / 255;
+        this.runtime.renderer.setBackgroundColor(r / 255, g / 255, b / 255);
     }
 
     /**
      * The pen "set stage transparency" block sets the canvas transparency
      */
     setStageTransparency (args) {
+        this._setStageTransparency(Cast.toNumber(args.TRANSPARENCY));
+    }
+    _setStageTransparency (transparency) { // used by compiler
         this.runtime.renderer._backgroundColor4f[3] = Math.max(
-            Math.min(Cast.toNumber(args.TRANSPARENCY), 100), 0
+            Math.min(transparency, 100), 0
         ) / 100;
         this.runtime.renderer.dirty = true;
     }

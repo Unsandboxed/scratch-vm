@@ -13,12 +13,12 @@ module.exports = function (compilerData, {
             value: stg.descendInputOfBlock(block, 'CHANGE').toType(InputType.NUMBER)
         });
     }, function (jsg, block) {
-        if (Object.prototype.hasOwnProperty.call(this.target.effects, block.inputs.effect)) {
+        if (Object.prototype.hasOwnProperty.call(jsg.target.effects, block.inputs.effect)) {
             jsg.source += `target.setEffect("${
                 sanitize(block.inputs.effect)
             }", runtime.ext_scratch3_looks.clampEffect("${
                 sanitize(block.inputs.effect)
-            }", ${this.descendInput(block.inputs.value)} + target.effects["${
+            }", ${jsg.descendInput(block.inputs.value)} + target.effects["${
                 sanitize(block.inputs.effect)
             }"]));\n`;
         }
@@ -170,4 +170,16 @@ module.exports = function (compilerData, {
         () => `(target.currentCostume + 1)`,
         () => `target.getCostumes()[target.currentCostume].name`
     ]);
+    // eslint-disable-next-line no-unused-vars
+    compilerData.registerBlock('looks_effect', function (_, block) {
+        return new IntermediateInput(this.ir_opcode, this.type, {
+            effect: block.fields.EFFECT.value
+        });
+        // eslint-disable-next-line no-unused-vars
+    }, function (_, block) {
+        return `target.getEffect("${sanitize(block.inputs.effect)}".toLowerCase()) || 0`;
+    }, {
+        input: true,
+        type: InputType.NUMBER_POS_REAL
+    });
 };

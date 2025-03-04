@@ -262,11 +262,11 @@ module.exports = function (compilerData, {
             return `(${jsg.descendInput(node.string)}[${jsg.descendInput(node.letter)}] || "")`;
         }
         if (node.letter.isConstant('random')) {
-            if (node.string.opcode === InputOpcode.CONSTANT) {
+            /* if (node.string.opcode === InputOpcode.CONSTANT) {
                 const str = jsg.descendInput(node.string);
                 const length = str.length - 2;
                 return `((${str})[${Math.round(Math.random() * (length - 1))}] || "")`;
-            }
+            } */
             return `randomCharacter(${jsg.descendInput(node.string)})`;
         }
         if (node.letter.isConstant('last')) {
@@ -278,16 +278,20 @@ module.exports = function (compilerData, {
         input: true,
         type: InputType.STRING
     });
-    /* compilerData.registerBlock('operator_letters_of', function (stg, block) {
+    compilerData.registerBlock('operator_letters_of', function (stg, block) {
         return new IntermediateInput(this.ir_opcode, this.type, {
-            left: stg.descendInputOfBlock(block, 'LETTER1').toType(InputType.NUMBER_INDEX),
-            right: stg.descendInputOfBlock(block, 'LETTER2').toType(InputType.NUMBER_INDEX),
+            left: stg.descendInputOfBlock(block, 'LETTER1').toType(InputType.NUMBER),
+            right: stg.descendInputOfBlock(block, 'LETTER2').toType(InputType.NUMBER),
             string: stg.descendInputOfBlock(block, 'STRING').toType(InputType.STRING)
         });
-    }, null, {
+    }, function (jsg, block) {
+        return `runtime.ext_scratch3_string._slice(${jsg.descendInput(block.inputs.string)}, ${
+            jsg.descendInput(block.inputs.left)
+        }-1, ${jsg.descendInput(block.inputs.right)}-1)`;
+    }, {
         input: true,
         type: InputType.STRING
-    }); */
+    });
     compilerData.registerBlock('operator_mathop', function (stg, block) {
         const value = stg.descendInputOfBlock(block, 'NUM').toType(InputType.NUMBER);
         const operator = block.fields.OPERATOR.value.toLowerCase();

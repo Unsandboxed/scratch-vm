@@ -66,7 +66,7 @@ module.exports = function (compilerData, {
     }, function (jsg, block) {
         const index = jsg.localVariables.next();
         jsg.source += `var ${index} = 0; `;
-        jsg.source += `while (${index} < ${jsg.descendInput(block.count)}) { `;
+        jsg.source += `while (${index} < ${jsg.descendInput(block.inputs.count)}) { `;
         jsg.source += `${index}++; `;
         jsg.source += `${jsg.referenceVariable(block.inputs.variable)}.value = ${index};\n`;
         jsg.descendStack(block.inputs.do, new Frame(true, true));

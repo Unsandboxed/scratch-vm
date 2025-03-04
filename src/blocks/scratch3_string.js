@@ -7,6 +7,16 @@ class Scratch3StringBlocks {
          * @type {Runtime}
          */
         this.runtime = runtime;
+
+        /**
+         * Turns a string into a safe matchable RegExp.
+         * @param {string} string The string to match.
+         * @param {string?} flags RegExp flags.
+         * @returns {RegExp}
+         */
+        this.RegExpString = (string, flags) => new RegExp(string.replace(
+            /[#-.]|[[-^]|[?|{}]/g, '\\$&'
+        ), flags);
     }
 
     /**
@@ -59,7 +69,7 @@ class Scratch3StringBlocks {
         const replacer = Cast.toString(args.WITH);
         const str = Cast.toString(args.STRING);
 
-        return str.replace(new RegExp(old, 'gi'), replacer);
+        return str.replace(this.RegExpString(old, 'gi'), replacer);
     }
 
     letterOf (args) {
@@ -67,7 +77,7 @@ class Scratch3StringBlocks {
         return this._getLetterOf(str, args.LETTER);
     }
 
-    _getLetterOf (string, index) { // usb // used by compiler
+    _getLetterOf (string, index) { // usb
         // usb: we support some weird dropdowns now
         if (index === 'last') {
             index = string.length - 1;
@@ -90,7 +100,10 @@ class Scratch3StringBlocks {
         const index2 = Cast.toNumber(args.LETTER2);
         const str = Cast.toString(args.STRING);
 
-        return str.slice(Math.max(index1, 1) - 1, Math.min(str.length, index2));
+        return this._slice(str, index1 - 1, index2 - 1);
+    }
+    _slice (str, a, b) { // used by compiler
+        return str.slice(Math.max(a, 0), Math.min(str.length, b));
     }
 
     itemSplit (args) { // usb
@@ -128,8 +141,7 @@ class Scratch3StringBlocks {
 
         return this._convertString(str, convert);
     }
-
-    _convertString (string, textCase) { // used by compiler
+    _convertString (string, textCase) {
         if (textCase === 'lowercase') {
             return string.toLowerCase();
         }
@@ -148,16 +160,18 @@ class Scratch3StringBlocks {
         const length = find.length;
         if (length > string.length) return 0;
 
-        const occurences = [];
-        for (let i = 0; i < string.length; i++) {
-            if (string.substring(i, i + length) === find) {
-                occurences.push(i);
-            }
-        }
+        if (index === 'last') return string.lastIndexOf(find) + 1;
+        // eslint-disable-next-line eqeqeq
+        if (index == 1) return string.indexOf(find) + 1;
 
-        if (index === 'last') {
-            index = occurences.length - 1;
-        } else if (index === 'random') {
+        let nidx = -length;
+        const occurences = [];
+        do {
+            nidx = string.indexOf(find, nidx + length);
+            if (nidx !== -1) occurences.push(nidx + 1);
+        } while (nidx !== -1);
+
+        if (index === 'random') {
             index = Math.floor(Math.random() * occurences.length);
         } else {
             index = Cast.toNumber(index) - 1;

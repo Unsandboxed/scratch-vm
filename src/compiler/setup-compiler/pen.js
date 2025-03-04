@@ -127,4 +127,26 @@ module.exports = function (compilerData, {
     }, `${PEN_EXT}._stamp(target);\n`, {
         input: false
     });
+    compilerData.registerBlock('pen_setStageColour', function (stg, block) {
+        return new IntermediateStackBlock(this.ir_opcode, {
+            color: stg.descendInputOfBlock(block, 'COLOR').toType(InputType.COLOR)
+        });
+    }, function (jsg, block) {
+        jsg.source += `${PEN_EXT}._setStageColour(${
+            jsg.descendInput(block.inputs.color)
+        }, target);\n`;
+    }, {
+        input: false
+    });
+    compilerData.registerBlock('pen_setStageTransparency', function (stg, block) {
+        return new IntermediateStackBlock(this.ir_opcode, {
+            transparency: stg.descendInputOfBlock(block, 'TRANSPARENCY').toType(InputType.NUMBER)
+        });
+    }, function (jsg, block) {
+        jsg.source += `${PEN_EXT}._setStageTransparency(${
+            jsg.descendInput(block.inputs.transparency)
+        }, target);\n`;
+    }, {
+        input: false
+    });
 };
