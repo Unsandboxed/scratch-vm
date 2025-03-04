@@ -478,7 +478,7 @@ class IROptimizer {
         case InputOpcode.ADDON_CALL:
             modified = state.clear() || modified;
             break;
-        case 'procedure.call': {
+        case 'procedures.call': {
             modified = this.analyzeInputs(inputs.inputs, state) || modified;
             const script = this.ir.procedures[inputs.variant];
 
@@ -542,7 +542,7 @@ class IROptimizer {
             modified = state.or(trueState) || modified;
             break;
         }
-        case 'procedure.call': {
+        case 'procedures.call': {
             modified = this.analyzeInputs(inputs.inputs, state) || modified;
             const script = this.ir.procedures[inputs.variant];
 
