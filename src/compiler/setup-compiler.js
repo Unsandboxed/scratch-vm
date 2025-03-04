@@ -16,7 +16,9 @@ const SetupCompiler = function (runtime) {
         SCALAR_TYPE,
         LIST_TYPE,
         environment,
-        Cast
+        Cast,
+        PEN_EXT,
+        PEN_STATE
     } = require('./shared-exports');
     const exports = {
         log,
@@ -32,6 +34,8 @@ const SetupCompiler = function (runtime) {
         LIST_TYPE,
         Cast,
         sanitize,
+        PEN_EXT,
+        PEN_STATE,
         isSafeInputForEqualsOptimization: (input, other) => {
             // Only optimize constants
             if (input.opcode !== InputOpcode.CONSTANT) return false;

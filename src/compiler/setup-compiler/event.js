@@ -11,7 +11,7 @@ module.exports = function (compilerData, {
         });
     }, function (jsg, block) {
         jsg.source += `startHats("event_whenbroadcastreceived", { BROADCAST_OPTION: ${
-            this.descendInput(block.inputs.broadcast)
+            jsg.descendInput(block.inputs.broadcast)
         } });\n`;
     }, {
         input: false
@@ -22,7 +22,7 @@ module.exports = function (compilerData, {
         }, this.yields);
     }, function (jsg, block) {
         jsg.source += `yield* waitThreads(startHats("event_whenbroadcastreceived", { BROADCAST_OPTION: ${
-            this.descendInput(block.inputs.broadcast)
+            jsg.descendInput(block.inputs.broadcast)
         } }));\n`;
         jsg.yielded();
     }, {

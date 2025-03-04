@@ -40,62 +40,41 @@ module.exports = function (compilerData, {
         input: false
     });
     compilerData.registerBlock('looks_goforwardbackwardlayers', function (stg, block) {
-        if (block.fields.FORWARD_BACKWARD.value === 'forward') {
-            return new IntermediateStackBlock('looks.forwardlayer', {
-                layers: stg.descendInputOfBlock(block, 'NUM').toType(InputType.NUMBER)
-            });
-        }
-        return new IntermediateStackBlock('looks.backwardslayer', {
+        return new IntermediateStackBlock(this.ir_opcode, {
+            forward: (block.fields.FORWARD_BACKWARD.value === 'forward'),
             layers: stg.descendInputOfBlock(block, 'NUM').toType(InputType.NUMBER)
+        });
+    }, function (jsg, block) {
+        if (jsg.target.isStage) return;
+        jsg.source += `target.go${
+            block.inputs.forward ? 'For' : 'Back'
+        }wardLayers(${jsg.descendInput(block.inputs.layers)});\n`;
+    }, {
+        input: false
+    });
+    compilerData.registerBlock('looks_gotofrontback', function (_, block) {
+        return new IntermediateStackBlock(this.ir_opcode, {
+            front: (block.fields.FRONT_BACK.value === 'front')
+        });
+    }, function (jsg, block) {
+        if (jsg.target.isStage) return;
+        jsg.source += `target.goTo${block.inputs.front ? 'Front' : 'Back'}();\n`;
+    }, {
+        input: false
+    });
+    compilerData.registerBlock([
+        'looks_hide',
+        'looks_show'
+    ], function () {
+        return new IntermediateStackBlock('looks.c.setvisibility', {
+            visible: this.ir_opcode === 'looks.show'
         });
     }, null, {
         input: false
     });
-    compilerData.registerCompileFn([
-        'looks.forwardlayer',
-        'looks.backwardslayer'
-    ], [
-        function (jsg, block) {
-            if (!jsg.target.isStage) {
-                jsg.source += `target.goBackwardLayers(${jsg.descendInput(block.inputs.layers)});\n`;
-            }
-        },
-        function (jsg, block) {
-            if (!jsg.target.isStage) {
-                jsg.source += `target.goForwardLayers(${jsg.descendInput(block.inputs.layers)});\n`;
-            }
-        }
-    ]);
-    compilerData.registerBlock('looks_gotofrontback', function (_, block) {
-        if (block.fields.FRONT_BACK.value === 'front') {
-            return new IntermediateStackBlock('looks.frontlayer');
-        }
-        return new IntermediateStackBlock('looks.backlayer');
-    }, null, {
-        input: false
-    });
-    compilerData.registerCompileFn([
-        'looks.frontlayer',
-        'looks.backlayer'
-    ], [
-        function (jsg) {
-            if (!jsg.target.isStage) {
-                jsg.source += 'target.goToFront();\n';
-            }
-        },
-        function (jsg) {
-            if (!jsg.target.isStage) {
-                jsg.source += 'target.goToBack();\n';
-            }
-        }
-    ]);
-    compilerData.registerBlock('looks_hide', function () {
-        return new IntermediateStackBlock(this.ir_opcode);
-    }, function (jsg) {
-        jsg.source += 'target.setVisible(false);\n';
+    compilerData.registerCompileFn('looks.c.setvisibility', function (jsg, block) {
+        jsg.source += `target.setVisible(${block.inputs.visible});\n`;
         jsg.source += 'runtime.ext_scratch3_looks._renderBubble(target);\n';
-    }, {
-        input: false
     });
     compilerData.registerBlock('looks_nextbackdrop', function () {
         return new IntermediateStackBlock(this.ir_opcode);
@@ -129,14 +108,6 @@ module.exports = function (compilerData, {
         });
     }, function (jsg, block) {
         jsg.source += `target.setSize(${jsg.descendInput(block.inputs.size)});\n`;
-    }, {
-        input: false
-    });
-    compilerData.registerBlock('looks_show', function () {
-        return new IntermediateStackBlock(this.ir_opcode);
-    }, function (jsg) {
-        jsg.source += 'target.setVisible(true);\n';
-        jsg.source += 'runtime.ext_scratch3_looks._renderBubble(target);\n';
     }, {
         input: false
     });

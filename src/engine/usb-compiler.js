@@ -46,7 +46,6 @@ class Compiler {
                     (str => str) :
                     ((str, jsg) => void (jsg.source += str))
             ).bind(null, compile)).bind(this);
-            // eslint-disable-next-line no-shadow
             stg = stg.bind(this);
             this.compile = compile;
             this.stg = stg;

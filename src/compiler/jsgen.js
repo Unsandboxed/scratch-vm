@@ -25,8 +25,6 @@ const {
 
 const {
     sanitize,
-    PEN_STATE,
-    PEN_EXT,
     Frame,
     factoryNameVariablePool,
     functionNameVariablePool,
@@ -274,78 +272,7 @@ class JSGenerator {
             this.isInHat = false;
             break;
 
-        case StackOpcode.MOTION_X_CHANGE:
-            this.source += `target.setXY(target.x + ${this.descendInput(node.dx)}, target.y);\n`;
-            break;
-        case StackOpcode.MOTION_Y_CHANGE:
-            this.source += `target.setXY(target.x, target.y + ${this.descendInput(node.dy)});\n`;
-            break;
-        case StackOpcode.MOTION_IF_ON_EDGE_BOUNCE:
-            this.source += `runtime.ext_scratch3_motion._ifOnEdgeBounce(target);\n`;
-            break;
-        case StackOpcode.MOTION_DIRECTION_SET:
-            this.source += `target.setDirection(${this.descendInput(node.direction)});\n`;
-            break;
-        case StackOpcode.MOTION_ROTATION_STYLE_SET:
-            this.source += `target.setRotationStyle("${sanitize(node.style)}");\n`;
-            break;
-        case StackOpcode.MOTION_X_SET: // fallthrough
-        case StackOpcode.MOTION_Y_SET: // fallthrough
-        case StackOpcode.MOTION_XY_SET: {
-            this.descendedIntoModulo = false;
-            const x = 'x' in node ? this.descendInput(node.x) : 'target.x';
-            const y = 'y' in node ? this.descendInput(node.y) : 'target.y';
-            this.source += `target.setXY(${x}, ${y});\n`;
-            if (this.descendedIntoModulo) {
-                this.source += `if (target.interpolationData) target.interpolationData = null;\n`;
-            }
-            break;
-        }
-        case StackOpcode.MOTION_STEP:
-            this.source += `runtime.ext_scratch3_motion._moveSteps(${this.descendInput(node.steps)}, target);\n`;
-            break;
-
         case StackOpcode.NOP:
-            break;
-
-        case StackOpcode.PEN_CLEAR:
-            this.source += `${PEN_EXT}.clear();\n`;
-            break;
-        case StackOpcode.PEN_DOWN:
-            this.source += `${PEN_EXT}._penDown(target);\n`;
-            break;
-        case StackOpcode.PEN_COLOR_PARAM_CHANGE:
-            this.source += `${PEN_EXT}._setOrChangeColorParam(${this.descendInput(node.param)}, ${this.descendInput(node.value)}, ${PEN_STATE}, true);\n`;
-            break;
-        case StackOpcode.PEN_SIZE_CHANGE:
-            this.source += `${PEN_EXT}._changePenSizeBy(${this.descendInput(node.size)}, target);\n`;
-            break;
-        case StackOpcode.PEN_COLOR_HUE_CHANGE_LEGACY:
-            this.source += `${PEN_EXT}._changePenHueBy(${this.descendInput(node.hue)}, target);\n`;
-            break;
-        case StackOpcode.PEN_COLOR_SHADE_CHANGE_LEGACY:
-            this.source += `${PEN_EXT}._changePenShadeBy(${this.descendInput(node.shade)}, target);\n`;
-            break;
-        case StackOpcode.PEN_COLOR_HUE_SET_LEGACY:
-            this.source += `${PEN_EXT}._setPenHueToNumber(${this.descendInput(node.hue)}, target);\n`;
-            break;
-        case StackOpcode.PEN_COLOR_SHADE_SET_LEGACY:
-            this.source += `${PEN_EXT}._setPenShadeToNumber(${this.descendInput(node.shade)}, target);\n`;
-            break;
-        case StackOpcode.PEN_COLOR_SET:
-            this.source += `${PEN_EXT}._setPenColorToColor(${this.descendInput(node.color)}, target);\n`;
-            break;
-        case StackOpcode.PEN_COLOR_PARAM_SET:
-            this.source += `${PEN_EXT}._setOrChangeColorParam(${this.descendInput(node.param)}, ${this.descendInput(node.value)}, ${PEN_STATE}, false);\n`;
-            break;
-        case StackOpcode.PEN_SIZE_SET:
-            this.source += `${PEN_EXT}._setPenSizeTo(${this.descendInput(node.size)}, target);\n`;
-            break;
-        case StackOpcode.PEN_STAMP:
-            this.source += `${PEN_EXT}._stamp(target);\n`;
-            break;
-        case StackOpcode.PEN_UP:
-            this.source += `${PEN_EXT}._penUp(target);\n`;
             break;
 
         case StackOpcode.VISUAL_REPORT: {

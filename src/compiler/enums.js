@@ -107,16 +107,6 @@ const StackOpcode = {
     HAT_EDGE: 'hat.edge',
     HAT_PREDICATE: 'hat.predicate',
   
-    MOTION_X_SET: 'motion.setX',
-    MOTION_X_CHANGE: 'motion.changeX',
-    MOTION_Y_SET: 'motion.setY',
-    MOTION_Y_CHANGE: 'motion.changeY',
-    MOTION_XY_SET: 'motion.setXY',
-    MOTION_IF_ON_EDGE_BOUNCE: 'motion.ifOnEdgeBounce',
-    MOTION_STEP: 'motion.step',
-    MOTION_ROTATION_STYLE_SET: 'motion.setRotationStyle',
-    MOTION_DIRECTION_SET: 'motion.setDirection',
-  
     PEN_UP: 'pen.up',
     PEN_DOWN: 'pen.down',
     PEN_CLEAR: 'pen.clear',
