@@ -107,22 +107,6 @@ const StackOpcode = {
     HAT_EDGE: 'hat.edge',
     HAT_PREDICATE: 'hat.predicate',
   
-    PEN_UP: 'pen.up',
-    PEN_DOWN: 'pen.down',
-    PEN_CLEAR: 'pen.clear',
-    PEN_COLOR_PARAM_SET: 'pen.setParam',
-    PEN_COLOR_PARAM_CHANGE: 'pen.changeParam',
-    PEN_COLOR_HUE_CHANGE_LEGACY: 'pen.legacyChangeHue',
-    PEN_COLOR_HUE_SET_LEGACY: 'pen_setPenHueToNumber',
-    PEN_COLOR_SHADE_CHANGE_LEGACY: 'pen.legacyChangeShade',
-    PEN_COLOR_SHADE_SET_LEGACY: 'pen.legacySetShade',
-    PEN_COLOR_SET: 'pen.setColor',
-    PEN_SIZE_SET: 'pen.setSize',
-    PEN_SIZE_CHANGE: 'pen.changeSize',
-    PEN_STAMP: 'pen.stamp',
-  
-    SENSING_TIMER_RESET: 'timer.reset',
-  
     PROCEDURE_RETURN: 'procedures.return',
     PROCEDURE_CALL: 'procedures.call'
 };
