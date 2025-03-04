@@ -89,7 +89,7 @@ module.exports = function (compilerData, {
         return new IntermediateStackBlock(this.ir_opcode, {
             condition: stg.descendInputOfBlock(block, 'CONDITION').toType(InputType.BOOLEAN),
             whenTrue: stg.descendSubstack(block, 'SUBSTACK'),
-            whenFalse: new IntermediateStack()
+            whenFalse: stg.descendSubstack(block, 'SUBSTACK2')
         });
     }, function (jsg, block) {
         jsg.source += `if (${jsg.descendInput(block.inputs.condition)}) {\n`;

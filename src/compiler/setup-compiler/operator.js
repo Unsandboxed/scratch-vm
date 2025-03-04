@@ -295,7 +295,9 @@ module.exports = function (compilerData, {
             return `((${jsg.descendInput(node.string)}).at(-1) || "")`;
         }
         // todo: maybe use some IR trickery to scan for "random" and "last" to midigate this
-        return `(getCharacter(${jsg.descendInput(node.string)}, ${jsg.descendInput(node.letter)}) || "")`;
+        return `(getCharacter(${jsg.descendInput(node.string)}, ${
+            jsg.descendInput(node.letter.toType(InputType.NUMBER))
+        } - 1) || "")`;
     }, {
         input: true,
         type: InputType.STRING

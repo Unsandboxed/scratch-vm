@@ -411,7 +411,7 @@ runtimeFunctions.randomInt = `const randomInt = (low, high) => low + Math.floor(
 runtimeFunctions.randomFloat = `const randomFloat = (low, high) => (Math.random() * (high - low)) + low;`;
 
 baseRuntime += `const randomCharacter = (string) => string[Math.round(Math.random() * (string.length - 1))];
-const getCharacter = (string, index) => ((index === 'last' ? string.at(-1) : (index === 'random' ? randomCharacter(string) : string[+index])) || '');`;
+const getCharacter = (string, index) => ((index === 'last' ? string.at(-1) : (index === 'random' ? randomCharacter(string) : string[+index - 1])) || '');`;
 
 /**
  * Create and start a timer.
