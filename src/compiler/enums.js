@@ -84,17 +84,18 @@ const InputType = {
     /** Any input that can be interperated as a boolean. Equal to BOOLEAN | STRING_BOOLEAN */
     BOOLEAN_INTERPRETABLE: 0x1800,
   
-    /** Any value type (a type a scratch variable can hold). Equal to NUMBER_OR_NAN | STRING | BOOLEAN */
-    ANY: 0x1FFF,
+    /** Any value type (a type a scratch variable can hold). Equal to NUMBER_OR_NAN | STRING | BOOLEAN | OBJECTLIKE */
+    ANY: 0x27FFF,
   
     /** An array of values in the form [R, G, B] */
     COLOR: 0x2000,
 
+    /** Any object like value, array, object, and null. Equal to ARRAY | OBJECT */
+    OBJECTLIKE: 0x26000,
     /** An array */
-    ARRAY: 0x3FFF,
-
+    ARRAY: 0x22000,
     /** A object */
-    OBJECT: 0x3000
+    OBJECT: 0x24000
 };
   
 /**
@@ -130,6 +131,9 @@ const InputOpcode = {
     CAST_STRING: 'cast.toString',
     CAST_BOOLEAN: 'cast.toBoolean',
     CAST_COLOR: 'cast.toColor',
+    CAST_ARRAY: 'cast.toArray',
+    CAST_OBJECT: 'cast.toObject',
+    CAST_OBJECTLIKE: 'cast.toObjectLike',
   
     COMPATIBILITY_LAYER: 'compat'
 };

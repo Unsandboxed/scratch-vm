@@ -140,6 +140,17 @@ module.exports = function (compilerData, {
     }, {
         input: false
     });
+    compilerData.registerBlock('data_setlist', function (stg, block) {
+        return new IntermediateStackBlock(this.ir_opcode, {
+            list: stg.descendVariable(block, 'LIST', LIST_TYPE),
+            value: stg.descendInputOfBlock(block, 'ARRAY').toType(InputType.ARRAY)
+        });
+    }, function (jsg, block) {
+        const varReference = jsg.referenceVariable(block.inputs.list);
+        jsg.source += `${varReference}.value = ${jsg.descendInput(block.inputs.value)};\n`;
+    }, {
+        input: false
+    });
     compilerData.registerBlock('data_showlist', function (stg, block) {
         return new IntermediateStackBlock(this.ir_opcode, {
             list: stg.descendVariable(block, 'LIST', LIST_TYPE)
@@ -247,6 +258,6 @@ module.exports = function (compilerData, {
         return `listContentsArray(${jsg.referenceVariable(block.inputs.list)})`;
     }, {
         input: true,
-        type: InputType.ANY
+        type: InputType.ARRAY
     });
 };

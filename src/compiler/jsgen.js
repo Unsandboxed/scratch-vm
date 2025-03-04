@@ -133,9 +133,18 @@ class JSGenerator {
         case InputOpcode.CAST_NUMBER_INDEX:
             return `(${this.descendInput(node.target.toType(InputType.NUMBER_OR_NAN))} | 0)`;
         case InputOpcode.CAST_STRING:
+            if (node.target.isSometimesType(InputType.OBJECTLIKE)) {
+                return `asString(${this.descendInput(node.target)})`;
+            }
             return `("" + ${this.descendInput(node.target)})`;
         case InputOpcode.CAST_COLOR:
             return `colorToList(${this.descendInput(node.target)})`;
+        case InputOpcode.CAST_ARRAY:
+            return `asArray(${this.descendInput(node.target)})`;
+        case InputOpcode.CAST_OBJECT:
+            return `asObject(${this.descendInput(node.target)}, false)`;
+        case InputOpcode.CAST_OBJECTLIKE:
+            return `asObject(${this.descendInput(node.target)}, true)`;
 
         case InputOpcode.COMPATIBILITY_LAYER:
             if (this.target.runtime.compilerData.bt_inlines.has(node.blockType)) {

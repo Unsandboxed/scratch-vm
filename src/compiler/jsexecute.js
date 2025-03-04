@@ -238,7 +238,7 @@ runtimeFunctions.retire = `const retire = () => {
  * @param {*} value The value to cast
  * @returns {boolean} The value cast to a boolean
  */
-runtimeFunctions.asBoolean = `const asBoolean = value => {
+runtimeFunctions.asBoolean = `;const asBoolean = value => {
     if (typeof value === 'boolean') {
         return value;
     }
@@ -249,15 +249,15 @@ runtimeFunctions.asBoolean = `const asBoolean = value => {
         return true;
     }
     return !!value;
-}`;
+};`;
 
 /**
  * Scratch cast to string
  * Similar to Cast.toString()
  * @param {*} value The value to cast
- * @returns {string} THe value cast to a string
+ * @returns {string} The value cast to a string
  */
-runtimeFunctions.asString = `const asString = value => {
+runtimeFunctions.asString = `;const asString = value => {
     if (typeof value === 'object') {
         try {
             return JSON.stringify(value);
@@ -266,7 +266,44 @@ runtimeFunctions.asString = `const asString = value => {
         }
     }
     return "" + value;
-}`;
+};`;
+
+baseRuntime += `;const asArray = (value) => {
+    if (Array.isArray(value)) return value;
+    try {
+        if (typeof value === 'string') {
+            value = JSON.parse(value);
+        } else {
+            value = Array.from(value);
+        }
+    } catch {
+        value = 0;
+    }
+    if (!Array.isArray(value)) return [];
+    return value;
+};`;
+
+/**
+ * Scratch cast to object
+ * Similar to Cast.toObject()
+ * @param {*} value The value to cast
+ * @param {boolean?} nonstrict Allow arrays and null?
+ * @returns {object} The value cast to a object
+ */
+runtimeFunctions.asObject = `;const asObject = (value, nonstrict) => {
+    if (typeof value === 'object') return value;
+    try {
+        value = JSON.parse(value);
+    } catch {
+        value = 0;
+    }
+    if (typeof value === 'object') {
+        if (nonstrict) return value;
+    } else {
+        value = {};
+    }
+    return Object.setPrototypeOf(value, null);
+};`;
 
 /**
  * If a number is very close to a whole number, round to that whole number.
@@ -277,7 +314,7 @@ runtimeFunctions.limitPrecision = `const limitPrecision = value => {
     const rounded = Math.round(value);
     const delta = value - rounded;
     return (Math.abs(delta) < 1e-9) ? rounded : value;
-}`;
+};`;
 
 /**
  * Used internally by the compare family of function.
@@ -332,7 +369,7 @@ runtimeFunctions.compareGreaterThan = `const compareGreaterThanSlow = (v1, v2) =
     }
     return n1 > n2;
 };
-const compareGreaterThan = (v1, v2) => typeof v1 === 'number' && typeof v2 === 'number' && !isNaN(v1) ? v1 > v2 : compareGreaterThanSlow(v1, v2)`;
+const compareGreaterThan = (v1, v2) => typeof v1 === 'number' && typeof v2 === 'number' && !isNaN(v1) ? v1 > v2 : compareGreaterThanSlow(v1, v2);`;
 
 /**
  * Determine if one value is less than another.
@@ -355,7 +392,7 @@ runtimeFunctions.compareLessThan = `const compareLessThanSlow = (v1, v2) => {
     }
     return n1 < n2;
 };
-const compareLessThan = (v1, v2) => typeof v1 === 'number' && typeof v2 === 'number' && !isNaN(v2) ? v1 < v2 : compareLessThanSlow(v1, v2)`;
+const compareLessThan = (v1, v2) => typeof v1 === 'number' && typeof v2 === 'number' && !isNaN(v2) ? v1 < v2 : compareLessThanSlow(v1, v2);`;
 
 /**
  * Generate a random integer.
@@ -363,7 +400,7 @@ const compareLessThan = (v1, v2) => typeof v1 === 'number' && typeof v2 === 'num
  * @param {number} high Upper bound
  * @returns {number} A random integer between low and high, inclusive.
  */
-runtimeFunctions.randomInt = `const randomInt = (low, high) => low + Math.floor(Math.random() * ((high + 1) - low))`;
+runtimeFunctions.randomInt = `const randomInt = (low, high) => low + Math.floor(Math.random() * ((high + 1) - low));`;
 
 /**
  * Generate a random float.
@@ -371,11 +408,10 @@ runtimeFunctions.randomInt = `const randomInt = (low, high) => low + Math.floor(
  * @param {number} high Upper bound
  * @returns {number} A random floating point number between low and high.
  */
-runtimeFunctions.randomFloat = `const randomFloat = (low, high) => (Math.random() * (high - low)) + low`;
+runtimeFunctions.randomFloat = `const randomFloat = (low, high) => (Math.random() * (high - low)) + low;`;
 
-runtimeFunctions.randomCharacter = `const randomCharacter = (string) => string[Math.round(Math.random() * (string.length - 1))];
+baseRuntime += `const randomCharacter = (string) => string[Math.round(Math.random() * (string.length - 1))];
 const getCharacter = (string, index) => ((index === 'last' ? string.at(-1) : (index === 'random' ? randomCharacter(string) : string[+index])) || '');`;
-runtimeFunctions.getCharacter = runtimeFunctions.randomCharacter;
 
 /**
  * Create and start a timer.
@@ -492,7 +528,7 @@ runtimeFunctions.listReplace = `const listReplace = (list, idx, value) => {
  * @param {*} array The new contents.
  */
 runtimeFunctions.listSet = `const listSet = (list, array) => {
-    list.value = globalState.Cast.toArray(array);
+    list.value = asArray(array);
     list._monitorUpToDate = false;
 }`;
 
