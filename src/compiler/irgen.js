@@ -443,7 +443,7 @@ class ScriptTreeGenerator {
     }
 
     /**
-     * @param {string|null} id The ID of the variable.
+     * @param {string} id The ID of the variable.
      * @param {string} name The name of the variable.
      * @param {''|'list'} type The variable type.
      * @private
@@ -510,7 +510,7 @@ class ScriptTreeGenerator {
         }
 
         // Create it locally...
-        const newVariable = new Variable(id, name, type, false);
+        const newVariable = new Variable(id, name, type, false, false);
 
         // Intentionally not using newVariable.id so that this matches vanilla Scratch quirks regarding
         // handling of null variable IDs.
@@ -522,7 +522,7 @@ class ScriptTreeGenerator {
             // sprite.clones has all instances of this sprite including the original and all clones
             for (const clone of target.sprite.clones) {
                 if (!Object.prototype.hasOwnProperty.call(clone.variables, id)) {
-                    clone.variables[id] = new Variable(id, name, type, false);
+                    clone.variables[id] = new Variable(id, name, type, false, false);
                 }
             }
         }

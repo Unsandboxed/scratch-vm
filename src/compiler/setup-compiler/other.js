@@ -1,10 +1,11 @@
 // @ts-check
-module.exports = function(compilerData, {
+module.exports = function (compilerData, {
     IntermediateInput,
     InputType
 }) {
+    /* eslint-disable no-invalid-this,prefer-arrow-callback */
     // Inputs
-    compilerData.registerBlock('colour_picker', function(stg, block) {
+    compilerData.registerBlock('colour_picker', function (stg, block) {
         return stg.createConstantInput(block.fields.COLOUR.value, true);
     }, null, {
         input: true
@@ -15,17 +16,17 @@ module.exports = function(compilerData, {
         'math_number',
         'math_positive_number',
         'math_whole_number'
-    ], function(stg, block, preserveStrings) {
+    ], function (stg, block, preserveStrings) {
         return stg.createConstantInput(block.fields.NUM.value, preserveStrings);
     }, null, {
         input: true
     });
-    compilerData.registerBlock('text', function(stg, block, preserveStrings) {
+    compilerData.registerBlock('text', function (stg, block, preserveStrings) {
         return stg.createConstantInput(block.fields.TEXT.value, preserveStrings);
     }, null, {
         input: true
     });
-    compilerData.registerBlock('tw_getLastKeyPressed', function() {
+    compilerData.registerBlock('tw_getLastKeyPressed', function () {
         return new IntermediateInput(this.ir_opcode, this.type);
     }, `runtime.ioDevices.keyboard.getLastKeyPressed()`, {
         input: true,

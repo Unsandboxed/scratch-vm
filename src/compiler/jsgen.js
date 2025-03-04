@@ -24,14 +24,14 @@ const {
 /* eslint-disable prefer-template */
 
 const {
-  sanitize,
-  PEN_STATE,
-  PEN_EXT,
-  Frame,
-  factoryNameVariablePool,
-  functionNameVariablePool,
-  generatorNameVariablePool,
-  VariablePool
+    sanitize,
+    PEN_STATE,
+    PEN_EXT,
+    Frame,
+    factoryNameVariablePool,
+    functionNameVariablePool,
+    generatorNameVariablePool,
+    VariablePool
 } = require('./shared-exports');
 
 class JSGenerator {
@@ -52,13 +52,13 @@ class JSGenerator {
 
         /**
          * Stack of frames, most recent is last item.
-         * @type {Frame[]}
+         * @type {InstanceType<Frame>[]}
          */
         this.frames = [];
 
         /**
          * The current Frame.
-         * @type {Frame?}
+         * @type {InstanceType<Frame>?}
          */
         this.currentFrame = null;
 
@@ -74,7 +74,7 @@ class JSGenerator {
 
     /**
      * Enter a new frame
-     * @param {Frame} frame New frame.
+     * @param {InstanceType<Frame>} frame New frame.
      */
     pushFrame (frame) {
         this.frames.push(frame);
@@ -600,7 +600,7 @@ class JSGenerator {
 
     /**
      * @param {IntermediateStack} stack
-     * @param {Frame} frame
+     * @param {InstanceType<Frame>} frame
      */
     descendStack (stack, frame) {
         // Entering a stack -- all bets are off.
@@ -627,14 +627,14 @@ class JSGenerator {
         return stackSource;
     }
 
-    /*descendVariable (variable) {
+    /* descendVariable (variable) {
         if (Object.prototype.hasOwnProperty.call(this.variableInputs, variable.id)) {
             return this.variableInputs[variable.id];
         }
         const input = new VariableInput(`${this.referenceVariable(variable)}.value`);
         this.variableInputs[variable.id] = input;
         return input;
-    }*/
+    } */
 
     referenceVariable (variable) {
         if (variable.scope === 'target') {
@@ -852,11 +852,12 @@ class JSGenerator {
         return fn;
     }
 
-    static get exports() {
-      throw 'Depricated syntax, please use the new exports.';
+    /* eslint-disable no-throw-literal */
+    static get exports () {
+        throw 'Depricated syntax, please use the new exports.';
     }
-    static get unstable_exports() {
-      throw 'Depricated syntax, please use the new exports.';
+    static get unstable_exports () {
+        throw 'Depricated syntax, please use the new exports.';
     }
 }
 

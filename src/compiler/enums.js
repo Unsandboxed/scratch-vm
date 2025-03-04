@@ -89,14 +89,14 @@ const InputType = {
   
     /** An array of values in the form [R, G, B] */
     COLOR: 0x2000
-  };
+};
   
-  /**
-  * Enum for the opcodes of the stackable blocks used in the IR AST.
-  * @readonly
-  * @enum {string}
-  */
-  const StackOpcode = {
+/**
+* Enum for the opcodes of the stackable blocks used in the IR AST.
+* @readonly
+* @enum {string}
+*/
+const StackOpcode = {
     NOP: 'noop',
   
     ADDON_CALL: 'addons.call',
@@ -180,14 +180,14 @@ const InputType = {
   
     PROCEDURE_RETURN: 'procedures.return',
     PROCEDURE_CALL: 'procedures.call'
-  };
-  
-  /**
-  * Enum for the opcodes of the reporter blocks used in the IR AST.
-  * @readonly
-  * @enum {string}
-  */
-  const InputOpcode = {
+};
+
+/**
+* Enum for the opcodes of the reporter blocks used in the IR AST.
+* @readonly
+* @enum {string}
+*/
+const InputOpcode = {
     NOP: 'noop',
   
     ADDON_CALL: 'addons.call',
@@ -200,12 +200,11 @@ const InputType = {
     CAST_BOOLEAN: 'cast.toBoolean',
     CAST_COLOR: 'cast.toColor',
   
-    COMPATIBILITY_LAYER: 'compat',
-  };
-  
-  module.exports = {
+    COMPATIBILITY_LAYER: 'compat'
+};
+
+module.exports = {
     StackOpcode,
     InputOpcode,
     InputType
-  };
-  
+};

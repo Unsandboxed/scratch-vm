@@ -1,5 +1,5 @@
 // @ts-check
-function SetupCompiler(runtime) {
+const SetupCompiler = function (runtime) {
     const log = require('../util/log');
     const compilerData = runtime.compilerData;
     const {
@@ -37,7 +37,10 @@ function SetupCompiler(runtime) {
             if (input.opcode !== InputOpcode.CONSTANT) return false;
             // Only optimize when the constant can always be thought of as a number
             if (input.isAlwaysType(InputType.NUMBER) || input.isAlwaysType(InputType.STRING_NUM)) {
-                if (other.isSometimesType(InputType.STRING_NAN) || other.isSometimesType(InputType.BOOLEAN_INTERPRETABLE)) {
+                if (
+                    other.isSometimesType(InputType.STRING_NAN) ||
+                    other.isSometimesType(InputType.BOOLEAN_INTERPRETABLE)
+                ) {
                     // Never optimize 0 if the other input can be '' or a boolean.
                     // eg. if '< 0 = "" >' was optimized it would turn into `0 === +""`,
                     //  which would be true even though Scratch would return false.
@@ -63,4 +66,5 @@ function SetupCompiler(runtime) {
     // Other
     require('./setup-compiler/other')(compilerData, exports);
 };
+
 module.exports = SetupCompiler;

@@ -32,9 +32,9 @@ const stacked = [
     'sound_seteffectto',
     'sound_setvolumeto',
     'sound_stopallsounds'
-  ];
-  
-  const inputs = [
+];
+
+const inputs = [
     'looks_effect',
     'motion_xscroll',
     'motion_yscroll',
@@ -48,10 +48,9 @@ const stacked = [
     'string_convert',
     'string_index_of',
     'string_ternary'
-  ];
-  
-  module.exports = {
+];
+
+module.exports = {
     stacked,
     inputs
-  };
-  
+};

@@ -1,12 +1,13 @@
 // @ts-check
-module.exports = function(compilerData, {
+module.exports = function (compilerData, {
     IntermediateInput,
     IntermediateStackBlock,
     InputType,
     sanitize
 }) {
+    /* eslint-disable no-invalid-this,prefer-arrow-callback,arrow-parens */
     // JSG Mixins
-    compilerData.registerCompileFn('procedures.call', function(jsg, block) { 
+    compilerData.registerCompileFn('procedures.call', function (jsg, block) {
         const node = block.inputs;
         const procedureCode = node.code;
         const procedureVariant = node.variant;
@@ -55,18 +56,19 @@ module.exports = function(compilerData, {
         jsg.source += args.join(',');
         jsg.source += `);\n`;
     });
+    // @ts-ignore
     compilerData.registerCompileFn('procedures.debugger', (jsg) => (jsg.source += 'debugger;\n'));
     // Stack
-    compilerData.registerBlock('procedures_return', function(stg, block) {
+    compilerData.registerBlock('procedures_return', function (stg, block) {
         return new IntermediateStackBlock(this.ir_opcode, {
             value: stg.descendInputOfBlock(block, 'VALUE')
         });
-    }, function(jsg, block) {
+    }, function (jsg, block) {
         jsg.stopScriptAndReturn(jsg.descendInput(block.inputs.value));
     }, {
         input: false
     });
-    compilerData.registerBlock('procedures_call', function(stg, block) {
+    compilerData.registerBlock('procedures_call', function (stg, block) {
         const procedureCode = block.mutation.proccode;
         if (block.mutation.return) {
             const visualReport = stg.descendVisualReport(block);
@@ -84,17 +86,17 @@ module.exports = function(compilerData, {
         dynamicChanges: true
     });
     // Inputs
-    compilerData.registerBlock('procedures_call', function(stg, block) {
-      const procedureInfo = stg.getProcedureInfo(block);
-      this.yields = procedureInfo.yields;
-      // @ts-ignore
-      return new IntermediateInput(procedureInfo.opcode, this.type, procedureInfo.inputs, this.yields);
+    compilerData.registerBlock('procedures_call', function (stg, block) {
+        const procedureInfo = stg.getProcedureInfo(block);
+        this.yields = procedureInfo.yields;
+        // @ts-ignore
+        return new IntermediateInput(procedureInfo.opcode, this.type, procedureInfo.inputs, this.yields);
     }, null, {
         input: true,
         type: InputType.ANY,
         dynamicChanges: true
     });
-    compilerData.registerBlock('argument_reporter_string_number', function(stg, block) {
+    compilerData.registerBlock('argument_reporter_string_number', function (stg, block) {
         const name = block.fields.VALUE.value;
         // lastIndexOf because multiple parameters with the same name will use the value of the last definition
         const index = stg.script.arguments.lastIndexOf(name);
@@ -110,17 +112,17 @@ module.exports = function(compilerData, {
         }
         return new IntermediateInput(this.ir_opcode, this.type, {index});
         // eslint-disable-next-line no-unused-vars
-    }, function(_, block) {
+    }, function (_, block) {
         return `p${block.inputs.index}`;
     }, {
         input: true,
         type: InputType.ANY
     });
     // eslint-disable-next-line no-unused-vars
-    compilerData.registerCompileFn('procedures.paramater', function(_, block) {
+    compilerData.registerCompileFn('procedures.paramater', function (_, block) {
         return `(thread.getParam("${block.inputs.name}") ?? 0)`;
-    })
-    compilerData.registerBlock('argument_reporter_boolean', function(stg, block) {
+    });
+    compilerData.registerBlock('argument_reporter_boolean', function (stg, block) {
         // see argument_reporter_string_number above
         const name = block.fields.VALUE.value;
         const index = stg.script.arguments.lastIndexOf(name);
@@ -132,7 +134,7 @@ module.exports = function(compilerData, {
         }
         return new IntermediateInput(this.ir_opcode, this.type, {index});
         // eslint-disable-next-line no-unused-vars
-    }, function(_, block) {
+    }, function (_, block) {
         return `toBoolean(p${block.arguments.index})`;
     }, {
         input: true,

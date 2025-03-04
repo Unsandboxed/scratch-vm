@@ -4,14 +4,14 @@ const enums = require('../compiler/enums');
 class Compiler {
     static Block = class Block {
         static block = Symbol('Compiler.Block');
-        constructor(opcode, opts, blockInfo, categoryInfo) {
+        constructor (opcode, opts, blockInfo, categoryInfo) {
             opts = opts || {
-              type: enums.InputType.ANY,
-              yields: false,
-              input: false
+                type: enums.InputType.ANY,
+                yields: false,
+                input: false
             };
             this.categoryInfo = categoryInfo;
-            this.blockInfo = blockInfo || { arguments: {} };
+            this.blockInfo = blockInfo || {arguments: {}};
             this.category = opcode.slice(0, opcode.indexOf('_'));
             this.opcode = opcode.slice(opcode.indexOf('_') + 1);
             this.extended_opcode = opcode;
@@ -19,17 +19,17 @@ class Compiler {
             this.compile = null;
             this.stg = null;
             this._original = {
-              type: opts?.type ?? enums.InputType.ANY,
-              yields: opts?.yields || false
+                type: opts?.type ?? enums.InputType.ANY,
+                yields: opts?.yields || false
             };
             this._reset();
             this.isInput = opts?.input || false;
         }
-        _reset() {
-          this.type = this._original.type;
-          this.yields = this._original.yields;
+        _reset () {
+            this.type = this._original.type;
+            this.yields = this._original.yields;
         }
-        _descendInputs(stg, block) {
+        _descendInputs (stg, block) {
             const inputs = {
                 [Block.block]: block
             };
@@ -40,14 +40,14 @@ class Compiler {
             return inputs;
         }
         // eslint-disable-next-line no-unused-vars
-        useMethods(dynamicChanges, stg, compile) {
+        useMethods (dynamicChanges, stg, compile) {
             compile = (typeof compile === 'function' ? compile : (() => compile)).bind(this);
             stg = (typeof stg === 'function' ? stg : (() => stg)).bind(this);
             this.compile = compile;
             this.stg = stg;
         }
     };
-    constructor(runtime) {
+    constructor (runtime) {
         this.runtime = runtime;
         this.stacks = new Map();
         this.inputs = new Map();
@@ -57,7 +57,7 @@ class Compiler {
             ...enums
         };
     }
-    _updateBlock(block) {
+    _updateBlock (block) {
         if (block.isInput) {
             this.inputs.set(block.extended_opcode, block);
         } else {
@@ -65,30 +65,30 @@ class Compiler {
         }
         this.registerCompileFn(block.ir_opcode, block?.compile?.bind?.(block));
     }
-    registerCompileFn(ir_opcode, fn) {
+    registerCompileFn (irOpcode, fn) {
         if (fn) {
-            const irArray = Array.isArray(ir_opcode);
+            const irArray = Array.isArray(irOpcode);
             const fnArray = Array.isArray(fn);
             if (irArray || fnArray) {
                 if (irArray && fnArray) {
-                    ir_opcode.forEach((ir_opcodev, i) => {
-                        this.compileFns.set(ir_opcodev, fn[i]);
+                    irOpcode.forEach((irOpcodev, i) => {
+                        this.compileFns.set(irOpcodev, fn[i]);
                     });
                 } else if (irArray) {
-                    ir_opcode.forEach(ir_opcodev => {
-                        this.compileFns.set(ir_opcodev, fn);
+                    irOpcode.forEach(irOpcodev => {
+                        this.compileFns.set(irOpcodev, fn);
                     });
                 } else {
                     fn.forEach(fnv => {
-                        this.compileFns.set(ir_opcode, fnv);
+                        this.compileFns.set(irOpcode, fnv);
                     });
                 }
             } else {
-                this.compileFns.set(ir_opcode, fn);
+                this.compileFns.set(irOpcode, fn);
             }
         }
     }
-    registerBlock(opcode, stg, compile, opts) {
+    registerBlock (opcode, stg, compile, opts) {
         opts = opts || {};
         if (!Array.isArray(opcode)) {
             opcode = [opcode];
@@ -102,31 +102,37 @@ class Compiler {
             this._updateBlock(block, opts);
         }
     }
-    simpleRegister(blockInfo, categoryInfo, compile, opts) {
+    simpleRegister (blockInfo, categoryInfo, compile, opts) {
         opts = opts || {};
         if (!Array.isArray(blockInfo)) {
-          blockInfo = [blockInfo];
+            blockInfo = [blockInfo];
         }
         const compileArray = Array.isArray(compile);
-        // eslint-disable-next-line no-unused-vars
-        const stg = function(stg, block, preserveInputs) {
+        /* eslint-disable no-invalid-this */
+        // eslint-disable-next-line no-shadow, no-unused-vars
+        const stg = function (stg, block, preserveInputs) {
             if (this.isInput) {
-                return new inter.IntermediateInput(this.ir_opcode, this.type, this._descendInputs(stg, block), this.yields);
+                return new inter.IntermediateInput(
+                    this.ir_opcode, this.type, this._descendInputs(stg, block), this.yields
+                );
             }
-            return new inter.IntermediateStackBlock(this.ir_opcode, this._descendInputs(stg, block), this.yields);
+            return new inter.IntermediateStackBlock(
+                this.ir_opcode, this._descendInputs(stg, block), this.yields
+            );
         };
+        /* eslint-enable no-invalid-this */
         for (let i = 0; i < blockInfo.length; i++) {
             const blockInfov = blockInfo[i];
             const compilev = compileArray ? compile[i] : compile;
             const block = new Compiler.Block(`${categoryInfo.id}_${
-              blockInfov.opcode ||
-              blockInfov.func
+                blockInfov.opcode ||
+                blockInfov.func
             }`, opts, blockInfov, categoryInfo);
             block.useMethods((opts?.dynamicChanges || false), stg, compilev);
             this._updateBlock(block);
         }
     }
-};
+}
 
 // - Shrek was here
 module.exports = Compiler;
