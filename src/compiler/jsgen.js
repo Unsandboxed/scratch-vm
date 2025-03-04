@@ -314,6 +314,17 @@ class JSGenerator {
         case StackOpcode.CONTROL_STOP_SCRIPT:
             this.stopScript();
             break;
+        // todo: Use StackOpcode
+        case 'control.break':
+            if (this.frames.find(frame =>
+                frame.isLoop ||
+                frame.isBreakable ||
+                frame.isIterable
+            )) this.source += 'break;\n';
+            break;
+        case 'control.continue':
+            if (this.frames.find(frame => frame.isLoop || frame.isIterable)) this.source += 'continue;\n';
+            break;
         case StackOpcode.CONTROL_WAIT: {
             const duration = this.localVariables.next();
             this.source += `thread.timer = timer();\n`;
@@ -734,6 +745,8 @@ class JSGenerator {
         }
         const opcodeFunction = this.evaluateOnce(`runtime.getOpcodeFunction("${sanitize(opcode)}")`);
         result += `}, ${opcodeFunction}, ${this.isWarp}, ${setFlags}, "${sanitize(node.id)}", ${frameName})`;
+
+        this.yielded();
 
         return result;
     }

@@ -810,7 +810,10 @@ class Blocks {
                         // @todo(vm#565) for numerical values with decimals, some countries use comma
                         value: '',
                         // @todo let extensions use list monitors!
-                        mode: (block.opcode === 'data_listcontents' || block.opcode === 'data_listarraycontents') ? 'list' : 'default'
+                        mode: (
+                            block.opcode === 'data_listcontents' ||
+                            block.opcode === 'data_listarraycontents'
+                        ) ? 'list' : 'default'
                     }));
                 }
             }

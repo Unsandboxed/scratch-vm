@@ -136,7 +136,7 @@ class ExtensionManager {
      * Prematurely load the "Scratch" object.
      * @return Promise<Object> The Scratch object/
      */
-    _getScratch() {
+    _getScratch () {
         return require('./tw-unsandboxed-extension-runner').setupUnsandboxedExtensionAPI(this.vm, true);
     }
 
@@ -286,19 +286,25 @@ class ExtensionManager {
 
     /**
      * Regenerate blockinfo for any loaded extensions
+     * @param {string} [optExtensionId] Optional extension ID for refreshing
      * @returns {Promise} resolved once all the extensions have been reinitialized
      */
-    refreshBlocks () {
-        const allPromises = Array.from(this._loadedExtensions.values()).map(serviceName =>
-            dispatch.call(serviceName, 'getInfo')
-                .then(info => {
-                    info = this._prepareExtensionInfo(serviceName, info);
-                    dispatch.call('runtime', '_refreshExtensionPrimitives', info);
-                })
-                .catch(e => {
-                    log.error('Failed to refresh built-in extension primitives', e);
-                })
-        );
+    refreshBlocks (optExtensionId) {
+        const refresh = serviceName => dispatch.call(serviceName, 'getInfo')
+            .then(info => {
+                info = this._prepareExtensionInfo(serviceName, info);
+                dispatch.call('runtime', '_refreshExtensionPrimitives', info);
+            })
+            .catch(e => {
+                log.error('Failed to refresh built-in extension primitives', e);
+            });
+        if (optExtensionId) {
+            if (!this._loadedExtensions.has(optExtensionId)) {
+                return Promise.reject(new Error(`Unknown extension: ${optExtensionId}`));
+            }
+            return refresh(this._loadedExtensions.get(optExtensionId));
+        }
+        const allPromises = Array.from(this._loadedExtensions.values()).map(refresh);
         return Promise.all(allPromises);
     }
 
