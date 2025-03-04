@@ -1,7 +1,18 @@
 // @ts-check
+/**
+ * @fileoverview
+ * Sets up all the main blocks for the compiler, aswell as exporting the exports.
+ * (Base categorys etc)
+ */
+
+/**
+ * Sets up the compiler.
+ * @param {import("../engine/runtime.js")} runtime The runtime.
+ */
 const SetupCompiler = function (runtime) {
     const log = require('../util/log');
     const compilerData = runtime.compilerData;
+    if (!compilerData) return;
     const {
         IntermediateStackBlock,
         IntermediateInput,
@@ -11,6 +22,7 @@ const SetupCompiler = function (runtime) {
         InputType,
         InputOpcode,
         StackOpcode
+        // @ts-expect-error
     } = compilerData._internalExports;
     const {
         sanitize,

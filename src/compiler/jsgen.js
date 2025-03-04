@@ -107,7 +107,6 @@ class JSGenerator {
      * @returns {string} Compiled input.
      */
     descendInput (block) {
-        if (!block) console.trace('DI JS', block);
         if (this.target.runtime.compilerData.compileFns.has(block.opcode)) {
             return this.target.runtime.compilerData.compileFns.get(block.opcode)(this, block, true);
         }
@@ -196,7 +195,6 @@ class JSGenerator {
      * @param {IntermediateStackBlock} block Stacked block to compile.
      */
     descendStackedBlock (block) {
-        if (!block) console.trace('DSB JS', block);
         if (this.target.runtime.compilerData.compileFns.has(block.opcode)) {
             return this.target.runtime.compilerData.compileFns.get(block.opcode)(this, block, false);
         }

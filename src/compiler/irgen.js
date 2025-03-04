@@ -195,10 +195,8 @@ class ScriptTreeGenerator {
      * @returns {IntermediateInput} Compiled input node for this input.
      */
     descendInput (block, preserveStrings = false) {
-        if (!block) console.trace('DI IR');
         if (this.runtime.compilerData.inputs.has(block.opcode)) {
             block = this.runtime.compilerData.inputs.get(block.opcode).stg(this, block, preserveStrings, true);
-            console.log('DI IR', block);
             return block;
         }
         
@@ -236,10 +234,8 @@ class ScriptTreeGenerator {
      * @returns {IntermediateStackBlock} Compiled node for this block.
      */
     descendStackedBlock (block) {
-        if (!block) console.trace('DSB IR');
         if (this.runtime.compilerData.stacks.has(block.opcode)) {
             block = this.runtime.compilerData.stacks.get(block.opcode).stg(this, block, null, false);
-            console.log('DSB IR', block);
             return block;
         }
         const opcodeFunction = this.runtime.getOpcodeFunction(block.opcode);
@@ -252,7 +248,7 @@ class ScriptTreeGenerator {
             const blockInfo = this.getBlockInfo(block.opcode);
             if (blockInfo) {
                 const type = blockInfo.info.blockType;
-                if (type === BlockType.COMMAND || type === BlockType.CONDITIONAL || type === BlockType.LOOP) {
+                if (this.runtime.compilerData.bt_stacks.has(type)) {
                     return this.descendCompatLayerStack(block);
                 }
             }
