@@ -197,7 +197,7 @@ class ScriptTreeGenerator {
     descendInput (block, preserveStrings = false) {
         if (!block) console.trace('DI IR');
         if (this.runtime.compilerData.inputs.has(block.opcode)) {
-            block = this.runtime.compilerData.inputs.get(block.opcode).stg(this, block, preserveStrings);
+            block = this.runtime.compilerData.inputs.get(block.opcode).stg(this, block, preserveStrings, true);
             console.log('DI IR', block);
             return block;
         }
@@ -242,7 +242,7 @@ class ScriptTreeGenerator {
     descendStackedBlock (block) {
         if (!block) console.trace('DSB IR');
         if (this.runtime.compilerData.stacks.has(block.opcode)) {
-            block = this.runtime.compilerData.stacks.get(block.opcode).stg(this, block, null);
+            block = this.runtime.compilerData.stacks.get(block.opcode).stg(this, block, null, false);
             console.log('DSB IR', block);
             return block;
         }

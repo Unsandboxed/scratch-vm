@@ -1,7 +1,6 @@
 // @ts-check
 
 const log = require('../util/log');
-const BlockType = require('../extension-support/block-type');
 const jsexecute = require('./jsexecute');
 const {StackOpcode, InputOpcode, InputType} = require('./enums.js');
 
@@ -121,7 +120,7 @@ class JSGenerator {
             return `(${this.descendAddonCall(node)})`;
 
         case InputOpcode.CAST_BOOLEAN:
-            return `toBoolean(${this.descendInput(node.target)})`;
+            return `asBoolean(${this.descendInput(node.target)})`;
         case InputOpcode.CAST_NUMBER:
             if (node.target.isAlwaysType(InputType.BOOLEAN_INTERPRETABLE)) {
                 return `(+${this.descendInput(node.target.toType(InputType.BOOLEAN))})`;
@@ -140,7 +139,7 @@ class JSGenerator {
             return `colorToList(${this.descendInput(node.target)})`;
 
         case InputOpcode.COMPATIBILITY_LAYER:
-            if (node.blockType === BlockType.INLINE) {
+            if (this.target.runtime.compilerData.bt_inlines.has(node.blockType)) {
                 const branchVariable = this.localVariables.next();
                 const returnVariable = this.localVariables.next();
                 let source = '(yield* (function*() {\n';
@@ -214,11 +213,11 @@ class JSGenerator {
             const isLastInLoop = this.isLastBlockInLoop();
 
             const blockType = node.blockType;
-            if (blockType === BlockType.COMMAND || blockType === BlockType.HAT) {
+            if (this.target.runtime.compilerData.bt_stacks.has(blockType)) {
                 this.source += `${this.generateCompatibilityLayerCall(node, isLastInLoop)};\n`;
-            } else if (blockType === BlockType.CONDITIONAL || blockType === BlockType.LOOP) {
+            } else if (this.target.runtime.compilerData.bt_branchables.has(blockType)) {
                 const branchVariable = this.localVariables.next();
-                this.source += `const ${branchVariable} = createBranchInfo(${blockType === BlockType.LOOP});\n`;
+                this.source += `const ${branchVariable} = createBranchInfo(${this.target.runtime.compilerData.bt_loops.has(blockType)});\n`;
                 this.source += `while (${branchVariable}.branch = +(${this.generateCompatibilityLayerCall(node, false, branchVariable)})) {\n`;
                 this.source += `switch (${branchVariable}.branch) {\n`;
                 for (const index in node.substacks) {

@@ -165,7 +165,18 @@ module.exports = function (compilerData, {
             // No compile-time optimizations possible - use fallback method.
             return `compareGreaterThan(${jsg.descendInput(left)}, ${jsg.descendInput(right)})`;
         },
-        `('not implemented >=', false)`,
+        function (jsg, block) {
+            const node = block.inputs;
+            const left = node.left;
+            const right = node.right;
+            return `(compareGreaterThan(${
+                jsg.descendInput(left)
+            }, ${jsg.descendInput(right)})||compareEqual(${
+                jsg.descendInput(left)
+            }, ${
+                jsg.descendInput(right)
+            }))`;
+        },
         function (jsg, block) {
             const node = block.inputs;
             const left = node.left;
@@ -200,7 +211,18 @@ module.exports = function (compilerData, {
             // No compile-time optimizations possible - use fallback method.
             return `compareLessThan(${jsg.descendInput(left)}, ${jsg.descendInput(right)})`;
         },
-        `('not implemented <=', false)`
+        function (jsg, block) {
+            const node = block.inputs;
+            const left = node.left;
+            const right = node.right;
+            return `(lessGreaterThan(${
+                jsg.descendInput(left)
+            }, ${jsg.descendInput(right)})||compareEqual(${
+                jsg.descendInput(left)
+            }, ${
+                jsg.descendInput(right)
+            }))`;
+        }
     ], {
         input: true,
         type: InputType.BOOLEAN
@@ -491,5 +513,23 @@ module.exports = function (compilerData, {
     }, {
         input: true,
         type: InputType.NUMBER
+    });
+    compilerData.registerBlock('operator_clamp', function (stg, block) {
+        return new IntermediateInput(this.ir_opcode, this.type, {
+            value: stg.descendInputOfBlock(block, 'NUM').toType(InputType.NUMBER),
+            min: stg.descendInputOfBlock(block, 'FROM').toType(InputType.NUMBER),
+            max: stg.descendInputOfBlock(block, 'TO').toType(InputType.NUMBER)
+        });
+    }, function (jsg, block) {
+        return `Math.max(Math.min(${
+            jsg.descendInput(block.inputs.value)
+        }, ${
+            jsg.descendInput(block.inputs.max)
+        }), ${
+            jsg.descendInput(block.inputs.min)
+        })`;
+    }, {
+        input: true,
+        type: InputType.NUMBER_OR_NAN
     });
 };

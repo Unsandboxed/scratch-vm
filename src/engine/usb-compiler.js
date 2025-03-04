@@ -1,5 +1,6 @@
 const inter = require('../compiler/intermediate');
 const enums = require('../compiler/enums');
+const BlockType = require('../extension-support/block-type.js');
 
 class Compiler {
     static Block = class Block {
@@ -60,6 +61,25 @@ class Compiler {
             ...inter,
             ...enums
         };
+        this.bt_stacks = new Set([
+            BlockType.COMMAND,
+            BlockType.HAT
+        ]);
+        this.bt_branchables = new Set([
+            BlockType.CONDITIONAL,
+            BlockType.LOOP
+        ]);
+        this.bt_loops = new Set([
+            BlockType.LOOP
+        ]);
+        this.bt_inlines = new Set([
+            BlockType.INLINE
+        ]);
+        this.bt_inputs = new Set([
+            BlockType.INLINE,
+            BlockType.REPORTER,
+            BlockType.BOOLEAN
+        ]);
     }
     _updateBlock (block) {
         if (block.isInput) {
@@ -77,18 +97,22 @@ class Compiler {
             if (irArray || fnArray) {
                 if (irArray && fnArray) {
                     irOpcode.forEach((irOpcodev, i) => {
+                        if (fn[i] === null) return;
                         this.compileFns.set(irOpcodev, fn[i]);
                     });
                 } else if (irArray) {
+                    if (fn === null) return;
                     irOpcode.forEach(irOpcodev => {
                         this.compileFns.set(irOpcodev, fn);
                     });
                 } else {
+                    if (fn === null) return;
                     fn.forEach(fnv => {
                         this.compileFns.set(irOpcode, fnv);
                     });
                 }
             } else {
+                if (fn === null) return;
                 this.compileFns.set(irOpcode, fn);
             }
         }

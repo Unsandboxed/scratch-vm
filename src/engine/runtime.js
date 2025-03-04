@@ -521,7 +521,7 @@ class Runtime extends EventEmitter {
             this.compilerData = new (require('./usb-compiler'))(this);
             // We need to setup the blocks soo
             require('../compiler/setup-compiler')(this);
-        } catch(err) {
+        } catch (err) {
             log.error('Failed to setup compiler data', err);
         }
         this.debug = false;
@@ -1224,6 +1224,7 @@ class Runtime extends EventEmitter {
                 const blockShapeInfo = categoryInfo.customShapes[blockShapeName];
 
                 // Emit events for custom shape types from extension
+                this.compilerData.bt_inputs.add(blockShapeName);
                 this.emit(Runtime.EXTENSION_SHAPE_ADDED, {
                     name: blockShapeName,
                     implementation: blockShapeInfo,

@@ -66,6 +66,7 @@ const SetupCompiler = function (runtime) {
     require('./setup-compiler/operator')(compilerData, exports);
     require('./setup-compiler/string')(compilerData, exports);
     require('./setup-compiler/data')(compilerData, exports);
+    require('./setup-compiler/procedures')(compilerData, exports);
     // Extensions
     require('./setup-compiler/pen')(compilerData, exports);
     // Other
