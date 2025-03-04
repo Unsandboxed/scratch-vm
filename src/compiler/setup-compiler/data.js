@@ -24,7 +24,7 @@ module.exports = function (compilerData, {
     });
     compilerData.registerBlock('data_changevariableby', function (stg, block) {
         const variable = stg.descendVariable(block, 'VARIABLE', SCALAR_TYPE);
-        return new IntermediateStackBlock(this.ir_opcode, {
+        return new IntermediateStackBlock('data.setvariableto', {
             variable,
             value: new IntermediateInput('operator.add', InputType.NUMBER_OR_NAN, {
                 left: new IntermediateInput('data.variable', InputType.ANY, {variable}).toType(InputType.NUMBER),

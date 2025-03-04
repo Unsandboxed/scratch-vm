@@ -128,7 +128,7 @@ module.exports = function (compilerData, {
         const needsWarpTimer = stg.usesTimer;
         this.yields = stg.analyzeLoop() || needsWarpTimer;
         const condition = stg.descendInputOfBlock(block, 'CONDITION');
-        return new IntermediateStackBlock(StackOpcode.CONTROL_WHILE, {
+        return new IntermediateStackBlock('control.while', {
             condition: new IntermediateInput('operator.not', InputType.BOOLEAN, {
                 operand: condition
             }),
