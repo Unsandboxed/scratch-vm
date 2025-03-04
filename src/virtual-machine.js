@@ -247,17 +247,6 @@ class VirtualMachine extends EventEmitter {
             i_will_not_ask_for_help_when_these_break: () => {
                 console.warn('You are using unsupported APIs. WHEN your code breaks, do not expect help.');
                 return ({
-                    JSGenerator: require('./compiler/jsgen.js'),
-                    IRGenerator: require('./compiler/irgen.js').IRGenerator,
-                    ScriptTreeGenerator: require('./compiler/irgen.js').ScriptTreeGenerator,
-                    IntermediateStackBlock: require('./compiler/intermediate.js').IntermediateStackBlock,
-                    IntermediateInput: require('./compiler/intermediate.js').IntermediateInput,
-                    IntermediateStack: require('./compiler/intermediate.js').IntermediateStack,
-                    IntermediateScript: require('./compiler/intermediate.js').IntermediateScript,
-                    IntermediateRepresentation: require('./compiler/intermediate.js').IntermediateRepresentation,
-                    StackOpcode: require('./compiler/enums.js').StackOpcode,
-                    InputOpcode: require('./compiler/enums.js').InputOpcode,
-                    InputType: require('./compiler/enums.js').InputType,
                     Thread: require('./engine/thread.js'),
                     execute: require('./engine/execute.js')
                 });

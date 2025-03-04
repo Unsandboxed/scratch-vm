@@ -6,10 +6,12 @@ const SetupCompiler = function (runtime) {
         IntermediateStackBlock,
         IntermediateInput,
         IntermediateStack,
+        IntermediateScript,
+        IntermediateRepresentation,
         InputType,
         InputOpcode,
         StackOpcode
-    } = compilerData.exports;
+    } = compilerData._internalExports;
     const {
         sanitize,
         Frame,
@@ -26,6 +28,8 @@ const SetupCompiler = function (runtime) {
         IntermediateStackBlock,
         IntermediateInput,
         IntermediateStack,
+        IntermediateScript,
+        IntermediateRepresentation,
         InputType,
         InputOpcode,
         StackOpcode,
@@ -55,6 +59,12 @@ const SetupCompiler = function (runtime) {
             return false;
         }
     };
+    compilerData.exports = Object.assign(Object.create(null), exports, {
+        JSGenerator: require('./jsgen.js'),
+        IRGenerator: require('./irgen.js').IRGenerator,
+        ScriptTreeGenerator: require('./irgen.js').ScriptTreeGenerator,
+        log: null
+    });
     // CORE
     require('./setup-compiler/motion')(compilerData, exports);
     require('./setup-compiler/looks')(compilerData, exports);

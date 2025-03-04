@@ -570,12 +570,11 @@ class JSGenerator {
         return fn;
     }
 
-    /* eslint-disable no-throw-literal */
     static get exports () {
-        throw 'Depricated syntax, please use the new exports.';
+        throw new Error('Depricated syntax, please use the new exports.');
     }
     static get unstable_exports () {
-        throw 'Depricated syntax, please use the new exports.';
+        throw new Error('Depricated syntax, please use the new exports.');
     }
 }
 

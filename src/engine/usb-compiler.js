@@ -36,7 +36,7 @@ class Compiler {
             };
             if (!this.blockInfo.arguments) return inputs;
             Object.keys(this.blockInfo.arguments).forEach(argumentName => {
-                inputs[argumentName] = stg.descendInput(block, argumentName);
+                inputs[argumentName] = stg.descendInputOfBlock(block, argumentName);
             });
             return inputs;
         }
@@ -57,10 +57,11 @@ class Compiler {
         this.stacks = new Map();
         this.inputs = new Map();
         this.compileFns = new Map();
-        this.exports = {
+        this._internalExports = {
             ...inter,
             ...enums
         };
+        this.exports = null;
         this.bt_stacks = new Set([
             BlockType.COMMAND,
             BlockType.HAT
@@ -80,6 +81,14 @@ class Compiler {
             BlockType.REPORTER,
             BlockType.BOOLEAN
         ]);
+        this.bt_to_type = new Map([
+            [BlockType.REPORTER, enums.InputType.ANY],
+            [BlockType.INLINE, enums.InputType.ANY],
+            [BlockType.BOOLEAN, enums.InputType.BOOLEAN_INTERPRETABLE],
+            [BlockType.ARRAY, enums.InputType.ARRAY],
+            [BlockType.OBJECT, enums.InputType.OBJECT]
+        ]);
+        this.with = fn => fn(this, this.exports);
     }
     _updateBlock (block) {
         if (block.isInput) {
@@ -131,22 +140,22 @@ class Compiler {
             this._updateBlock(block, opts);
         }
     }
-    simpleRegister (blockInfo, categoryInfo, compile, opts) {
+    _simpleRegister (categoryInfo, blockInfo, compile, opts) {
         opts = opts || {};
         if (!Array.isArray(blockInfo)) {
             blockInfo = [blockInfo];
         }
         const compileArray = Array.isArray(compile);
         /* eslint-disable no-invalid-this */
-        // eslint-disable-next-line no-shadow, no-unused-vars
-        const stg = function (stg, block, preserveInputs) {
+        // eslint-disable-next-line no-unused-vars
+        const stg = function (stg_, block, preserveInputs) {
             if (this.isInput) {
                 return new inter.IntermediateInput(
-                    this.ir_opcode, this.type, this._descendInputs(stg, block), this.yields
+                    this.ir_opcode, this.type, this._descendInputs(stg_, block), this.yields
                 );
             }
             return new inter.IntermediateStackBlock(
-                this.ir_opcode, this._descendInputs(stg, block), this.yields
+                this.ir_opcode, this._descendInputs(stg_, block), this.yields
             );
         };
         /* eslint-enable no-invalid-this */
@@ -159,6 +168,19 @@ class Compiler {
             }`, opts, blockInfov, categoryInfo);
             block.useMethods((opts.dynamicChanges || false), stg, compilev);
             this._updateBlock(block);
+            // debugger;
+        }
+    }
+    simpleRegister (categoryInfo, binds) {
+        const opcodes = Object.keys(binds);
+        for (let i = 0; i < opcodes.length; i++) {
+            const opcode = opcodes[i];
+            const compile = binds[opcode][0];
+            const opts = binds[opcode][1] ?? {};
+            const blockInfo = categoryInfo.blocks.find(block => block.opcode === opcode);
+            opts.input = this.bt_inputs.has(blockInfo.blockType);
+            opts.type = (opts.type ?? this.bt_to_type.get(blockInfo.blockType)) ?? enums.InputType.ANY;
+            this._simpleRegister(categoryInfo, blockInfo, compile, opts);
         }
     }
 }
