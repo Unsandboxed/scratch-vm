@@ -388,7 +388,7 @@ class ScriptTreeGenerator {
         }
 
         return {
-            opcode: StackOpcode.PROCEDURE_CALL,
+            opcode: 'procedure.call',
             inputs: {
                 code: procedureCode,
                 variant,

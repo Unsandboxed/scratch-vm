@@ -88,7 +88,13 @@ const InputType = {
     ANY: 0x1FFF,
   
     /** An array of values in the form [R, G, B] */
-    COLOR: 0x2000
+    COLOR: 0x2000,
+
+    /** An array */
+    ARRAY: 0x3FFF,
+
+    /** A object */
+    OBJECT: 0x3000
 };
   
 /**
@@ -100,15 +106,11 @@ const StackOpcode = {
     NOP: 'noop',
   
     ADDON_CALL: 'addons.call',
-    DEBUGGER: 'tw.debugger',
     VISUAL_REPORT: 'visualReport',
     COMPATIBILITY_LAYER: 'compat',
   
     HAT_EDGE: 'hat.edge',
-    HAT_PREDICATE: 'hat.predicate',
-  
-    PROCEDURE_RETURN: 'procedures.return',
-    PROCEDURE_CALL: 'procedures.call'
+    HAT_PREDICATE: 'hat.predicate'
 };
 
 /**
