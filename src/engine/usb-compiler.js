@@ -191,6 +191,8 @@ class Compiler {
         this.bt_inputs = new Set([
             BlockType.INLINE,
             BlockType.REPORTER,
+            BlockType.ARRAY,
+            BlockType.OBJECT,
             BlockType.BOOLEAN
         ]);
 
