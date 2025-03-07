@@ -160,7 +160,9 @@ class BlockUtility {
      * @return {Array.<string>} List of param names for a procedure.
      */
     getProcedureParamNamesAndIds (procedureCode) {
-        return this.thread.target.blocks.getProcedureParamNamesAndIds(procedureCode);
+        const paramNamesAndIds = this.thread.blockContainer.getProcedureParamNamesAndIds(procedureCode);
+        if (!paramNamesAndIds) return this.sequencer.runtime.getProcedureParamNamesAndIds(procedureCode);
+        return paramNamesAndIds;
     }
 
     /**
@@ -169,7 +171,9 @@ class BlockUtility {
      * @return {Array.<string>} List of param names for a procedure.
      */
     getProcedureParamNamesIdsAndDefaults (procedureCode) {
-        return this.thread.target.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
+        const paramNamesIdsAndDefaults = this.thread.blockContainer.getProcedureParamNamesIdsAndDefaults(procedureCode);
+        if (!paramNamesIdsAndDefaults) return this.sequencer.runtime.getProcedureParamNamesIdsAndDefaults(procedureCode);
+        return paramNamesIdsAndDefaults;
     }
 
     /**

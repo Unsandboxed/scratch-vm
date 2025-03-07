@@ -3983,6 +3983,45 @@ class Runtime extends EventEmitter {
 
         return callback().then(onSuccess, onError);
     }
+
+    /**
+     * Get the procedure definition for a given name.
+     * @param {?string} name Name of procedure to query.
+     * @return {?string} ID of procedure definition.
+     */
+    getProcedureDefinition (name) {
+        for (const target of this.targets) {
+            const definition = target.blocks.getProcedureDefinition(name);
+            if (definition) {
+                return [target, definition];
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Get names and ids of parameters for the given procedure.
+     * @param {?string} name Name of procedure to query.
+     * @return {?Array.<string>} List of param names for a procedure.
+     */
+    getProcedureParamNamesAndIds (name) {
+        return this.getProcedureParamNamesIdsAndDefaults(name).slice(0, 2);
+    }
+
+    /**
+     * Get names, ids, and defaults of parameters for the given procedure.
+     * @param {?string} name Name of procedure to query.
+     * @return {?Array.<string>} List of param names for a procedure.
+     */
+    getProcedureParamNamesIdsAndDefaults (name) {
+        for (const target of this.targets) {
+            const definition = target.blocks.getProcedureParamNamesIdsAndDefaults(name);
+            if (definition) {
+                return definition;
+            }
+        }
+        return null;
+    }
 }
 
 /**

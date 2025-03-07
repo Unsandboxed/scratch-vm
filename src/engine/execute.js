@@ -127,7 +127,8 @@ const handlePromiseResolution = (resolvedValue, sequencer, thread, blockCached, 
             if (popped === null) {
                 return;
             }
-            nextBlockId = thread.target.blocks.getNextBlock(popped);
+            nextBlockId = thread.blockContainer.getNextBlock(popped);
+            target = thread.peekStackFrame().targetContext;
             if (nextBlockId !== null) {
                 // A next block exists so break out this loop
                 break;
