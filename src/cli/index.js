@@ -14,7 +14,7 @@ const runProject = async buffer => {
     vm.runtime.on('SAY', (target, type, text) => {
         console.log(text);
     });
-    vm.setCompatibilityMode(true);
+    vm.setCompatibilityMode(false);
     vm.clear();
     await vm.loadProject(buffer);
     vm.start();

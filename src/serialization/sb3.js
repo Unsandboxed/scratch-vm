@@ -118,7 +118,11 @@ const serializePrimitiveBlock = function (block) {
         const primitiveDesc = [primitiveConstant, field.value];
         if (block.opcode === 'event_broadcast_menu') {
             primitiveDesc.push(field.id);
-        } else if (block.opcode === 'data_variable' || block.opcode === 'data_listcontents' || block.opcode === 'data_listarraycontents') {
+        } else if (
+            block.opcode === 'data_variable' ||
+            block.opcode === 'data_listcontents' ||
+            block.opcode === 'data_listarraycontents'
+        ) {
             primitiveDesc.push(field.id);
             if (block.topLevel) {
                 primitiveDesc.push(block.x ? Math.round(block.x) : 0);
@@ -1524,7 +1528,7 @@ const checkPlatformCompatibility = (json, runtime) => {
  * @param {Runtime} runtime
  */
 const applyCompatibilityOptions = runtime => {
-    runtime.setFramerate(30);
+    runtime.setCompatibilityMode(true);
     runtime.setStageSize(480, 360);
     runtime.setRuntimeOptions({fencing: true});
 };
