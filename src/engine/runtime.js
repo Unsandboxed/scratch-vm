@@ -4102,13 +4102,13 @@ class Runtime extends EventEmitter {
     /**
      * Get the procedure definition for a given name.
      * @param {?string} name Procedure to query.
-     * @return {?[Target, string]} ID of procedure definition.
+     * @return {[?Target, ?string]} ID of procedure definition.
      */
     getGlobalProcedureDefinition (name) {
         const target = this.getTargetById(this._globalProcedures[name]);
-        if (!target) return;
+        if (!target) return [null, null];
         const definition = target.blocks.getProcedureDefinition(name);
-        if (!definition) return;
+        if (!definition) return [null, null];
         return [target, definition];
     }
 

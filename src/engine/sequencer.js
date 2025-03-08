@@ -330,7 +330,7 @@ class Sequencer {
         let target = null;
         let definition = thread.blockContainer.getProcedureDefinition(procedureCode);
         if (!definition) {
-            [target, definition] = this.runtime.getProcedureDefinition(procedureCode);
+            [target, definition] = this.runtime.getGlobalProcedureDefinition(procedureCode);
         }
         if (!definition) return;
 
@@ -357,7 +357,9 @@ class Sequencer {
                 definitionBlock.inputs.custom_block.block);
             let doWarp = false;
             if (innerBlock && innerBlock.mutation) {
-                const warp = Cast.toBooleanSimple(innerBlock.mutation.warp);
+                doWarp = Cast.toBooleanSimple(innerBlock.mutation.warp);
+
+                debugger;
 
                 // by this stage, if the procedure isn't global,
                 // it would've been skipped in the search.
