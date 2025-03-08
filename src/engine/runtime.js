@@ -4144,7 +4144,7 @@ class Runtime extends EventEmitter {
                 if (!mutation) continue;
                 if (!!JSON.parse(mutation.global)) continue;
                 
-                return target.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
+                return target.blocks.getProcedureParamNamesAndIds(procedureCode);
             }
         }
         return def[0].blocks.getProcedureParamNamesAndIds(procedureCode);
