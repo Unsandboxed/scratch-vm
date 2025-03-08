@@ -3,6 +3,7 @@ const mutationAdapter = require('./mutation-adapter');
 const xmlEscape = require('../util/xml-escape');
 const MonitorRecord = require('./monitor-record');
 const Clone = require('../util/clone');
+const Cast = require('../util/cast');
 const {Map} = require('immutable');
 const BlocksExecuteCache = require('./blocks-execute-cache');
 const BlocksRuntimeCache = require('./blocks-runtime-cache');
@@ -705,6 +706,10 @@ class Blocks {
         // A new block was actually added to the block container,
         // emit a project changed event
         this.emitProjectChanged();
+
+        if (block.opcode === 'procedures_prototype') {
+            this.runtime.requestGlobalProceduresRefresh();
+        }
     }
 
     /**
@@ -762,9 +767,17 @@ class Blocks {
                 }
             }
             break;
-        case 'mutation':
-            block.mutation = mutationAdapter(args.value);
+        case 'mutation': {
+            const adapter = mutationAdapter(args.value);
+            if (block.opcode === 'procedures_prototype') {
+                if (
+                    Cast.toBooleanSimple(block.mutation.global) !==
+                    Cast.toBooleanSimple(adapter.global)
+                ) this.runtime.requestGlobalProceduresRefresh();
+            }
+            block.mutation = adapter;
             break;
+        }
         case 'checkbox': {
             // A checkbox usually has a one to one correspondence with the monitor
             // block but in the case of monitored reporters that have arguments,
@@ -959,6 +972,16 @@ class Blocks {
         if (!block) {
             // No block with the given ID exists
             return;
+        }
+
+        // Make sure we remove ourself from the global procedures if we are one.
+        console.log('Deleting', block);
+        if (
+            block.opcode === 'procedures_prototype' &&
+            block.mutation &&
+            Cast.toBooleanSimple(block.mutation.global)
+        ) {
+            this.runtime.requestGlobalProceduresRefresh();
         }
 
         // Delete children

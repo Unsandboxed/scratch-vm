@@ -4050,7 +4050,7 @@ class Runtime extends EventEmitter {
             targets.delete(target.id);
             // hack: update the cache so we can get all the info about our procedures
             target.blocks.populateProcedureCache();
-            const proccodes = Object.keys(blocks._cache.procedureDefinitions);
+            const proccodes = Object.keys(target.blocks._cache.procedureDefinitions);
             for (let j = 0; j < proccodes.length; j++) {
                 const proccode = proccodes[j];
                 const mutation = target.blocks.getProcedureMutation(proccode);
@@ -4062,10 +4062,10 @@ class Runtime extends EventEmitter {
             }
         }
 
-        const changed = Pnew.difference(Pold);
-        if (changed.size > 0) {
+        const changed = Array.from(Pnew.difference(Pold));
+        if (changed.length > 0) {
             // if any procedures are missing or new then go through them
-            for (let i = 0; i < changed.size; i++) {
+            for (let i = 0; i < changed.length; i++) {
                 const proccode = changed[i];
                 // add the procedure if it is new
                 if (Pnew.has(proccode)) {
@@ -4075,14 +4075,16 @@ class Runtime extends EventEmitter {
                 // otherwise delete it (this can happen for a variety of reasons)
                 delete this._globalProcedures[proccode];
             }
+            return true;
         }
-        return changed.size > 0;
+        return false;
     }
 
     /**
      * Requests the global procedures to be refreshed.
      */
     requestGlobalProceduresRefresh () {
+        console.trace();
         this._refreshGlobalProcedures = true;
     }
 
@@ -4104,18 +4106,23 @@ class Runtime extends EventEmitter {
     /**
      * Get names, ids, and defaults of parameters for the given procedure.
      * @param {string} procedureCode Procedure code for procedure to query.
-     * @return {?[Target, Array.<string>]} List of param names for a procedure.
+     * @return {?Array.<string>} List of param names for a procedure.
      */
     getGlobalProcedureParamNamesIdsAndDefaults (procedureCode) {
-        const 
+        const def = this.getGlobalProcedureDefinition(procedureCode);
+        if (!def) return;
+        return def[0].blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
     }
 
     /**
      * Get names and ids of parameters for the given procedure.
      * @param {string} procedureCode Procedure code for procedure to query.
-     * @return {?[Target, Array.<string>]} List of param names for a procedure.
+     * @return {?Array.<string>} List of param names for a procedure.
      */
     getGlobalProcedureParamNamesAndIds (procedureCode) {
+        const def = this.getGlobalProcedureDefinition(procedureCode);
+        if (!def) return;
+        return def[0].blocks.getGlobalProcedureParamNamesAndIds(procedureCode);
     }
 }
 
