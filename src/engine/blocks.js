@@ -346,6 +346,25 @@ class Blocks {
     }
 
     /**
+     * TODO: cache?
+     * Get mutation for the given procedure.
+     * @param {?string} name Name of procedure to query.
+     * @return {?Array.<string>} Mutation for a procedure.
+     */
+    getProcedureMutation (name) {
+        for (const id in this._blocks) {
+            if (!Object.prototype.hasOwnProperty.call(this._blocks, id)) continue;
+            const block = this._blocks[id];
+            if (block.opcode === 'procedures_prototype' &&
+                block.mutation.proccode === name) {
+                return block.mutation;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * tw: Setup the procedureParamNames and procedureDefinitions caches all at once.
      * This makes subsequent calls to these methods faster.
      */

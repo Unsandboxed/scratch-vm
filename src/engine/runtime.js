@@ -289,6 +289,12 @@ class Runtime extends EventEmitter {
         this.monitorBlocks = new Blocks(this, true /* force no glow */);
 
         /**
+         * Map to look up a global custom block's target.
+         * @type {Object.<string, string>}
+         */
+        this._globalProcedures = {};
+
+        /**
          * Currently known editing target for the VM.
          * @type {?Target}
          */
@@ -353,6 +359,14 @@ class Runtime extends EventEmitter {
          * @type {boolean}
          */
         this._refreshTargets = false;
+
+        /**
+         * Flag to tell the runtime to refresh global procedures on the next step call.
+         * When a procedure is created, deleted or some other event
+         * this flag is set to true.
+         * @type {boolean}
+         */
+        this._refreshGlobalProcedures = false;
 
         /**
          * Map to look up all monitor block information by opcode.
@@ -610,6 +624,7 @@ class Runtime extends EventEmitter {
          */
         this.temporaryStorage = {};
         this.on(Runtime.PROJECT_START, () => {
+            this._doFefreshGlobalProcedures();
             this.temporaryStorage = {};
         });
         this.on(Runtime.PROJECT_STOP_ALL, () => {
@@ -620,6 +635,7 @@ class Runtime extends EventEmitter {
          * Export some internal values for extensions.
          */
         this.exports = {
+            Cast,
             ExtendedJSON,
             i_will_not_ask_for_help_when_these_break: () => {
                 console.warn('You are using unsupported APIs. WHEN your code breaks, do not expect help.');
@@ -2890,6 +2906,11 @@ class Runtime extends EventEmitter {
      * inactive threads after each iteration.
      */
     _step () {
+        if (this._refreshGlobalProcedures) {
+            this._refreshGlobalProcedures = false;
+            this._updateGlobalProcedures();
+        }
+
         let targetHasInterpolation = false;
         for (const target of this.targets) {
             if (target.interpolation) targetHasInterpolation = true;
@@ -3985,6 +4006,87 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Gets the global procedures for the selected target.
+     * @param {string} target The target (by id) to check.
+     * @returns {string[]}
+     */
+    getGlobalProceduresFromTarget(target) {
+        return Object.entries(this._globalProcedures).flatMap(([proccode, targetId]) => {
+            if (targetId !== target) return [];
+            return [proccode];
+        });
+    }
+
+    /**
+     * Gets the global procedure target based on proccode.
+     * @param {string} proccode The procedure proccode.
+     * @returns {?string} The target ID.
+     */
+    getGlobalProcedure(proccode) {
+        return this._globalProcedures[proccode];
+    }
+
+    /**
+     * Refreshes the global procedures for the runtime. (used by the sequencer and scratch-blocks)
+     * @param {?Target|Target[]} targets Optional target(s) to refresh the global's of
+     * @returns {boolean} Did any changes occur?
+     */
+    _updateGlobalProcedures (targets) {
+        // get a list of targets to refresh, if we dont get any then just refresh them all
+        if (targets == undefined || target === null) targets = this.targets;
+        else targets = [].concat(target);
+        targets = new Set(targets.map(t => t.id));
+
+        // keep track of what procedures used to exist and exist now
+        // (this is used for cleanup)
+        const Pold = new Set(Object.keys(this._globalProcedures));
+        const Pnew = new Set();
+        const globalProcedures = {};
+
+        for (let i = 0; i < this.targets.length; i++) {
+            const target = this.targets[i];
+            if (!targets.has(target.id)) continue;
+            // todo: check if this matters in the long run
+            targets.delete(target.id);
+            // hack: update the cache so we can get all the info about our procedures
+            target.blocks.populateProcedureCache();
+            const proccodes = Object.keys(blocks._cache.procedureDefinitions);
+            for (let j = 0; j < proccodes.length; j++) {
+                const proccode = proccodes[j];
+                const mutation = target.blocks.getProcedureMutation(proccode);
+                if (!mutation) continue;
+                // Add the proccode to the list of existing procedures if it is global
+                if (!Cast.toBooleanSimple(mutation.global)) return;
+                Pnew.add(proccode);
+                globalProcedures[proccode] = target.id;
+            }
+        }
+
+        const changed = Pnew.difference(Pold);
+        if (changed.size > 0) {
+            // if any procedures are missing or new then go through them
+            for (let i = 0; i < changed.size; i++) {
+                const proccode = changed[i];
+                // add the procedure if it is new
+                if (Pnew.has(proccode)) {
+                    this._globalProcedures[proccode] = globalProcedures[proccode];
+                    continue;
+                }
+                // otherwise delete it (this can happen for a variety of reasons)
+                delete this._globalProcedures[proccode];
+            }
+        }
+        return changed.size > 0;
+    }
+
+    /**
+     * Requests the global procedures to be refreshed.
+     */
+    requestGlobalProceduresRefresh () {
+        this._refreshGlobalProcedures = true;
+    }
+
+    /**
      * Get the procedure definition for a given name.
      * @param {?string} name Name of procedure to query.
      * @return {?string} ID of procedure definition.
@@ -4015,10 +4117,19 @@ class Runtime extends EventEmitter {
      */
     getProcedureParamNamesIdsAndDefaults (name) {
         for (const target of this.targets) {
+            const mutation = target.blocks.getProcedureMutation(name);
+            if (!mutation) continue;
+
+            const global = Cast.toBooleanSimple(mutation.global);
+            if (!global) continue;
+
             const definition = target.blocks.getProcedureParamNamesIdsAndDefaults(name);
-            if (definition) {
-                return definition;
+            // the prototype may exist, but the definition may be missing
+            if (!definition) {
+                log.warn('Missing global procedure', name, 'definition in target', target.id);
+                continue;
             }
+            return definition;
         }
         return null;
     }

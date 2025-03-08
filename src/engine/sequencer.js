@@ -1,5 +1,6 @@
 const Timer = require('../util/timer');
 const Thread = require('./thread');
+const Cast = require('../util/cast');
 const execute = require('./execute.js');
 const compilerExecute = require('../compiler/jsexecute');
 
@@ -342,6 +343,7 @@ class Sequencer {
         // When that set of blocks finishes executing, it will be popped
         // from the stack by the sequencer, returning control to the caller.
         thread.pushStack(definition, target);
+
         // In known warp-mode threads, only yield when time is up.
         if (thread.peekStackFrame().warpMode &&
             thread.warpTimer.timeElapsed() > Sequencer.WARP_TIME) {
@@ -355,17 +357,17 @@ class Sequencer {
                 definitionBlock.inputs.custom_block.block);
             let doWarp = false;
             if (innerBlock && innerBlock.mutation) {
-                const warp = innerBlock.mutation.warp;
-                if (typeof warp === 'boolean') {
-                    doWarp = warp;
-                } else if (typeof warp === 'string') {
-                    doWarp = JSON.parse(warp);
-                }
+                const warp = Cast.toBooleanSimple(innerBlock.mutation.warp);
 
-                const global = innerBlock.mutation.global;
-                if (target && (global === false)) {
-                    return;
-                }    
+                // by this stage, if the procedure isn't global,
+                // it would've been skipped in the search.
+
+                // const global = Cast.toBooleanSimple(innerBlock.mutation.global);
+                
+                // console.log(global, target);
+                // if (!!target && !global) { 
+                //     return;
+                // }
             }
             if (doWarp) {
                 thread.peekStackFrame().warpMode = true;
