@@ -4033,14 +4033,14 @@ class Runtime extends EventEmitter {
      */
     _updateGlobalProcedures (targets) {
         // get a list of targets to refresh, if we dont get any then just refresh them all
-        if (targets == undefined || target === null) targets = this.targets;
-        else targets = [].concat(target);
+        if (targets == undefined || targets === null) targets = this.targets;
+        else targets = [].concat(targets);
         targets = new Set(targets.map(t => t.id));
 
         // keep track of what procedures used to exist and exist now
         // (this is used for cleanup)
         const Pold = new Set(Object.keys(this._globalProcedures));
-        const Pnew = new Set();
+        const Pupdated = new Set(), Pnew = new Set();
         const globalProcedures = {};
 
         for (let i = 0; i < this.targets.length; i++) {
@@ -4054,15 +4054,25 @@ class Runtime extends EventEmitter {
             for (let j = 0; j < proccodes.length; j++) {
                 const proccode = proccodes[j];
                 const mutation = target.blocks.getProcedureMutation(proccode);
-                if (!mutation) continue;
+                if (!mutation) {
+                    if (Pold.has(proccode)) Pupdated.add(proccode);
+                    continue;
+                }
                 // Add the proccode to the list of existing procedures if it is global
-                if (!Cast.toBooleanSimple(mutation.global)) return;
-                Pnew.add(proccode);
-                globalProcedures[proccode] = target.id;
+                if (!Cast.toBooleanSimple(mutation.global))  {
+                    if (Pold.has(proccode)) Pupdated.add(proccode);
+                    continue;
+                }
+                Pupdated.add(proccode);
+                if (!Pold.has(proccode)) {
+                    Pnew.add(proccode);
+                    globalProcedures[proccode] = target.id;
+                }
             }
         }
 
-        const changed = Array.from(Pnew.difference(Pold));
+        const changed = Array.from(Pupdated);
+        debugger;
         if (changed.length > 0) {
             // if any procedures are missing or new then go through them
             for (let i = 0; i < changed.length; i++) {
@@ -4122,7 +4132,7 @@ class Runtime extends EventEmitter {
     getGlobalProcedureParamNamesAndIds (procedureCode) {
         const def = this.getGlobalProcedureDefinition(procedureCode);
         if (!def) return;
-        return def[0].blocks.getGlobalProcedureParamNamesAndIds(procedureCode);
+        return def[0].blocks.getProcedureParamNamesAndIds(procedureCode);
     }
 }
 

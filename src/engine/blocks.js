@@ -975,13 +975,13 @@ class Blocks {
         }
 
         // Make sure we remove ourself from the global procedures if we are one.
-        console.log('Deleting', block);
         if (
             block.opcode === 'procedures_prototype' &&
             block.mutation &&
             Cast.toBooleanSimple(block.mutation.global)
         ) {
-            this.runtime.requestGlobalProceduresRefresh();
+            // We want to run immediently as the block will be deleted before the update can happen if we dont.
+            this.runtime._updateGlobalProcedures();
         }
 
         // Delete children
