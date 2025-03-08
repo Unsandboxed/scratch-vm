@@ -4119,7 +4119,15 @@ class Runtime extends EventEmitter {
      */
     getGlobalProcedureParamNamesIdsAndDefaults (procedureCode) {
         const def = this.getGlobalProcedureDefinition(procedureCode);
-        if (!def[0]) return;
+        if (!def[0]) {
+            for (const target of this.targets) {
+                const mutation = target.blocks.getProcedureMutation(procedureCode);
+                if (!mutation) continue;
+                if (!!JSON.parse(mutation.global)) continue;
+                
+                return target.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
+            }
+        }
         return def[0].blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
     }
 
@@ -4130,7 +4138,15 @@ class Runtime extends EventEmitter {
      */
     getGlobalProcedureParamNamesAndIds (procedureCode) {
         const def = this.getGlobalProcedureDefinition(procedureCode);
-        if (!def[0]) return;
+        if (!def[0]) {
+            for (const target of this.targets) {
+                const mutation = target.blocks.getProcedureMutation(procedureCode);
+                if (!mutation) continue;
+                if (!!JSON.parse(mutation.global)) continue;
+                
+                return target.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
+            }
+        }
         return def[0].blocks.getProcedureParamNamesAndIds(procedureCode);
     }
 }
