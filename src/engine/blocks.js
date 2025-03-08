@@ -980,8 +980,7 @@ class Blocks {
             block.mutation &&
             Cast.toBooleanSimple(block.mutation.global)
         ) {
-            // We want to run immediently as the block will be deleted before the update can happen if we dont.
-            this.runtime._updateGlobalProcedures();
+            this.runtime.requestGlobalProceduresRefresh();
         }
 
         // Delete children

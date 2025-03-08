@@ -4040,7 +4040,7 @@ class Runtime extends EventEmitter {
         // keep track of what procedures used to exist and exist now
         // (this is used for cleanup)
         const Pold = new Set(Object.keys(this._globalProcedures));
-        const Pupdated = new Set(), Pnew = new Set();
+        let Premoved = new Set(), Pnew = new Set();
         const globalProcedures = {};
 
         for (let i = 0; i < this.targets.length; i++) {
@@ -4048,31 +4048,30 @@ class Runtime extends EventEmitter {
             if (!targets.has(target.id)) continue;
             // todo: check if this matters in the long run
             targets.delete(target.id);
-            // hack: update the cache so we can get all the info about our procedures
+            // hack: use the cache to get an easy list of currently existing procedure definitions.
             target.blocks.populateProcedureCache();
             const proccodes = Object.keys(target.blocks._cache.procedureDefinitions);
             for (let j = 0; j < proccodes.length; j++) {
                 const proccode = proccodes[j];
                 const mutation = target.blocks.getProcedureMutation(proccode);
                 if (!mutation) {
-                    if (Pold.has(proccode)) Pupdated.add(proccode);
+                    if (Pold.has(proccode)) Premoved.add(proccode);
                     continue;
                 }
                 // Add the proccode to the list of existing procedures if it is global
                 if (!Cast.toBooleanSimple(mutation.global))  {
-                    if (Pold.has(proccode)) Pupdated.add(proccode);
+                    if (Pold.has(proccode)) Premoved.add(proccode);
                     continue;
                 }
-                Pupdated.add(proccode);
                 if (!Pold.has(proccode)) {
                     Pnew.add(proccode);
                     globalProcedures[proccode] = target.id;
                 }
             }
+            Premoved = Premoved.union(new Set(this.getGlobalProceduresFromTarget(target.id)).difference(new Set(proccodes)));
         }
 
-        const changed = Array.from(Pupdated);
-        debugger;
+        const changed = Array.from(Pnew.union(Premoved));
         if (changed.length > 0) {
             // if any procedures are missing or new then go through them
             for (let i = 0; i < changed.length; i++) {
