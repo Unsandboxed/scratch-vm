@@ -624,7 +624,7 @@ class Runtime extends EventEmitter {
          */
         this.temporaryStorage = {};
         this.on(Runtime.PROJECT_START, () => {
-            this._doFefreshGlobalProcedures();
+            this._doRefreshGlobalProcedures();
             this.temporaryStorage = {};
         });
         this.on(Runtime.PROJECT_STOP_ALL, () => {
@@ -4010,7 +4010,7 @@ class Runtime extends EventEmitter {
      * @param {string} target The target (by id) to check.
      * @returns {string[]}
      */
-    getGlobalProceduresFromTarget(target) {
+    getGlobalProceduresFromTarget (target) {
         return Object.entries(this._globalProcedures).flatMap(([proccode, targetId]) => {
             if (targetId !== target) return [];
             return [proccode];
@@ -4022,7 +4022,7 @@ class Runtime extends EventEmitter {
      * @param {string} proccode The procedure proccode.
      * @returns {?string} The target ID.
      */
-    getGlobalProcedure(proccode) {
+    getGlobalProcedureTarget (proccode) {
         return this._globalProcedures[proccode];
     }
 
@@ -4086,52 +4086,36 @@ class Runtime extends EventEmitter {
         this._refreshGlobalProcedures = true;
     }
 
+    // Implement global methods for the procedure utilitys
+
     /**
      * Get the procedure definition for a given name.
-     * @param {?string} name Name of procedure to query.
-     * @return {?string} ID of procedure definition.
+     * @param {?string} name Procedure to query.
+     * @return {?[Target, string]} ID of procedure definition.
      */
-    getProcedureDefinition (name) {
-        for (const target of this.targets) {
-            const definition = target.blocks.getProcedureDefinition(name);
-            if (definition) {
-                return [target, definition];
-            }
-        }
-        return null;
-    }
-    
-    /**
-     * Get names and ids of parameters for the given procedure.
-     * @param {?string} name Name of procedure to query.
-     * @return {?Array.<string>} List of param names for a procedure.
-     */
-    getProcedureParamNamesAndIds (name) {
-        return this.getProcedureParamNamesIdsAndDefaults(name).slice(0, 2);
+    getGlobalProcedureDefinition (name) {
+        const target = this.getTargetById(this._globalProcedures[name]);
+        if (!target) return;
+        const definition = target.blocks.getProcedureDefinition(name);
+        if (!definition) return;
+        return [target, definition];
     }
 
     /**
      * Get names, ids, and defaults of parameters for the given procedure.
-     * @param {?string} name Name of procedure to query.
-     * @return {?Array.<string>} List of param names for a procedure.
+     * @param {string} procedureCode Procedure code for procedure to query.
+     * @return {?[Target, Array.<string>]} List of param names for a procedure.
      */
-    getProcedureParamNamesIdsAndDefaults (name) {
-        for (const target of this.targets) {
-            const mutation = target.blocks.getProcedureMutation(name);
-            if (!mutation) continue;
+    getGlobalProcedureParamNamesIdsAndDefaults (procedureCode) {
+        const 
+    }
 
-            const global = Cast.toBooleanSimple(mutation.global);
-            if (!global) continue;
-
-            const definition = target.blocks.getProcedureParamNamesIdsAndDefaults(name);
-            // the prototype may exist, but the definition may be missing
-            if (!definition) {
-                log.warn('Missing global procedure', name, 'definition in target', target.id);
-                continue;
-            }
-            return definition;
-        }
-        return null;
+    /**
+     * Get names and ids of parameters for the given procedure.
+     * @param {string} procedureCode Procedure code for procedure to query.
+     * @return {?[Target, Array.<string>]} List of param names for a procedure.
+     */
+    getGlobalProcedureParamNamesAndIds (procedureCode) {
     }
 }
 

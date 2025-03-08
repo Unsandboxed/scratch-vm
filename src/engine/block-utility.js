@@ -161,7 +161,7 @@ class BlockUtility {
      */
     getProcedureParamNamesAndIds (procedureCode) {
         const paramNamesAndIds = this.thread.blockContainer.getProcedureParamNamesAndIds(procedureCode);
-        if (!paramNamesAndIds) return this.sequencer.runtime.getProcedureParamNamesAndIds(procedureCode);
+        if (!paramNamesAndIds) return this.sequencer.runtime.getGlobalProcedureParamNamesAndIds(procedureCode);
         return paramNamesAndIds;
     }
 
@@ -172,7 +172,7 @@ class BlockUtility {
      */
     getProcedureParamNamesIdsAndDefaults (procedureCode) {
         const paramNamesIdsAndDefaults = this.thread.blockContainer.getProcedureParamNamesIdsAndDefaults(procedureCode);
-        if (!paramNamesIdsAndDefaults) return this.sequencer.runtime.getProcedureParamNamesIdsAndDefaults(procedureCode);
+        if (!paramNamesIdsAndDefaults) return this.sequencer.runtime.getGlobalProcedureParamNamesIdsAndDefaults(procedureCode);
         return paramNamesIdsAndDefaults;
     }
 

@@ -306,6 +306,7 @@ class Blocks {
      * @return {?Array.<string>} List of param names for a procedure.
      */
     getProcedureParamNamesAndIds (name) {
+        // slice(names, ids, defaults)
         return this.getProcedureParamNamesIdsAndDefaults(name).slice(0, 2);
     }
 
@@ -360,7 +361,6 @@ class Blocks {
                 return block.mutation;
             }
         }
-
         return null;
     }
 
