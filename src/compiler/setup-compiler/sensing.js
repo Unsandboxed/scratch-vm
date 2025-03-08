@@ -50,6 +50,7 @@ module.exports = function (compilerData, {
         case 'minute': return new IntermediateInput('sensing.currenttime.minute', this.type);
         case 'second': return new IntermediateInput('sensing.currenttime.second', this.type);
         case 'millisecond': return new IntermediateInput('sensing.currenttime.millisecond', this.type);
+        case 'timestamp': return new IntermediateInput('sensing.currenttime.timestamp', this.type);
         // @ts-ignore
         default: return this.createConstantInput(0);
         }
@@ -66,7 +67,8 @@ module.exports = function (compilerData, {
         'sensing.currenttime.hour',
         'sensing.currenttime.minute',
         'sensing.currenttime.second',
-        'sensing.currenttime.millisecond'
+        'sensing.currenttime.millisecond',
+        'sensing.currenttime.timestamp'
     ], [
         () => `(new Date().getFullYear())`,
         () => `(new Date().getMonth() + 1)`,
@@ -75,7 +77,8 @@ module.exports = function (compilerData, {
         () => `(new Date().getHours())`,
         () => `(new Date().getMinutes())`,
         () => `(new Date().getSeconds())`,
-        () => `(new Date().getMilliseconds())`
+        () => `(new Date().getMilliseconds())`,
+        () => `(new Date().valueOf())`
     ]);
     compilerData.registerBlock([
         'sensing_dayssince2000',
