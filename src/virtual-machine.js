@@ -1713,7 +1713,6 @@ class VirtualMachine extends EventEmitter {
             .map(k => this.editingTarget.comments[k])
             .filter(c => c.blockId === null);
 
-        // todo: fucking jesus christ holy shit
         let globalProcedureMutations = [];
         let localProcedureMutations = [];
         const globalProcedures = this.runtime._globalProcedures;
@@ -1727,14 +1726,10 @@ class VirtualMachine extends EventEmitter {
                 // this could be an email
                 const mutation = blocks.getProcedureMutation(globalProcedure);
                 const mutationXML = blocks.mutationToXML(mutation);
-                
-                console.log(globalProcedure, mutation, mutationXML);
 
                 globalProcedureMutations.push(mutationXML);
             }
         }
-
-        console.log(globalProcedureMutations, localProcedureMutations);
 
         const xmlString = `<xml xmlns="http://www.w3.org/1999/xhtml">
                             <variables>
