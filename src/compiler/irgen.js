@@ -315,7 +315,13 @@ class ScriptTreeGenerator {
      */
     getProcedureInfo (block) {
         const procedureCode = block.mutation.proccode;
-        const paramNamesIdsAndDefaults = this.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
+        let paramNamesIdsAndDefaults = this.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
+        if (!paramNamesIdsAndDefaults) {
+            console.log("params not found, falling back onto global procedure");
+            paramNamesIdsAndDefaults = this.runtime.getGlobalProcedureParamNamesIdsAndDefaults(procedureCode);
+        }
+
+        console.log(paramNamesIdsAndDefaults, this.runtime);
 
         if (paramNamesIdsAndDefaults === null) {
             return {opcode: StackOpcode.NOP, yields: false};
