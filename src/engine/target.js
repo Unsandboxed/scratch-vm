@@ -76,6 +76,37 @@ class Target extends EventEmitter {
          * @type {Object.<string, object>}
          */
         this.extensionStorage = {};
+
+        /**
+         * Pause status of this target
+         */
+        this.paused = this.runtime.paused;
+    }
+
+    /**
+     * Sets the "paused" status of this target
+     * @param {boolean} status The pause status of this sprite.
+     * @param {Array<import('./thread.js')>} threads An array of threads to pause,
+       (Note these must be owned by the sprite)
+     */
+    setPause (status, threads) {
+        status = status || false;
+        const statusChanged = status !== this.paused;
+        this.paused = status;
+        threads = threads || this.runtime.threads;
+        if (status) {
+            for (let i = threads.length - 1; i > -1; i--) {
+                if (threads[i].status === 5 /* STATUS_PAUSED */) continue;
+                if (threads[i].target.id !== this.id) continue;
+                this.runtime._pauseThread(threads[i]);
+            }
+        } else if (statusChanged) {
+            for (let i = threads.length - 1; i > -1; i--) {
+                if (threads[i].status !== 5 /* STATUS_PAUSED */) continue;
+                if (threads[i].target.id !== this.id) continue;
+                this.runtime._pauseThread(threads[i]);
+            }
+        }
     }
 
     /**

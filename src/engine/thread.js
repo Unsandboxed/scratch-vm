@@ -1,4 +1,5 @@
 const log = require('../util/log');
+const uid = require('../util/uid');
 
 /**
  * Recycle bin for empty stackFrame objects
@@ -70,6 +71,19 @@ class _StackFrame {
          * @type {object}
          */
         this.op = null;
+
+        /**
+         * Whether or not this frame can be broken by a break block
+         * @type {boolean}
+         */
+        this.isBreakable = false;
+
+        /**
+         * Whether or not this frame can be broken by a continue block
+         * (Kind of redundant but for the sake of it, its being added)
+         * @type {boolean}
+         */
+        this.isIterable = false;
     }
 
     /**
@@ -87,6 +101,8 @@ class _StackFrame {
         this.params = null;
         this.executionContext = null;
         this.op = null;
+        this.isBreakable = false;
+        this.isIterable = false;
 
         return this;
     }
@@ -153,6 +169,14 @@ class Thread {
          */
         this.stackFrames = [];
 
+
+        /**
+         * The previous status of the thread
+         * Used by the pause thread feature
+         * @type {number}
+         */
+        this.previousStatus = 0; /* Thread.STATUS_RUNNING */
+
         /**
          * Status of the thread, one of three states (below)
          * @type {number}
@@ -201,6 +225,17 @@ class Thread {
         this.triedToCompile = false;
 
         this.isCompiled = false;
+
+        /**
+         * The threads id
+         */
+        this.id = uid();
+        /**
+         * The threads "name"
+         * Initially this is the same as the ID
+         * (for extensions)
+         */
+        this.name = this.id;
 
         // compiler data
         // these values only make sense if isCompiled == true
@@ -261,6 +296,24 @@ class Thread {
      */
     static get STATUS_DONE () {
         return 4; // used by compiler
+    }
+
+    /**
+     * Thread status for a single-tick yield. This will not be cleared when the
+     * thread is resumed.
+     * @const
+     */
+    static get STATUS_PAUSED () {
+        return 5; // used by compiler
+    }
+
+    /**
+     * Sets the thread status
+     */
+    setStatus (newStatus) {
+        this.previousStatus = this.status;
+        this.status = newStatus;
+        // todo: Possibly make an event?
     }
 
     /**
@@ -340,9 +393,10 @@ class Thread {
         if (this.stack.length === 0) {
             // Clean up!
             this.requestScriptGlowInFrame = false;
-            this.status = Thread.STATUS_DONE;
+            this.setStatus(Thread.STATUS_DONE);
         }
     }
+
 
     /**
      * Get top stack item.
@@ -352,6 +406,106 @@ class Thread {
         return this.stack.length > 0 ? this.stack[this.stack.length - 1] : null;
     }
 
+    // Code borrowed from https://github.com/surv-is-a-dev/gallery/edit/main/site-files/extensions/0znzw/tests/breakContinue.js
+    // Commenting done by the Unsandboxed team.
+
+    /**
+     * Get the stackframe of the current loop.
+     * @param {Thread} thread
+     * @returns {boolean|Array<any, number>}
+     */
+    static getLoopFrame (thread, iter) {
+        const stackFrames = thread.stackFrames; const frameCount = stackFrames.length;
+        let loopFrameBlock = null; let loopFrameIndex;
+
+        for (let i = frameCount - 1; i >= 0; i--) {
+        // This check should literally never pass,
+        // but as GarboMuffin once said, "just in case".
+            if (i < 0) break;
+            if (!(stackFrames[i].isLoop || (iter ? stackFrames[i].isIterable : (
+                stackFrames[i].isBreakable || stackFrames[i].isIterable
+            )))) continue;
+            loopFrameBlock = stackFrames[i].op.id;
+            loopFrameIndex = i;
+            break;
+        }
+
+        if (!loopFrameBlock) {
+        // We are not inside of a loop block.
+            return false;
+        }
+
+        return [loopFrameBlock, loopFrameIndex];
+    }
+
+    /**
+     * TODO: Make these work for extensions that are not intepreter only.
+     * (It will probably require some compiler changes for extension blocks).
+     */
+    /**
+     * Break the current executing loop.
+     */
+    breakCurrentLoop () {
+        const blocks = this.blockContainer; const stackFrame = this.peekStackFrame();
+
+        if (!stackFrame._breakData) {
+            let frameData = false;
+            if (!(frameData = Thread.getLoopFrame(this))) return;
+            const loopFrameBlock = frameData[0];
+            const afterLoop = blocks.getBlock(loopFrameBlock).next;
+            stackFrame._breakData = {loopFrameBlock, afterLoop};
+        }
+
+        const {loopFrameBlock, afterLoop} = stackFrame._breakData;
+
+        // Remove any remaining blocks within the remaining stack
+        // until we reach the loop block.
+        let _;
+        while ((_ = this.stack.at(-1)) !== loopFrameBlock) {
+        // We don't want to exit from a procedure
+            if (blocks.getBlock(_)?.opcode === 'procedures_call') return;
+            this.popStack();
+        }
+
+        // Remove the remaining loop block.
+        this.popStack();
+
+        // If there's a block after the loop, continue
+        // from there.
+        if (afterLoop) {
+            this.pushStack(afterLoop);
+        }
+
+        // Clear breakData because it is stoopid
+        delete stackFrame._breakData;
+    }
+
+    /**
+     * Continue the current running loop onto the next iteration.
+     */
+    continueCurrentLoop () {
+        const blocks = this.blockContainer; const stackFrame = this.peekStackFrame();
+
+        if (!stackFrame._continueData) {
+            let frameData = false;
+            if (!(frameData = Thread.getLoopFrame(this))) return;
+            stackFrame._continueData = frameData[0];
+        }
+
+        // Pop the stack until we are at the loop block
+        // (we make sure to check if the stack exists though to prevent errors)
+        let _;
+        while (this.stack[0] && (_ = this.stack.at(-1)) !== stackFrame._continueData) {
+        // Same as break.
+            if (blocks.getBlock(_)?.opcode === 'procedures_call') return;
+            this.popStack();
+        }
+
+        // "run util.yield", and restart the loop block
+        this.setStatus(Thread.STATUS_YIELD);
+    }
+
+    // end of borrowed code
 
     /**
      * Get top stack frame.
@@ -451,7 +605,8 @@ class Thread {
         let callCount = 5; // Max number of enclosing procedure calls to examine.
         const sp = this.stackFrames.length - 1;
         for (let i = sp - 1; i >= 0; i--) {
-            const block = this.target.blocks.getBlock(this.stackFrames[i].op.id);
+            const block = this.target.blocks.getBlock(this.stackFrames[i].op.id) ||
+                this.target.runtime.flyoutBlocks.getBlock(this.stackFrames[i].op.id);
             if (block.opcode === 'procedures_call' &&
                 block.mutation.proccode === procedureCode) {
                 return true;
@@ -527,5 +682,7 @@ class Thread {
 
 // for extensions
 Thread._StackFrame = _StackFrame;
+// (super duper secret export shhh!!!)
+Thread._compile = () => require('../compiler/compile');
 
 module.exports = Thread;

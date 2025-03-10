@@ -33,6 +33,8 @@ class Scratch3ControlBlocks {
             control_if: this.if,
             control_if_else: this.ifElse,
             control_stop: this.stop,
+            control_break: this.break,
+            control_continue: this.continue,
             control_create_clone_of: this.createClone,
             control_delete_this_clone: this.deleteClone,
             control_get_counter: this.getCounter,
@@ -147,6 +149,14 @@ class Scratch3ControlBlocks {
         } else if (option === 'this script') {
             util.stopThisScript();
         }
+    }
+
+    break (_, util) {
+        util.thread.breakCurrentLoop();
+    }
+
+    continue (_, util) {
+        util.thread.continueCurrentLoop();
     }
 
     createClone (args, util) {

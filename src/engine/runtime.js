@@ -587,6 +587,30 @@ class Runtime extends EventEmitter {
         this.finishedAssetRequests = 0;
 
         /**
+         * Whether or not the project is currently paused
+         */
+        this.paused = false;
+
+        /**
+         * The audio settings (runtime)
+         */
+        this.audioSettings = {
+            muted: false,
+            volume: 1
+        };
+
+        /**
+         * A temporary storage area that gets cleared when the project starts or stops
+         */
+        this.temporaryStorage = {};
+        this.on(Runtime.PROJECT_START, () => {
+            this.temporaryStorage = {};
+        });
+        this.on(Runtime.PROJECT_STOP_ALL, () => {
+            this.temporaryStorage = {};
+        });
+
+        /**
          * Export some internal values for extensions.
          */
         this.exports = {
@@ -757,6 +781,14 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Event name when the project is paused
+     * @const {string}
+     */
+    static get PROJECT_PAUSE () {
+        return 'PROJECT_PAUSE';
+    }
+
+    /**
      * Event name when threads start running.
      * Used by the UI to indicate running status.
      * @const {string}
@@ -781,6 +813,14 @@ class Runtime extends EventEmitter {
      */
     static get PROJECT_STOP_ALL () {
         return 'PROJECT_STOP_ALL';
+    }
+
+    /**
+     * Event name for when the volume is changed
+     * @const {string}
+     */
+    static get VOLUME_CHANGE () {
+        return 'VOLUME_CHANGE';
     }
 
     /**
@@ -1179,7 +1219,9 @@ class Runtime extends EventEmitter {
 
                 // Emit events for custom shape types from extension
                 this.emit(Runtime.EXTENSION_SHAPE_ADDED, {
-                    implementation: blockShapeInfo
+                    name: blockShapeName,
+                    implementation: blockShapeInfo,
+                    categoryInfo
                 });
             }
         }
@@ -1351,6 +1393,7 @@ class Runtime extends EventEmitter {
                 colour: acceptInput ? '#FFFFFF' : categoryInfo.color1,
                 colourSecondary: acceptInput ? '#FFFFFF' : categoryInfo.color2,
                 colourTertiary: acceptInput ? '#FFFFFF' : categoryInfo.color3,
+                colourQuaternary: acceptInput ? '#FFFFFF' : categoryInfo.color4,
                 outputShape: ScratchBlocksConstants.OUTPUT_SHAPE_ROUND,
                 args0: [
                     {
@@ -1403,6 +1446,7 @@ class Runtime extends EventEmitter {
                 colour: categoryInfo.color1,
                 colourSecondary: categoryInfo.color2,
                 colourTertiary: categoryInfo.color3,
+                colourQuaternary: categoryInfo.color4,
                 outputShape: outputShape,
                 args0: [
                     {
@@ -1458,7 +1502,8 @@ class Runtime extends EventEmitter {
             extensions: [],
             colour: blockInfo.color1 ?? categoryInfo.color1,
             colourSecondary: blockInfo.color2 ?? categoryInfo.color2,
-            colourTertiary: blockInfo.color3 ?? categoryInfo.color3
+            colourTertiary: blockInfo.color3 ?? categoryInfo.color3,
+            colourQuaternary: blockInfo.color4 ?? categoryInfo.color4
         };
         const context = {
             // TODO: store this somewhere so that we can map args appropriately after translation.
@@ -1484,7 +1529,8 @@ class Runtime extends EventEmitter {
         if (
             blockJSON.colour === defaultExtensionColors[0] &&
             blockJSON.colourSecondary === defaultExtensionColors[1] &&
-            blockJSON.colourTertiary === defaultExtensionColors[2]
+            blockJSON.colourTertiary === defaultExtensionColors[2] &&
+            blockJSON.colourQuaternary === defaultExtensionColors[2]
         ) {
             blockJSON.extensions.push('default_extension_colors');
         }
@@ -2143,6 +2189,13 @@ class Runtime extends EventEmitter {
      * @param {!AudioEngine} audioEngine The audio engine to attach
      */
     attachAudioEngine (audioEngine) {
+        if (audioEngine.inputNode && audioEngine.inputNode.gain) {
+            this.audioSettings.volume = audioEngine.inputNode.gain.value;
+            this.audioSettings.muted = this.audioSettings.volume === 0;
+        } else {
+            this.audioSettings.muted = false;
+            this.audioSettings.volume = 1;
+        }
         this.audioEngine = audioEngine;
     }
 
@@ -2202,6 +2255,76 @@ class Runtime extends EventEmitter {
     // -----------------------------------------------------------------------------
     // -----------------------------------------------------------------------------
 
+    _sortThreadsToTarget () {
+        const targets = Object.create(null);
+        for (let i = this.threads.length - 1; i > -1; i--) {
+            const thread = this.threads[i];
+            targets[thread.target.id] ??= {target: thread.target, threads: []};
+            targets[thread.target.id].threads.push(thread);
+        }
+        return targets;
+    }
+
+    /**
+     * Set the "paused" status of the current project.
+     * @param {boolean} status The pause status of the project.
+     */
+    setPause (status) {
+        status = status || false;
+        const didChange = this.paused !== status;
+        this.paused = status;
+        const targets = Object.values(this._sortThreadsToTarget());
+        // Pause all the targets with RUNNING threads
+        for (let i = targets.length - 1; i > -1; i--) {
+            const target = targets[i];
+            if (target.target.paused === status) continue;
+            target.target.setPause(status, target.threads);
+        }
+        // The for loop above will miss any target without any threads running
+        // So we iterate over all the targets and pause them
+        for (let i = this.targets.length - 1; i > -1; i--) {
+            // If its paused then we can assume its threads are paused
+            if (this.targets[i].paused === status) continue;
+            // Unlike the above for loop we don't have a list of threads to pause
+            // so we pass an empty array, it is safe to assume there are no threads unpaused
+            // after the above for loop
+            this.targets[i].setPause(status, []);
+        }
+        if (status) {
+            if (!this.ioDevices.clock._paused) {
+                this.ioDevices.clock.pause();
+            }
+            this.audioEngine.audioContext.suspend();
+        } else if (didChange) {
+            this.audioEngine.audioContext.resume();
+            this.ioDevices.clock.resume();
+        }
+        this.emit(Runtime.PROJECT_PAUSE, status);
+    }
+
+    /*
+     * Sets the volume on the audio engine for the project
+     * @param {number} volume The volume (in a 0.00 - 1.00 range)
+     * @returns {boolean} Whether or not the volume was actually set succesfully
+     * This function also emits an event for the GUI. Please use this as it updates
+     * other properties and prevents them from becoming dysynced. This will not
+     * update audioSettings.volume if the new volume is 0 (muted), pass -1 to unmute the value.
+     */
+    setVolume (volume) {
+        if (volume === this.audioSettings.volume) return false;
+        if (volume === -1 && this.audioSettings.muted) {
+            volume = this.audioSettings.volume;
+        }
+        // It is safe to assume the engine is setup
+        this.audioSettings.muted = volume === 0;
+        if (volume !== 0) {
+            this.audioSettings.volume = volume;
+        }
+        this.audioEngine.inputNode.gain.value = volume;
+        this.emit(Runtime.VOLUME_CHANGE, volume);
+        return true;
+    }
+
     /**
      * Create a thread and push it to the list of threads.
      * @param {!string} id ID of block that starts the stack.
@@ -2213,6 +2336,15 @@ class Runtime extends EventEmitter {
      */
     _pushThread (id, target, opts) {
         const thread = new Thread(id);
+        if (
+            // If the project or sprite is paused then the new thread should be paused
+            (this.paused ||
+             target.paused) &&
+            // We dont want to pause threads in the flyout
+            target.blocks.getBlock(id)
+        ) {
+            thread.status = Thread.STATUS_PAUSED;
+        }
         thread.target = target;
         thread.stackClick = Boolean(opts && opts.stackClick);
         thread.updateMonitor = Boolean(opts && opts.updateMonitor);
@@ -2274,6 +2406,20 @@ class Runtime extends EventEmitter {
         this.threads.push(thread);
         return thread;
     }
+
+    /**
+     * Pause a thread, this toggles the pause status!
+     * PLEASE check the status before you use this!
+     * @param {!Thread} thread Thread object to restart.
+     */
+    _pauseThread (thread) {
+        if (thread.status === 5 /* STATUS_PAUSED */) {
+            thread.setStatus(thread.previousStatus);
+        } else {
+            thread.setStatus(5); // STATUS_PAUSED
+        }
+    }
+    _;
 
     emitCompileError (target, error) {
         this.emit(Runtime.COMPILE_ERROR, target, error);
@@ -2666,6 +2812,7 @@ class Runtime extends EventEmitter {
      * Start all threads that start with the green flag.
      */
     greenFlag () {
+        // pausing is done in stopAll
         this.stopAll();
         this.emit(Runtime.PROJECT_START);
         this.updateCurrentMSecs();
@@ -2704,6 +2851,7 @@ class Runtime extends EventEmitter {
         // Remove all remaining threads from executing in the next tick.
         this.threads = [];
         this.threadMap.clear();
+        this.setPause(false);
 
         this.resetRunId();
     }
@@ -3155,7 +3303,7 @@ class Runtime extends EventEmitter {
     storeProjectOptions () {
         const options = this.generateDifferingProjectOptions();
         // TODO: translate
-        const text = `Configuration for https://turbowarp.org/\nYou can move, resize, and minimize this comment, but don't edit it by hand. This comment can be deleted to remove the stored settings.\n${ExtendedJSON.stringify(options)}${COMMENT_CONFIG_MAGIC}`;
+        const text = `Configuration for https://alpha.unsandboxed.org/\nYou can move, resize, and minimize this comment, but don't edit it by hand. This comment can be deleted to remove the stored settings.\n${ExtendedJSON.stringify(options)}${COMMENT_CONFIG_MAGIC}`;
         const existingComment = this.findProjectOptionsComment();
         if (existingComment) {
             existingComment.text = text;
@@ -3612,7 +3760,7 @@ class Runtime extends EventEmitter {
                 label: extensionBlockInfo.text
             };
         }
-        
+
         // TODO: we may want to format the label in a locale-specific way.
         return {
             category: 'extension', // This assumes that all extensions have the same monitor color.

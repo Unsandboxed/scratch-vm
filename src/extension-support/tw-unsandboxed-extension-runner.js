@@ -1,4 +1,5 @@
 const ScratchCommon = require('./tw-extension-api-common');
+const createUnsandboxed = require('./usb-unsandboxed-object');
 const createScratchX = require('./tw-scratchx-compatibility-layer');
 const AsyncLimiter = require('../util/async-limiter');
 const createTranslate = require('./tw-l10n');
@@ -22,18 +23,25 @@ const parseURL = url => {
 /**
  * Sets up the global.Scratch API for an unsandboxed extension.
  * @param {VirtualMachine} vm
+ * @param {boolean} pre Whether or not this is a "pre-mature" load
  * @returns {Promise<object[]>} Resolves with a list of extension objects when Scratch.extensions.register is called.
  */
-const setupUnsandboxedExtensionAPI = vm => new Promise(resolve => {
+const setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
+    pre = pre || false;
     const extensionObjects = [];
-    const register = extensionObject => {
+    const register = pre ? (() => {
+        throw new Error('Unable to register extension as this is a pre-mature instance.');
+    }) : (extensionObject => {
         extensionObjects.push(extensionObject);
         resolve(extensionObjects);
-    };
+    });
 
-    // Create a new copy of global.Scratch for each extension
+    // Create a new copy of global.Scratch and global.Unsandboxed for each extension
     const Scratch = Object.assign({}, global.Scratch || {}, ScratchCommon);
+    const Unsandboxed = Object.assign({}, createUnsandboxed());
     Scratch.extensions = {
+        isPremature: pre,
+        isUSB: true,
         unsandboxed: true,
         register
     };
@@ -96,6 +104,19 @@ const setupUnsandboxedExtensionAPI = vm => new Promise(resolve => {
         return vm.securityManager.canEmbed(parsed.href);
     };
 
+    Scratch.canDownload = async (url, name) => {
+        const parsed = parseURL(url);
+        if (!parsed) {
+            return false;
+        }
+        // Always reject protocols that would allow code execution.
+        // eslint-disable-next-line no-script-url
+        if (parsed.protocol === 'javascript:') {
+            return false;
+        }
+        return vm.securityManager.canDownload(url, name);
+    };
+
     Scratch.fetch = async (url, options) => {
         const actualURL = url instanceof Request ? url.url : url;
 
@@ -127,12 +148,33 @@ const setupUnsandboxedExtensionAPI = vm => new Promise(resolve => {
         location.href = url;
     };
 
+    Scratch.download = async (url, name) => {
+        if (!await Scratch.canDownload(url, name)) {
+            throw new Error(`Permission to download ${name} rejected.`);
+        }
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = name;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    };
+
     Scratch.translate = createTranslate(vm);
 
-    global.Scratch = Scratch;
-    global.ScratchExtensions = createScratchX(Scratch);
+    const ScratchExtensions = createScratchX(Scratch);
 
-    vm.emit('CREATE_UNSANDBOXED_EXTENSION_API', Scratch);
+    // We want Scratch.gui even when it is loaded prematurly as it gives access to some fancy API's in the GUI
+    vm.emit('CREATE_UNSANDBOXED_EXTENSION_API', Scratch, pre);
+    vm.emit('CREATE_USB_API', Unsandboxed, pre);
+
+    if (pre) {
+        resolve({Scratch, ScratchExtensions, Unsandboxed});
+    } else {
+        global.Unsandboxed = Unsandboxed;
+        global.Scratch = Scratch;
+        global.ScratchExtensions = ScratchExtensions;
+    }
 });
 
 /**

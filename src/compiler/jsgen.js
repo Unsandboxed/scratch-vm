@@ -361,7 +361,7 @@ const isSafeConstantForEqualsOptimization = input => {
  * A frame contains some information about the current substack being compiled.
  */
 class Frame {
-    constructor (isLoop) {
+    constructor (isLoop, isBreakable) {
         /**
          * Whether the current stack runs in a loop (while, for)
          * @type {boolean}
@@ -370,10 +370,23 @@ class Frame {
         this.isLoop = isLoop;
 
         /**
+         * For compatibility with StackFrame
+         * @type {boolean}
+         */
+        this.isIterable = this.isLoop;
+
+        /**
          * Whether the current block is the last block in the stack.
          * @type {boolean}
          */
         this.isLastBlock = false;
+
+        /**
+         * Whether or not the current stack can be broken by continue or break
+         * @type {boolean}
+         * @readonly
+         */
+        this.isBreakable = isLoop ? true : (isBreakable ?? false);
     }
 }
 
@@ -479,7 +492,9 @@ class JSGenerator {
                 source += `switch (${branchVariable}.branch) {\n`;
                 for (const index in node.substacks) {
                     source += `case ${+index}: {\n`;
-                    source += this.descendStackForSource(node.substacks[index], new Frame(false));
+                    const _frame = new Frame(false, node.breakable);
+                    _frame.isIterable = node.iterable;
+                    source += this.descendStackForSource(node.substacks[index], _frame);
                     source += `break;\n`;
                     source += `}\n`; // close case
                 }
@@ -875,7 +890,9 @@ class JSGenerator {
                 this.source += `switch (${branchVariable}.branch) {\n`;
                 for (const index in node.substacks) {
                     this.source += `case ${+index}: {\n`;
-                    this.descendStack(node.substacks[index], new Frame(false));
+                    const _frame = new Frame(false, node.breakable);
+                    _frame.isIterable = node.iterable;
+                    this.descendStack(node.substacks[index], _frame);
                     this.source += `break;\n`;
                     this.source += `}\n`; // close case
                 }
@@ -945,6 +962,16 @@ class JSGenerator {
         case 'control.stopScript':
             this.stopScript();
             break;
+        case 'control.break':
+            if (this.frames.find(frame =>
+                frame.isLoop ||
+                frame.isBreakable ||
+                frame.isIterable
+            )) this.source += 'break;\n';
+            break;
+        case 'control.continue':
+            if (this.frames.find(frame => frame.isLoop || frame.isIterable)) this.source += 'continue;\n';
+            break;
         case 'control.wait': {
             const duration = this.localVariables.next();
             this.source += `thread.timer = timer();\n`;
@@ -981,7 +1008,7 @@ class JSGenerator {
             // eslint-disable-next-line no-case-declarations
             const previousWarp = this.isWarp;
             this.isWarp = true;
-            this.descendStack(node.code, new Frame(false, 'control.allAtOnce'));
+            this.descendStack(node.code, new Frame(false));
             this.isWarp = previousWarp;
             break;
         }
@@ -1487,6 +1514,8 @@ class JSGenerator {
         }
         const opcodeFunction = this.evaluateOnce(`runtime.getOpcodeFunction("${sanitize(opcode)}")`);
         result += `}, ${opcodeFunction}, ${this.isWarp}, ${setFlags}, "${sanitize(node.id)}", ${frameName})`;
+
+        this.yielded();
 
         return result;
     }

@@ -108,6 +108,9 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.PROJECT_START, () => {
             this.emit(Runtime.PROJECT_START);
         });
+        this.runtime.on(Runtime.PROJECT_PAUSE, paused => {
+            this.emit(Runtime.PROJECT_PAUSE, paused);
+        });
         this.runtime.on(Runtime.PROJECT_RUN_START, () => {
             this.emit(Runtime.PROJECT_RUN_START);
         });
@@ -235,6 +238,7 @@ class VirtualMachine extends EventEmitter {
             Sprite,
             RenderedTarget,
             JSZip,
+            Variable,
             Buffer,
             Base64: Base64Util,
             RESERVED_NAMES,

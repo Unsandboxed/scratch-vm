@@ -61,7 +61,7 @@ const handleReport = function (resolvedValue, sequencer, thread, blockCached, la
     if (isHat) {
         // Hat predicate was evaluated.
         if (thread.stackClick) {
-            thread.status = Thread.STATUS_RUNNING;
+            thread.setStatus(Thread.STATUS_RUNNING);
         } else if (sequencer.runtime.getIsEdgeActivatedHat(opcode)) {
             // If this is an edge-activated hat, only proceed if the value is
             // true and used to be false, or the stack was activated explicitly
@@ -74,13 +74,13 @@ const handleReport = function (resolvedValue, sequencer, thread, blockCached, la
 
             const edgeWasActivated = hasOldEdgeValue ? (!oldEdgeValue && resolvedValue) : resolvedValue;
             if (edgeWasActivated) {
-                thread.status = Thread.STATUS_RUNNING;
+                thread.setStatus(Thread.STATUS_RUNNING);
             } else {
                 sequencer.retireThread(thread);
             }
         } else if (resolvedValue) {
             // Predicate returned true: allow the script to run.
-            thread.status = Thread.STATUS_RUNNING;
+            thread.setStatus(Thread.STATUS_RUNNING);
         } else {
             // Predicate returned false: do not allow script to run
             sequencer.retireThread(thread);
@@ -108,7 +108,7 @@ const handleReport = function (resolvedValue, sequencer, thread, blockCached, la
             }
         }
         // Finished any yields.
-        thread.status = Thread.STATUS_RUNNING;
+        thread.setStatus(Thread.STATUS_RUNNING);
     }
 };
 
@@ -144,7 +144,7 @@ const handlePromiseResolution = (resolvedValue, sequencer, thread, blockCached, 
 const handlePromise = (primitiveReportedValue, sequencer, thread, blockCached, lastOperation) => {
     if (thread.status === Thread.STATUS_RUNNING) {
         // Primitive returned a promise; automatically yield thread.
-        thread.status = Thread.STATUS_PROMISE_WAIT;
+        thread.setStatus(Thread.STATUS_PROMISE_WAIT);
     }
     // Promise handlers
     primitiveReportedValue.then(resolvedValue => {
