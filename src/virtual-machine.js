@@ -1714,21 +1714,18 @@ class VirtualMachine extends EventEmitter {
             .filter(c => c.blockId === null);
 
         let globalProcedureMutations = [];
-        let localProcedureMutations = [];
+        const localProcedureMutations = this.editingTarget.blocks.getLocalProcedureMutationXMLs();
         const globalProcedures = this.runtime._globalProcedures;
 
-        if (globalProcedures) {
-            localProcedureMutations = this.editingTarget.blocks.getLocalProcedureMutationXMLs();
-            for (const globalProcedure of Object.keys(globalProcedures)) {
-                const target = this.runtime.getTargetById(globalProcedures[globalProcedure]);
-                const blocks = target.blocks;
+        for (const globalProcedure of Object.keys(globalProcedures)) {
+            const target = this.runtime.getTargetById(globalProcedures[globalProcedure]);
+            const blocks = target.blocks;
 
-                // this could be an email
-                const mutation = blocks.getProcedureMutation(globalProcedure);
-                const mutationXML = blocks.mutationToXML(mutation);
+            // this could be an email
+            const mutation = blocks.getProcedureMutation(globalProcedure);
+            const mutationXML = blocks.mutationToXML(mutation);
 
-                globalProcedureMutations.push(mutationXML);
-            }
+            globalProcedureMutations.push(mutationXML);
         }
 
         const xmlString = `<xml xmlns="http://www.w3.org/1999/xhtml">
@@ -1744,7 +1741,7 @@ class VirtualMachine extends EventEmitter {
                             ${this.editingTarget.blocks.toXML(this.editingTarget.comments)}
                         </xml>`;
 
-        this.emit('workspaceUpdate', {xml: xmlString});
+        console.log(this.emit('workspaceUpdate', {xml: xmlString}));
     }
 
     /**
