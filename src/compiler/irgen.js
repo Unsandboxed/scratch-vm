@@ -234,99 +234,6 @@ class ScriptTreeGenerator {
      * @returns {IntermediateStackBlock} Compiled node for this block.
      */
     descendStackedBlock (block) {
-<<<<<<< HEAD
-        switch (block.opcode) {
-        case 'argument_statement': {
-            const name = block.fields.VALUE.value;
-            const index = this.script.arguments.lastIndexOf(name);
-            if (index === -1) {
-                return {
-                    kind: 'noop'
-                };
-            }
-            this.script.yields = true;
-            return {
-                kind: 'procedures.statement',
-                name: name
-            };
-        }
-        case 'control_all_at_once':
-            // In Unsandboxed, attempts to run the script in 1 frame.
-            return {
-                kind: 'control.allAtOnce',
-                condition: {
-                    kind: 'constant',
-                    value: true
-                },
-                code: this.descendSubstack(block, 'SUBSTACK')
-            };
-        case 'control_clear_counter':
-            return {
-                kind: 'counter.clear'
-            };
-        case 'control_create_clone_of':
-            return {
-                kind: 'control.createClone',
-                target: this.descendInputOfBlock(block, 'CLONE_OPTION')
-            };
-        case 'control_delete_this_clone':
-            this.script.yields = true;
-            return {
-                kind: 'control.deleteClone'
-            };
-        case 'control_forever':
-            this.analyzeLoop();
-            return {
-                kind: 'control.while',
-                condition: {
-                    kind: 'constant',
-                    value: true
-                },
-                do: this.descendSubstack(block, 'SUBSTACK')
-            };
-        case 'control_for_each':
-            this.analyzeLoop();
-            return {
-                kind: 'control.for',
-                variable: this.descendVariable(block, 'VARIABLE', SCALAR_TYPE),
-                count: this.descendInputOfBlock(block, 'VALUE'),
-                do: this.descendSubstack(block, 'SUBSTACK')
-            };
-        case 'control_if':
-            return {
-                kind: 'control.if',
-                condition: this.descendInputOfBlock(block, 'CONDITION'),
-                whenTrue: this.descendSubstack(block, 'SUBSTACK'),
-                whenFalse: []
-            };
-        case 'control_if_else':
-            return {
-                kind: 'control.if',
-                condition: this.descendInputOfBlock(block, 'CONDITION'),
-                whenTrue: this.descendSubstack(block, 'SUBSTACK'),
-                whenFalse: this.descendSubstack(block, 'SUBSTACK2')
-            };
-        case 'control_incr_counter':
-            return {
-                kind: 'counter.increment'
-            };
-        case 'control_repeat':
-            this.analyzeLoop();
-            return {
-                kind: 'control.repeat',
-                times: this.descendInputOfBlock(block, 'TIMES'),
-                do: this.descendSubstack(block, 'SUBSTACK')
-            };
-        case 'control_repeat_until': {
-            this.analyzeLoop();
-            // Dirty hack: automatically enable warp timer for this block if it uses timer
-            // This fixes project that do things like "repeat until timer > 0.5"
-            this.usesTimer = false;
-            const condition = this.descendInputOfBlock(block, 'CONDITION');
-            const needsWarpTimer = this.usesTimer;
-            if (needsWarpTimer) {
-                this.script.yields = true;
-=======
         if (this.runtime.compilerData.stacks.has(block.opcode)) {
             block = this.runtime.compilerData.stacks.get(block.opcode).stg(this, block, null, false);
             return block;
@@ -336,7 +243,6 @@ class ScriptTreeGenerator {
             // It might be a non-compiled primitive from a standard category
             if (compatBlocks.stacked.includes(block.opcode)) {
                 return this.descendCompatLayerStack(block);
->>>>>>> origin/develop
             }
             // It might be an extension block.
             const blockInfo = this.getBlockInfo(block.opcode);
@@ -638,71 +544,6 @@ class ScriptTreeGenerator {
         for (const name of Object.keys(block.fields)) {
             fields[name] = block.fields[name].value;
         }
-<<<<<<< HEAD
-
-        const definitionId = this.blocks.getProcedureDefinition(procedureCode);
-        const definitionBlock = this.blocks.getBlock(definitionId);
-        if (!definitionBlock) {
-            return {
-                kind: 'noop'
-            };
-        }
-        const innerDefinition = this.blocks.getBlock(definitionBlock.inputs.custom_block.block);
-
-        let isWarp = this.script.isWarp;
-        if (!isWarp) {
-            if (innerDefinition && innerDefinition.mutation) {
-                const warp = innerDefinition.mutation.warp;
-                if (typeof warp === 'boolean') {
-                    isWarp = warp;
-                } else if (typeof warp === 'string') {
-                    isWarp = JSON.parse(warp);
-                }
-            }
-        }
-
-        const variant = generateProcedureVariant(procedureCode, isWarp);
-
-        if (!this.script.dependedProcedures.includes(variant)) {
-            this.script.dependedProcedures.push(variant);
-        }
-
-        // Non-warp direct recursion yields.
-        if (!this.script.isWarp) {
-            if (procedureCode === this.script.procedureCode) {
-                this.script.yields = true;
-            }
-        }
-
-        const substacks = {};
-        const args = [];
-        for (let i = 0; i < paramIds.length; i++) {
-            let value;
-
-            if (paramIds[i].startsWith('SUBSTACK')) {
-                substacks[paramNames[i]] = this.descendSubstack(block, paramIds[i]);
-                continue;
-            }
-
-            if (block.inputs[paramIds[i]] && block.inputs[paramIds[i]].block) {
-                value = this.descendInputOfBlock(block, paramIds[i]);
-            } else {
-                value = {
-                    kind: 'constant',
-                    value: paramDefaults[i]
-                };
-            }
-            args.push(value);
-        }
-
-        return {
-            kind: 'procedures.call',
-            code: procedureCode,
-            variant,
-            arguments: args,
-            substacks
-        };
-=======
         return new IntermediateInput(InputOpcode.COMPATIBILITY_LAYER, InputType.ANY, {
             opcode: block.opcode,
             id: block.id,
@@ -711,7 +552,6 @@ class ScriptTreeGenerator {
             breakable: false,
             iterable: false
         }, true);
->>>>>>> origin/develop
     }
 
     /**
