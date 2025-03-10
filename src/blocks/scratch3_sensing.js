@@ -257,6 +257,7 @@ class Scratch3SensingBlocks {
         case 'minute': return date.getMinutes();
         case 'second': return date.getSeconds();
         case 'millisecond': return date.getMilliseconds();
+        case 'timestamp': return date.valueOf();
         }
         return 0;
     }
