@@ -4103,13 +4103,13 @@ class Runtime extends EventEmitter {
 
     /**
      * Get the procedure definition for a given name.
-     * @param {?string} name Procedure to query.
+     * @param {?string} procedureCode Procedure to query.
      * @return {[?Target, ?string]} ID of procedure definition.
      */
-    getGlobalProcedureDefinition (name) {
-        const target = this.getTargetById(this._globalProcedures[name]);
+    getGlobalProcedureDefinition (procedureCode) {
+        const target = this.getTargetById(this._globalProcedures[procedureCode]);
         if (!target) return [null, null];
-        const definition = target.blocks.getProcedureDefinition(name);
+        const definition = target.blocks.getProcedureDefinition(procedureCode);
         if (!definition) return [null, null];
         return [target, definition];
     }
@@ -4121,7 +4121,15 @@ class Runtime extends EventEmitter {
      */
     getGlobalProcedureParamNamesIdsAndDefaults (procedureCode) {
         const def = this.getGlobalProcedureDefinition(procedureCode);
-        if (!def) return;
+        if (!def[0]) {
+            for (const target of this.targets) {
+                const mutation = target.blocks.getProcedureMutation(procedureCode);
+                if (!mutation) continue;
+                if (!!JSON.parse(mutation.global)) continue;
+                
+                return target.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
+            }
+        }
         return def[0].blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
     }
 
@@ -4132,7 +4140,15 @@ class Runtime extends EventEmitter {
      */
     getGlobalProcedureParamNamesAndIds (procedureCode) {
         const def = this.getGlobalProcedureDefinition(procedureCode);
-        if (!def) return;
+        if (!def[0]) {
+            for (const target of this.targets) {
+                const mutation = target.blocks.getProcedureMutation(procedureCode);
+                if (!mutation) continue;
+                if (!!JSON.parse(mutation.global)) continue;
+                
+                return target.blocks.getProcedureParamNamesAndIds(procedureCode);
+            }
+        }
         return def[0].blocks.getProcedureParamNamesAndIds(procedureCode);
     }
 }

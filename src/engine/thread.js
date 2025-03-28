@@ -627,8 +627,8 @@ class Thread {
         let callCount = 5; // Max number of enclosing procedure calls to examine.
         const sp = this.stackFrames.length - 1;
         for (let i = sp - 1; i >= 0; i--) {
-            const block = this.blockContainer.getBlock(this.stackFrames[i].op.id) ||
-                this.target.runtime.flyoutBlocks.getBlock(this.stackFrames[i].op.id);
+            const blockId = this.stack[i];
+            const block = this.stackFrames[i].targetContext.blocks.getBlock(blockId);
             if (block.opcode === 'procedures_call' &&
                 block.mutation.proccode === procedureCode) {
                 return true;

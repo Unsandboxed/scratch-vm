@@ -366,6 +366,25 @@ class Blocks {
     }
 
     /**
+     * Get all the mutation XMLs for all local procedures.
+     */
+    getLocalProcedureMutationXMLs () {
+        let mutations = [];
+        for (const id in this._blocks) {
+            const block = this._blocks[id];
+
+            if (block.opcode === 'procedures_prototype') {
+                const global = JSON.parse(block.mutation.global);
+                if (global) continue;
+
+                const mutation = this.mutationToXML(block.mutation);
+                mutations.push(mutation);
+            }
+        }
+        return mutations;
+    }
+
+    /**
      * tw: Setup the procedureParamNames and procedureDefinitions caches all at once.
      * This makes subsequent calls to these methods faster.
      */

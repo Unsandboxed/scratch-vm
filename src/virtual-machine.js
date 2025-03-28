@@ -1713,16 +1713,35 @@ class VirtualMachine extends EventEmitter {
             .map(k => this.editingTarget.comments[k])
             .filter(c => c.blockId === null);
 
+        let globalProcedureMutations = [];
+        const localProcedureMutations = this.editingTarget.blocks.getLocalProcedureMutationXMLs();
+        const globalProcedures = this.runtime._globalProcedures;
+
+        for (const globalProcedure of Object.keys(globalProcedures)) {
+            const target = this.runtime.getTargetById(globalProcedures[globalProcedure]);
+            const blocks = target.blocks;
+
+            // this could be an email
+            const mutation = blocks.getProcedureMutation(globalProcedure);
+            const mutationXML = blocks.mutationToXML(mutation);
+
+            globalProcedureMutations.push(mutationXML);
+        }
+
         const xmlString = `<xml xmlns="http://www.w3.org/1999/xhtml">
                             <variables>
                                 ${globalVariables.map(v => v.toXML()).join()}
                                 ${localVariables.map(v => v.toXML(true)).join()}
                             </variables>
+                            <procedures>
+                                ${globalProcedureMutations.join()}
+                                ${localProcedureMutations.join()}
+                            </procedures>
                             ${workspaceComments.map(c => c.toXML()).join()}
                             ${this.editingTarget.blocks.toXML(this.editingTarget.comments)}
                         </xml>`;
 
-        this.emit('workspaceUpdate', {xml: xmlString});
+        console.log(this.emit('workspaceUpdate', {xml: xmlString}));
     }
 
     /**
