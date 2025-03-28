@@ -795,6 +795,24 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Event name when the project is paused
+     * @const {string}
+     * @depricated
+     */
+    static get RUNTIME_PAUSED () {
+        return 'RUNTIME_PAUSED';
+    }
+
+    /**
+     * Event name when the project is unpaused
+     * @const {string}
+     * @depricated
+     */
+    static get RUNTIME_UNPAUSED () {
+        return 'RUNTIME_UNPAUSED';
+    }
+
+    /**
      * Event name when threads start running.
      * Used by the UI to indicate running status.
      * @const {string}
@@ -2306,7 +2324,14 @@ class Runtime extends EventEmitter {
             this.audioEngine.audioContext.resume();
             this.ioDevices.clock.resume();
         }
+        if (!didChange) return;
         this.emit(Runtime.PROJECT_PAUSE, status);
+        // https://github.com/Unsandboxed/addons/pull/2/commits/c237cfad6e88ea310dd163e9b8519d9939605d3f
+        if (status) {
+            this.emit(Runtime.RUNTIME_PAUSED);
+        } else {
+            this.emit(Runtime.RUNTIME_UNPAUSED);
+        }
     }
 
     /*
