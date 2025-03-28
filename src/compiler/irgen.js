@@ -1,6 +1,7 @@
 // @ts-check
 
 const StringUtil = require('../util/string-util');
+const Cast = require('../util/cast');
 const BlockType = require('../extension-support/block-type');
 const Variable = require('../engine/variable');
 const log = require('../util/log');
@@ -53,11 +54,13 @@ const parseProcedureCode = variant => variant.substring(1);
 const parseIsWarp = variant => variant.charAt(0) === 'W';
 
 class ScriptTreeGenerator {
-    constructor (thread) {
+    constructor (thread, targetId) {
         /** @private */
         this.thread = thread;
         /** @private */
         this.target = thread.target;
+        /** @private */
+        this.targetId = targetId;
         /** @private */
         this.blocks = thread.blockContainer;
         /** @private */
@@ -81,6 +84,7 @@ class ScriptTreeGenerator {
         this.usesTimer = false;
 
         this.namesOfCostumesAndSounds = new Set();
+        // eslint-disable-next-line no-shadow
         for (const target of this.runtime.targets) {
             if (target.isOriginal) {
                 const sprite = target.sprite;
@@ -357,12 +361,7 @@ class ScriptTreeGenerator {
         let isWarp = this.script.isWarp;
         if (!isWarp) {
             if (innerDefinition && innerDefinition.mutation) {
-                const warp = innerDefinition.mutation.warp;
-                if (typeof warp === 'boolean') {
-                    isWarp = warp;
-                } else if (typeof warp === 'string') {
-                    isWarp = JSON.parse(warp);
-                }
+                isWarp = Cast.toBooleanSimple(innerDefinition.mutation.warp);
             }
         }
 
@@ -442,6 +441,7 @@ class ScriptTreeGenerator {
      * @returns {DescendedVariable} A parsed variable object.
      */
     _descendVariable (id, name, type) {
+        // eslint-disable-next-line no-shadow
         const target = this.target;
         const stage = this.stage;
 
@@ -726,6 +726,8 @@ class ScriptTreeGenerator {
             }
         }
 
+        this.script.targetId = this.targetId;
+
         return this.script;
     }
 }
@@ -755,8 +757,13 @@ class IRGenerator {
                 continue;
             }
             const procedureCode = parseProcedureCode(procedureVariant);
-            const definition = this.blocks.getProcedureDefinition(procedureCode);
-            this.proceduresToCompile.set(procedureVariant, definition);
+            // eslint-disable-next-line no-shadow
+            let target = this.thread.target;
+            let definition = this.blocks.getProcedureDefinition(procedureCode);
+            if (!definition) {
+                [target, definition] = this.blocks.runtime.getGlobalProcedureDefinition(procedureCode);
+            }
+            this.proceduresToCompile.set(procedureVariant, [target, definition]);
         }
     }
 
@@ -811,14 +818,16 @@ class IRGenerator {
             this.compilingProcedures = this.proceduresToCompile;
             this.proceduresToCompile = new Map();
 
-            for (const [procedureVariant, definitionId] of this.compilingProcedures.entries()) {
+            // eslint-disable-next-line no-shadow
+            for (const [procedureVariant, [target, definitionId]] of this.compilingProcedures.entries()) {
                 if (procedureTreeCache[procedureVariant]) {
                     const result = procedureTreeCache[procedureVariant];
                     this.procedures[procedureVariant] = result;
                     this.addProcedureDependencies(result.dependedProcedures);
                 } else {
                     const isWarp = parseIsWarp(procedureVariant);
-                    const generator = new ScriptTreeGenerator(this.thread);
+                    const generator = new ScriptTreeGenerator(this.thread, target.id);
+                    debugger;
                     generator.setProcedureVariant(procedureVariant);
                     if (isWarp) generator.enableWarp();
                     const compiledProcedure = this.generateScriptTree(generator, definitionId);

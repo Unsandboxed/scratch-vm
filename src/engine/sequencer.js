@@ -359,8 +359,6 @@ class Sequencer {
             if (innerBlock && innerBlock.mutation) {
                 doWarp = Cast.toBooleanSimple(innerBlock.mutation.warp);
 
-                debugger;
-
                 // by this stage, if the procedure isn't global,
                 // it would've been skipped in the search.
 

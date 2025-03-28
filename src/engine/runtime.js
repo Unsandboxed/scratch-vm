@@ -4033,14 +4033,15 @@ class Runtime extends EventEmitter {
      */
     _updateGlobalProcedures (targets) {
         // get a list of targets to refresh, if we dont get any then just refresh them all
-        if (targets == undefined || targets === null) targets = this.targets;
+        if (targets === (void 0) || targets === null) targets = this.targets;
         else targets = [].concat(targets);
         targets = new Set(targets.map(t => t.id));
 
         // keep track of what procedures used to exist and exist now
         // (this is used for cleanup)
         const Pold = new Set(Object.keys(this._globalProcedures));
-        let Premoved = new Set(), Pnew = new Set();
+        const Pnew = new Set();
+        let Premoved = new Set();
         const globalProcedures = {};
 
         for (let i = 0; i < this.targets.length; i++) {
@@ -4059,7 +4060,7 @@ class Runtime extends EventEmitter {
                     continue;
                 }
                 // Add the proccode to the list of existing procedures if it is global
-                if (!Cast.toBooleanSimple(mutation.global))  {
+                if (!Cast.toBooleanSimple(mutation.global)) {
                     if (Pold.has(proccode)) Premoved.add(proccode);
                     continue;
                 }
@@ -4068,7 +4069,9 @@ class Runtime extends EventEmitter {
                     globalProcedures[proccode] = target.id;
                 }
             }
-            Premoved = Premoved.union(new Set(this.getGlobalProceduresFromTarget(target.id)).difference(new Set(proccodes)));
+            Premoved = Premoved.union(new Set(
+                this.getGlobalProceduresFromTarget(target.id)
+            ).difference(new Set(proccodes)));
         }
 
         const changed = Array.from(Pnew.union(Premoved));
@@ -4093,7 +4096,6 @@ class Runtime extends EventEmitter {
      * Requests the global procedures to be refreshed.
      */
     requestGlobalProceduresRefresh () {
-        console.trace();
         this._refreshGlobalProcedures = true;
     }
 

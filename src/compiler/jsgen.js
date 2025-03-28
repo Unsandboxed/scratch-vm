@@ -520,8 +520,12 @@ class JSGenerator {
 
         // Setup the factory
         script += `(function ${this.getScriptFactoryName()}(thread) { `;
-        script += 'const target = thread.target; ';
-        script += 'const runtime = target.runtime; ';
+        script += 'const runtime = thread.target.runtime; ';
+        script += `const target = ${this.isProcedure ? `${
+            this.target.id === this.script.targetId ? 'thread.target' : `runtime.getTargetById("${
+                this.script.targetId
+            }")`
+        }` : 'thread.target'}; `;
         script += 'const stage = runtime.getTargetForStage();\n';
         for (const varValue of Object.keys(this._setupVariables)) {
             const varName = this._setupVariables[varValue];

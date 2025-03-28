@@ -319,6 +319,11 @@ class IntermediateScript {
          */
         this.executableHat = false;
 
+        /**
+         * The target ID of this script.
+         * @type {?string}
+         */
+        this.targetId = null;
     }
 }
 
