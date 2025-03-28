@@ -3500,8 +3500,18 @@ class Runtime extends EventEmitter {
      * Emit value for reporter to show in the blocks.
      * @param {string} blockId ID for the block.
      * @param {string} value Value to show associated with the block.
+     * @param {Target} target The target that the block was run in.
      */
-    visualReport (blockId, value) {
+    visualReport (blockId, value, target) {
+        if (typeof blockId === 'object') {
+            console.warn('Legacy inputs, swap blockId and target.');
+            const temp = blockId;
+            blockId = target;
+            target = temp;
+        }
+        if (target !== this.getEditingTarget()) {
+            console.warn('Tried to emit from a target other than the current editing target.');
+        }
         this.emit(Runtime.VISUAL_REPORT, {
             id: blockId,
             value: (
