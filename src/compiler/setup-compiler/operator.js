@@ -215,7 +215,7 @@ module.exports = function (compilerData, {
             const node = block.inputs;
             const left = node.left;
             const right = node.right;
-            return `(lessGreaterThan(${
+            return `(compareLessThan(${
                 jsg.descendInput(left)
             }, ${jsg.descendInput(right)})||compareEqual(${
                 jsg.descendInput(left)
