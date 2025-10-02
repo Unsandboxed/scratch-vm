@@ -251,6 +251,9 @@ class ScriptTreeGenerator {
                 if (this.runtime.compilerData.bt_stacks.has(type)) {
                     return this.descendCompatLayerStack(block);
                 }
+                if (this.runtime.compilerData.bt_branchables.has(type)) {
+                    return this.descendCompatLayerStack(block);
+                }
             }
         }
 
