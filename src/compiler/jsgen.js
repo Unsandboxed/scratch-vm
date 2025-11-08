@@ -3,6 +3,7 @@
 const log = require('../util/log');
 const jsexecute = require('./jsexecute');
 const {StackOpcode, InputOpcode, InputType} = require('./enums.js');
+const oldCompilerCompatibility = require('./old-compiler-compatibility.js');
 
 // These imports are used by jsdoc comments but eslint doesn't know that
 /* eslint-disable no-unused-vars */
@@ -67,6 +68,8 @@ class JSGenerator {
         this.isInHat = false;
 
         this.debug = this.target.runtime.debug;
+
+        this.oldCompilerStub = new oldCompilerCompatibility.JSGeneratorStub(this);
     }
 
     /**
@@ -173,6 +176,9 @@ class JSGenerator {
             // Compatibility layer inputs never use flags.
             return `(${this.generateCompatibilityLayerCall(node, false)})`;
 
+        case InputOpcode.OLD_COMPILER_COMPATIBILITY_LAYER:
+            return this.oldCompilerStub.descendInputFromNewCompiler(block);
+
         case InputOpcode.CONSTANT:
             if (block.isAlwaysType(InputType.NUMBER)) {
                 if (typeof node.value !== 'number') throw new Error(`JS: '${block.type}' type constant had ${typeof node.value} type value. Expected number.`);
@@ -250,6 +256,9 @@ class JSGenerator {
             }
             break;
         }
+
+        case InputOpcode.OLD_COMPILER_COMPATIBILITY_LAYER:
+            return this.oldCompilerStub.descendStackedBlockFromNewCompiler(block);
 
         case StackOpcode.HAT_EDGE:
             this.isInHat = true;
