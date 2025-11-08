@@ -13,6 +13,7 @@ const {
     IntermediateScript,
     IntermediateRepresentation
 } = require('./intermediate');
+const oldCompilerCompatiblity = require('./old-compiler-compatibility.js');
 
 /**
  * @fileoverview Generate intermediate representations from Scratch blocks.
@@ -23,7 +24,7 @@ const {
 /**
  * @typedef DescendedVariable
  * @property {'target'|'stage'} scope
- * @property {string} id
+ * @property {string | null} id
  * @property {string} name
  * @property {boolean} isCloud
  */
@@ -92,6 +93,12 @@ class ScriptTreeGenerator {
                 }
             }
         }
+
+        this.oldCompilerStub = (
+            oldCompilerCompatiblity.enabled ?
+                new oldCompilerCompatiblity.ScriptTreeGeneratorStub(this) :
+                null
+        );
     }
 
     setProcedureVariant (procedureVariant) {
@@ -433,7 +440,7 @@ class ScriptTreeGenerator {
         const data = this._descendVariable(id, variable.value, type);
         // If variable ID was null, this might do some unnecessary updates, but that is a rare
         // edge case and it won't have any adverse effects anyways.
-        this.variableCache[data.id] = data;
+        this.variableCache[String(data.id)] = data;
         return data;
     }
 
@@ -450,7 +457,7 @@ class ScriptTreeGenerator {
 
         // Look for by ID in target...
         if (Object.prototype.hasOwnProperty.call(target.variables, id)) {
-            const currVar = target.variables[id];
+            const currVar = target.variables[String(id)];
             return {
                 scope: 'target',
                 id: currVar.id,
@@ -462,7 +469,7 @@ class ScriptTreeGenerator {
         // Look for by ID in stage...
         if (!target.isStage) {
             if (stage && Object.prototype.hasOwnProperty.call(stage.variables, id)) {
-                const currVar = stage.variables[id];
+                const currVar = stage.variables[String(id)];
                 return {
                     scope: 'stage',
                     id: currVar.id,
@@ -509,7 +516,7 @@ class ScriptTreeGenerator {
 
         // Intentionally not using newVariable.id so that this matches vanilla Scratch quirks regarding
         // handling of null variable IDs.
-        target.variables[id] = newVariable;
+        target.variables[String(id)] = newVariable;
 
         if (target.sprite) {
             // Create the variable in all instances of this sprite.
@@ -517,7 +524,7 @@ class ScriptTreeGenerator {
             // sprite.clones has all instances of this sprite including the original and all clones
             for (const clone of target.sprite.clones) {
                 if (!Object.prototype.hasOwnProperty.call(clone.variables, id)) {
-                    clone.variables[id] = new Variable(id, name, type, false, false);
+                    clone.variables[String(id)] = new Variable(id, name, type, false, false);
                 }
             }
         }
