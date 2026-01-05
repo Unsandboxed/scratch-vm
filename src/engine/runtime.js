@@ -1198,28 +1198,88 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Makes some magical colour 1 to colour 4 stuff.
+     * @param {object} extensionInfo extension info
+     * @param {boolean} [skipGen] whether or not to preset generation values
+     * @param {object} fallbacks extension info
+     */
+    _mapColours (info, skipGen, fallbacks) {
+        // this is an absurd function meant to generate every possible colour setup onto one object :P
+        if (Array.isArray(fallbacks)) {
+            fallbacks = {
+                color1: fallbacks[0] || defaultExtensionColors[0],
+                color2: fallbacks[1] || defaultExtensionColors[1],
+                color3: fallbacks[2] || defaultExtensionColors[2],
+                color4: (fallbacks[3] || defaultExtensionColors[3]) || defaultExtensionColors[2]
+            };
+        }
+        if (fallbacks) {
+            fallbacks.color1 = fallbacks.color1 || defaultExtensionColors[0];
+            fallbacks.color2 = fallbacks.color2 || fallbacks.color1;
+            fallbacks.color3 = fallbacks.color3 || fallbacks.color1;
+            fallbacks.color4 = fallbacks.color4 || fallbacks.color3;
+        }
+        // color1
+        info.color1 = ((((info.color1 || info.colour1) || info.primaryColour) || info.primary) || info.colour) || info.color;
+        info.colour1 = info.colour1 || info.color1;
+        info.primaryColour = info.primaryColour || info.color1;
+        info.primary = info.primary || info.color1;
+        info.colour = info.colour || info.color1;
+        info.color = info.color || info.color1;
+        // color2
+        info.color2 = (((info.color2 || info.colour2) || info.secondaryColour) || info.secondary) || info.color1;
+        info.colour2 = info.colour2 || info.color2;
+        info.secondaryColour = info.secondaryColour || info.color2;
+        info.secondary = info.secondary || info.color2;
+        // color3
+        info.color3 = (((info.color3 || info.colour3) || info.tertiaryColour) || info.tertiary) || info.color1;
+        info.colour3 = info.colour3 || info.color3;
+        info.tertiaryColour = info.tertiaryColour || info.color3;
+        info.tertiary = info.tertiary || info.color3;
+        // color4
+        info.color4 = (((info.color4 || info.colour4) || info.quaternaryColour) || info.quaternary) || info.color1;
+        info.colour4 = info.colour4 || info.color4;
+        info.quaternaryColour = info.quaternaryColour || info.color4;
+        info.quaternary = info.quaternary || info.color4;
+        // fallbacks
+        if (!skipGen) {
+            // color1
+            info.color1 = info.color1 || fallbacks.color1;
+            info.colour1 = info.colour1 || fallbacks.color1;
+            info.primaryColour = info.primaryColour || fallbacks.color1;
+            info.primary = info.primary || fallbacks.color1;
+            // color2
+            info.color2 = info.color2 || fallbacks.color2;
+            info.colour2 = info.colour2 || fallbacks.color2;
+            info.secondaryColour = info.secondaryColour || fallbacks.color2;
+            info.secondary = info.secondary || fallbacks.color2;
+            // color3
+            info.color3 = info.color3 || fallbacks.color3;
+            info.colour3 = info.colour3 || fallbacks.color3;
+            info.tertiaryColour = info.tertiaryColour || fallbacks.color3;
+            info.tertiary = info.tertiary || fallbacks.color3;
+            // color4
+            info.color4 = info.color4 || fallbacks.color4;
+            info.colour4 = info.colour4 || fallbacks.color4;
+            info.quaternaryColour = info.quaternaryColour || fallbacks.color4;
+            info.quaternary = info.quaternary || fallbacks.color4;
+        }
+        return info;
+    }
+
+    /**
      * Register the primitives provided by an extension.
      * @param {ExtensionMetadata} extensionInfo - information about the extension (id, blocks, etc.)
      * @private
      */
     _registerExtensionPrimitives (extensionInfo) {
-        const categoryInfo = {
+        const categoryInfo = this._mapColours({
             id: extensionInfo.id,
             name: maybeFormatMessage(extensionInfo.name),
             showStatusButton: extensionInfo.showStatusButton,
             blockIconURI: extensionInfo.blockIconURI,
             menuIconURI: extensionInfo.menuIconURI
-        };
-
-        if (extensionInfo.color1) {
-            categoryInfo.color1 = extensionInfo.color1;
-            categoryInfo.color2 = extensionInfo.color2;
-            categoryInfo.color3 = extensionInfo.color3;
-        } else {
-            categoryInfo.color1 = defaultExtensionColors[0];
-            categoryInfo.color2 = defaultExtensionColors[1];
-            categoryInfo.color3 = defaultExtensionColors[2];
-        }
+        }, true, defaultExtensionColors);
 
         this._blockInfo.push(categoryInfo);
 
@@ -1520,15 +1580,17 @@ class Runtime extends EventEmitter {
     _convertBlockForScratchBlocks (blockInfo, categoryInfo) {
         const extendedOpcode = `${categoryInfo.id}_${blockInfo.opcode}`;
 
+        blockInfo = this._mapColours(blockInfo, true, categoryInfo);
+
         const blockJSON = {
             type: extendedOpcode,
             inputsInline: true,
             category: categoryInfo.name,
             extensions: [],
-            colour: blockInfo.color1 ?? categoryInfo.color1,
-            colourSecondary: blockInfo.color2 ?? categoryInfo.color2,
-            colourTertiary: blockInfo.color3 ?? categoryInfo.color3,
-            colourQuaternary: blockInfo.color4 ?? categoryInfo.color4
+            colour: blockInfo.color1,
+            colourSecondary: blockInfo.color2,
+            colourTertiary: blockInfo.color3,
+            colourQuaternary: blockInfo.color4
         };
         const context = {
             // TODO: store this somewhere so that we can map args appropriately after translation.
