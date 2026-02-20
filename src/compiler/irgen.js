@@ -669,10 +669,21 @@ class ScriptTreeGenerator {
             // Edge-activated HAT
             this.script.yields = true;
             this.script.executableHat = true;
+            if (hatInfo.isProcedure) {
+                return new IntermediateStack([
+                    new IntermediateStackBlock(StackOpcode.HAT_EDGE, {
+                        id: hatBlock.id,
+                        condition: (this.descendInput(hatBlock)).toType(InputType.BOOLEAN),
+                        info: hatInfo
+                    }),
+                    ...this.walkStack(nextBlock).blocks
+                ]);
+            }
             return new IntermediateStack([
                 new IntermediateStackBlock(StackOpcode.HAT_EDGE, {
                     id: hatBlock.id,
-                    condition: this.descendCompatLayerInput(hatBlock).toType(InputType.BOOLEAN)
+                    condition: this.descendCompatLayerInput(hatBlock).toType(InputType.BOOLEAN),
+                    info: hatInfo
                 }),
                 ...this.walkStack(nextBlock).blocks
             ]);
@@ -718,8 +729,12 @@ class ScriptTreeGenerator {
 
         // We do need to evaluate empty hats
         const hatInfo = this.runtime._hats[topBlock.opcode];
-        const isHat = !!hatInfo;
-        if (isHat) {
+        if (!!hatInfo && (
+            // If the block is a procedure call then only treat it as a hat if its mutation says its a hat.
+            topBlock.opcode === 'procedures_call' ?
+                (topBlock.mutation && (topBlock.mutation.hat === 'true' || topBlock.mutation.hat === true)) :
+                true
+        )) {
             this.script.stack = this.walkHat(topBlock);
         } else {
             // We don't evaluate the procedures_definition top block as it never does anything

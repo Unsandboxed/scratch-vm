@@ -62,6 +62,15 @@ const handleReport = function (resolvedValue, sequencer, thread, blockCached, la
         if (thread.stackClick) {
             thread.setStatus(Thread.STATUS_RUNNING);
         } else if (sequencer.runtime.getIsEdgeActivatedHat(opcode)) {
+            if (sequencer.runtime.getIsAlwaysActivatedHat(opcode)) {
+                if (resolvedValue) {
+                    thread.setStatus(Thread.STATUS_RUNNING);
+                } else {
+                    sequencer.retireThread(thread);
+                }
+                return;
+            }
+
             // If this is an edge-activated hat, only proceed if the value is
             // true and used to be false, or the stack was activated explicitly
             // via stack click

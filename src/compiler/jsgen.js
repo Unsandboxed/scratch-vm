@@ -266,13 +266,19 @@ class JSGenerator {
             // For exact Scratch parity, evaluate the input before checking old edge state.
             // Can matter if the input is not instantly evaluated.
             this.source += `const resolvedValue = ${this.descendInput(node.condition)};\n`;
-            this.source += `const id = "${sanitize(node.id)}";\n`;
-            this.source += 'const hasOldEdgeValue = target.hasEdgeActivatedValue(id);\n';
-            this.source += `const oldEdgeValue = target.updateEdgeActivatedValue(id, resolvedValue);\n`;
-            this.source += `const edgeWasActivated = hasOldEdgeValue ? (!oldEdgeValue && resolvedValue) : resolvedValue;\n`;
-            this.source += `if (!edgeWasActivated) {\n`;
-            this.retire();
-            this.source += '}\n';
+            if (node.info.alwaysActivated) {
+                this.source += `if (!resolvedValue) {\n`;
+                this.retire();
+                this.source += '}\n';
+            } else {
+                this.source += `const id = "${sanitize(node.id)}";\n`;
+                this.source += 'const hasOldEdgeValue = target.hasEdgeActivatedValue(id);\n';
+                this.source += `const oldEdgeValue = target.updateEdgeActivatedValue(id, resolvedValue);\n`;
+                this.source += `const edgeWasActivated = hasOldEdgeValue ? (!oldEdgeValue && resolvedValue) : resolvedValue;\n`;
+                this.source += `if (!edgeWasActivated) {\n`;
+                this.retire();
+                this.source += '}\n';
+            }
             this.source += 'yield;\n';
             this.source += '}\n';
             this.isInHat = false;

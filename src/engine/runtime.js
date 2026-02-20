@@ -2277,6 +2277,15 @@ class Runtime extends EventEmitter {
             this._hats[opcode].edgeActivated;
     }
 
+    /**
+     * Return whether an opcode represents an always-activated hat block.
+     * @param {!string} opcode The opcode to look up.
+     * @return {boolean} True if the op is known to be a always-activated hat.
+     */
+    getIsAlwaysActivatedHat (opcode) {
+        return Object.prototype.hasOwnProperty.call(this._hats, opcode) &&
+            this._hats[opcode].alwaysActivated;
+    }
 
     /**
      * Attach the audio engine
@@ -2658,9 +2667,13 @@ class Runtime extends EventEmitter {
         // Look up metadata for the relevant hat.
         const hatMeta = instance._hats[requestedHatOpcode];
 
-        for (const opts in optMatchFields) {
-            if (!Object.prototype.hasOwnProperty.call(optMatchFields, opts)) continue;
-            optMatchFields[opts] = optMatchFields[opts].toUpperCase();
+        const isProcedure = hatMeta.isProcedure === 'true' || hatMeta.isProcedure === true;
+
+        if (!isProcedure) {
+            for (const opts in optMatchFields) {
+                if (!Object.prototype.hasOwnProperty.call(optMatchFields, opts)) continue;
+                optMatchFields[opts] = optMatchFields[opts].toUpperCase();
+            }
         }
 
         // tw: By assuming that all new threads will not interfere with eachother, we can optimize the loops
@@ -2673,6 +2686,17 @@ class Runtime extends EventEmitter {
                 blockId: topBlockId,
                 fieldsOfInputs: hatFields
             } = script;
+
+            if (isProcedure) {
+                const topBlock = target.blocks.getBlock(topBlockId);
+                if (
+                    !topBlock ||
+                    !topBlock.mutation ||
+                    !(topBlock.mutation.hat === 'true' || topBlock.mutation.hat === true)
+                ) {
+                    return;
+                }
+            }
 
             // Match any requested fields.
             // For example: ensures that broadcasts match.
