@@ -206,7 +206,7 @@ class ScriptTreeGenerator {
             block = this.runtime.compilerData.inputs.get(block.opcode).stg(this, block, preserveStrings, true);
             return block;
         }
-        
+
         const opcodeFunction = this.runtime.getOpcodeFunction(block.opcode);
         if (opcodeFunction) {
             // It might be a non-compiled primitive from a standard category
