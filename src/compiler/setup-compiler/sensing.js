@@ -153,13 +153,13 @@ module.exports = function (compilerData, {
                 this.type = InputType.NUMBER_REAL;
                 return new IntermediateInput('sensing.of.direction', this.type, {object});
             case 'costume #':
-                this.type = InputType.NUMBER_POS_REAL;
+                this.type = InputType.NUMBER_POS_REAL | InputType.NUMBER_ZERO;
                 return new IntermediateInput('sensing.of.costume_number', this.type, {object});
             case 'costume name':
-                this.type = InputType.STRING;
+                this.type = InputType.STRING | InputType.NUMBER_ZERO;
                 return new IntermediateInput('sensing.of.costume_name', this.type, {object});
             case 'size':
-                this.type = InputType.NUMBER_POS_REAL;
+                this.type = InputType.NUMBER_POS_REAL | InputType.NUMBER_ZERO;
                 return new IntermediateInput('sensing.of.size', this.type, {object});
             }
         }

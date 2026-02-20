@@ -7,6 +7,24 @@ module.exports = function (compilerData, {
 }) {
     /* eslint-disable no-invalid-this,prefer-arrow-callback */
     // Stack
+    compilerData.registerBlock([
+        'looks_say',
+        'looks_think'
+    ], function (stg, block) {
+        return new IntermediateStackBlock('looks.c.bubble', {
+            say: this.ir_opcode === 'looks.say',
+            message: stg.descendInputOfBlock(block, 'MESSAGE').toType(InputType.STRING)
+        });
+    }, null, {
+        input: false
+    });
+    compilerData.registerCompileFn('looks.c.bubble', function (jsg, block) {
+        jsg.source += `runtime.ext_scratch3_looks._${
+            block.inputs.say ? 'say' : 'think'
+        }(${
+            jsg.descendInput(block.inputs.message)
+        }, target);\n`;
+    });
     compilerData.registerBlock('looks_changeeffectby', function (stg, block) {
         return new IntermediateStackBlock(this.ir_opcode, {
             effect: block.fields.EFFECT.value.toLowerCase(),
@@ -157,7 +175,7 @@ module.exports = function (compilerData, {
         return new IntermediateInput(this.ir_opcode, this.type);
     }, `Math.round(target.size)`, {
         input: true,
-        type: InputType.NUMBER_POS_REAL
+        type: InputType.NUMBER_POS_REAL | InputType.NUMBER_ZERO
     });
     compilerData.registerCompileFn([
         'looks.backdrop.number',
