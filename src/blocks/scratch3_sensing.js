@@ -354,12 +354,14 @@ class Scratch3SensingBlocks {
     }
 
     isOnline () {
-        // Modern Node.js has a navigator object but does .onLine === undefined
+        // USB: This does diviate from TurboWarp to allow for it to match scratch.
+        // But it WILL still work in NodeJS
+
         if (typeof navigator === 'object' && typeof navigator.onLine === 'boolean') {
             return navigator.onLine;
         }
-        // We're running in some non-browser environment. We probably have internet.
-        return true;
+
+        return '';
     }
 }
 
