@@ -654,7 +654,7 @@ class ScriptTreeGenerator {
         const opcode = hatBlock.opcode;
         const hatInfo = this.runtime._hats[opcode];
 
-        if (this.thread.stackClick) {
+        if (this.thread.stackClick && !hatInfo.isProcedure) {
             // We still need to treat the hat as a normal block (so executableHat should be false) for
             // interpreter parity, but the reuslt is ignored.
             const opcodeFunction = this.runtime.getOpcodeFunction(opcode);
