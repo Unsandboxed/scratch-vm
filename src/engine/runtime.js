@@ -1222,7 +1222,8 @@ class Runtime extends EventEmitter {
             fallbacks.color4 = fallbacks.color4 || fallbacks.color3;
         }
         // color1
-        info.color1 = ((((info.color1 || info.colour1) || info.primaryColour) || info.primary) || info.colour) || info.color;
+        info.color1 =
+            ((((info.color1 || info.colour1) || info.primaryColour) || info.primary) || info.colour) || info.color;
         info.colour1 = info.colour1 || info.color1;
         info.primaryColour = info.primaryColour || info.color1;
         info.primary = info.primary || info.color1;
@@ -1281,7 +1282,7 @@ class Runtime extends EventEmitter {
             showStatusButton: extensionInfo.showStatusButton,
             blockIconURI: extensionInfo.blockIconURI,
             menuIconURI: extensionInfo.menuIconURI
-        }, true, defaultExtensionColors);
+        }, false, defaultExtensionColors);
 
         this._blockInfo.push(categoryInfo);
 
@@ -1582,7 +1583,7 @@ class Runtime extends EventEmitter {
     _convertBlockForScratchBlocks (blockInfo, categoryInfo) {
         const extendedOpcode = `${categoryInfo.id}_${blockInfo.opcode}`;
 
-        blockInfo = this._mapColours(blockInfo, true, categoryInfo);
+        blockInfo = this._mapColours(blockInfo, false, categoryInfo);
 
         const blockJSON = {
             type: extendedOpcode,
