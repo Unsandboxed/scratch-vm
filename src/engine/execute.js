@@ -198,9 +198,10 @@ class BlockCached {
 
         /**
          * Procedure mutation.
-         * @type {?object}
+         * @type {object | null}
          */
-        this.mutation = cached.mutation;
+        // The mutation should never be undefined, but it CAN be null.
+        this.mutation = cached.mutation ?? null;
 
         /**
          * The profiler the block is configured with.
