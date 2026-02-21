@@ -559,6 +559,7 @@ class ScriptTreeGenerator {
             id: block.id,
             inputs,
             fields,
+            mutation: block.mutation ?? null,
             breakable: false,
             iterable: false
         }, true);
@@ -603,6 +604,7 @@ class ScriptTreeGenerator {
             inputs,
             fields,
             substacks,
+            mutation: block.mutation ?? null,
             breakable: block.isBreakable ?? false,
             iterable: block.isIterable ?? false
         }, true);

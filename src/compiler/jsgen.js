@@ -471,12 +471,22 @@ class JSGenerator {
         for (const inputName of Object.keys(node.inputs)) {
             const input = node.inputs[inputName];
             const compiledInput = this.descendInput(input);
-            result += `"${sanitize(inputName)}":${compiledInput},`;
+            if (inputName !== 'mutation' || node.mutation === null) {
+                result += `"${sanitize(inputName)}":${compiledInput},`;
+            }
         }
         for (const fieldName of Object.keys(node.fields)) {
             const field = node.fields[fieldName];
             result += `"${sanitize(fieldName)}":"${sanitize(field)}",`;
         }
+        if (node.mutation !== null) {
+            try {
+                result += `"mutation":${JSON.stringify(node.mutation)},`;
+            } catch (error) {
+                console.error('Failed to sanitize mutation', node.mutation, 'for node', node);
+            }
+        }
+
         const opcodeFunction = this.evaluateOnce(`runtime.getOpcodeFunction("${sanitize(opcode)}")`);
         result += `}, ${opcodeFunction}, ${this.isWarp}, ${setFlags}, "${sanitize(node.id)}", ${frameName})`;
 
