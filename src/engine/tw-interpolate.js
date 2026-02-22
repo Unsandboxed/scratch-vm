@@ -1,3 +1,5 @@
+const Runtime = require('./runtime.js');
+
 /**
  * Prepare the targets of a runtime for interpolation.
  * @param {Runtime} runtime The Runtime with targets to prepare for interpolation.
@@ -108,7 +110,7 @@ const interpolate = (runtime, time) => {
             continue;
         }
 
-        runtime.emit(runtime.constructor.BEFORE_INTERPOLATE, target);
+        runtime.emit(Runtime.BEFORE_INTERPOLATE, target);
 
         const drawableID = target.drawableID;
 
@@ -187,7 +189,7 @@ const interpolate = (runtime, time) => {
             }
         }
 
-        runtime.emit(runtime.constructor.AFTER_INTERPOLATE, target);
+        runtime.emit(Runtime.AFTER_INTERPOLATE, target);
     }
 };
 
