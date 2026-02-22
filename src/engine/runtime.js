@@ -524,6 +524,7 @@ class Runtime extends EventEmitter {
 
         this._lastStepTime = Date.now();
         this.interpolationEnabled = false;
+        this.interpolate = interpolate;
 
         this._defaultStoredSettings = this._generateAllProjectOptions();
 
@@ -739,6 +740,20 @@ class Runtime extends EventEmitter {
      */
     static get INTERPOLATION_CHANGED () {
         return 'INTERPOLATION_CHANGED';
+    }
+
+    /**
+     * Event called before interpolation data is set.
+     */
+    static get BEFORE_INTERPOLATE () {
+        return 'BEFORE_INTERPOLATE';
+    }
+
+    /**
+     * Event called after interpolation data is set.
+     */
+    static get AFTER_INTERPOLATE () {
+        return 'AFTER_INTERPOLATE';
     }
 
     /**
