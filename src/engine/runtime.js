@@ -1229,12 +1229,11 @@ class Runtime extends EventEmitter {
                 color3: fallbacks[2] || defaultExtensionColors[2],
                 color4: (fallbacks[3] || defaultExtensionColors[3]) || defaultExtensionColors[2]
             };
-        }
-        if (fallbacks) {
+        } else if (fallbacks) {
             fallbacks.color1 = fallbacks.color1 || defaultExtensionColors[0];
-            fallbacks.color2 = fallbacks.color2 || fallbacks.color1;
-            fallbacks.color3 = fallbacks.color3 || fallbacks.color1;
-            fallbacks.color4 = fallbacks.color4 || fallbacks.color3;
+            fallbacks.color2 = fallbacks.color2 || defaultExtensionColors[1];
+            fallbacks.color3 = fallbacks.color3 || defaultExtensionColors[2];
+            fallbacks.color4 = (fallbacks.color4 || defaultExtensionColors[3]) || defaultExtensionColors[2];
         }
         // color1
         info.color1 =
@@ -1297,7 +1296,7 @@ class Runtime extends EventEmitter {
             showStatusButton: extensionInfo.showStatusButton,
             blockIconURI: extensionInfo.blockIconURI,
             menuIconURI: extensionInfo.menuIconURI
-        }, false, defaultExtensionColors);
+        }, false, extensionInfo);
 
         this._blockInfo.push(categoryInfo);
 
