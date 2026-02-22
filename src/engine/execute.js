@@ -411,10 +411,7 @@ const _prepareBlockProfiling = function (profiler, blockCached) {
 const execute = function (sequencer, thread) {
     const runtime = sequencer.runtime;
 
-    // store sequencer and thread so block functions can access them through
-    // convenience methods.
-    blockUtility.sequencer = sequencer;
-    blockUtility.thread = thread;
+    blockUtility.init(thread, sequencer);
 
     // Current block to execute is the one on the top of the stack.
     const currentBlockId = thread.peekStack();

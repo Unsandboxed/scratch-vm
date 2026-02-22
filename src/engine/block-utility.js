@@ -8,19 +8,21 @@ const Timer = require('../util/timer');
  */
 
 class BlockUtility {
-    constructor (sequencer = null, thread = null) {
-        /**
-         * A sequencer block primitives use to branch or start procedures with
-         * @type {?Sequencer}
-         */
-        this.sequencer = sequencer;
+    /**
+     * A sequencer block primitives use to branch or start procedures with
+     * @type {?Sequencer}
+     */
+    sequencer;
 
-        /**
-         * The block primitives thread with the block's target, stackFrame and
-         * modifiable status.
-         * @type {?Thread}
-         */
-        this.thread = thread;
+    /**
+     * The block primitives thread with the block's target, stackFrame and
+     * modifiable status.
+     * @type {?Thread}
+     */
+    thread;
+
+    constructor (sequencer = null, thread = null) {
+        this._cleanInit(thread, sequencer);
 
         this._nowObj = {
             now: () => this.sequencer.runtime.currentMSecs
@@ -119,9 +121,10 @@ class BlockUtility {
      * Start a branch in the current block.
      * @param {number} branchNum Which branch to step to (i.e., 1, 2).
      * @param {boolean} isLoop Whether this block is a loop.
+     * @param {?(() => void)} onEnd Optional callback for when the branch ends.
      */
-    startBranch (branchNum, isLoop) {
-        this.sequencer.stepToBranch(this.thread, branchNum, isLoop);
+    startBranch (branchNum, isLoop, onEnd) {
+        this.sequencer.stepToBranch(this.thread, branchNum, isLoop, onEnd);
     }
 
     /**
@@ -214,8 +217,7 @@ class BlockUtility {
         const result = this.sequencer.runtime.startHats(requestedHat, optMatchFields, optTarget, optParams);
 
         // Restore thread and sequencer to prior values before we return to the calling block.
-        this.thread = callerThread;
-        this.sequencer = callerSequencer;
+        this._cleanInit(callerThread, callerSequencer);
 
         return result;
     }
@@ -237,6 +239,22 @@ class BlockUtility {
             // eslint-disable-next-line prefer-spread
             return devObject[func].apply(devObject, args);
         }
+    }
+
+    _cleanInit (thread, sequencer) {
+        this.thread = thread;
+        if (this.thread) {
+            this.thread.blockUtility = this;
+        }
+        this.sequencer = sequencer;
+    }
+
+    /**
+     * @param {?Thread} thread Current thread.
+     * @param {?Sequencer} sequencer Sequencer instance.
+     */
+    init (thread, sequencer) {
+        this._cleanInit(thread, sequencer);
     }
 }
 

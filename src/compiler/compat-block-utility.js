@@ -34,8 +34,7 @@ class CompatibilityLayerBlockUtility extends BlockUtility {
     }
 
     init (thread, fakeBlockId, stackFrame, branchInfo) {
-        this.thread = thread;
-        this.sequencer = thread.target.runtime.sequencer;
+        super.init(thread, thread.target.runtime.sequencer);
         this._startedBranch = null;
         this._branchInfo = branchInfo;
         thread.stack[0] = fakeBlockId;

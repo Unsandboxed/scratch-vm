@@ -58,9 +58,7 @@ test('#760 - broadcastAndWait', t => {
     rt.addTarget(tgt);
 
     let th = rt._pushThread('broadcastAndWaitBlock', t);
-    const util = new BlockUtility();
-    util.sequencer = rt.sequencer;
-    util.thread = th;
+    const util = new BlockUtility(rt.sequencer, th);
     util.runtime = rt;
 
     // creates threads
@@ -82,7 +80,7 @@ test('#760 - broadcastAndWait', t => {
     // restarts done threads that are in runtime threads
     rt.updateThreadMap();
     th = rt._pushThread('broadcastAndWaitBlock', tgt);
-    util.thread = th;
+    util._cleanInit(th, util.sequencer);
     e.broadcastAndWait({BROADCAST_OPTION: {id: 'testBroadcastID', name: 'message'}}, util);
     t.strictEqual(rt.threads.length, 3);
     t.strictEqual(rt.threads[2].status, Thread.STATUS_RUNNING);
