@@ -7,59 +7,58 @@ const BLE = require('../../io/ble');
 const Base64Util = require('../../util/base64-util');
 
 /**
- * Icon png to be displayed at the left edge of each extension block, encoded as a data URI.
- * @type {string}
- */
-// eslint-disable-next-line max-len
-const blockIconURI = 'data:image/png;base64,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';
-
-/**
- * Enum for micro:bit BLE command protocol.
- * https://github.com/scratchfoundation/scratch-microbit-firmware/blob/master/protocol.md
- * @readonly
- * @enum {number}
- */
-const BLECommand = {
-    CMD_PIN_CONFIG: 0x80,
-    CMD_DISPLAY_TEXT: 0x81,
-    CMD_DISPLAY_LED: 0x82
-};
-
-
-/**
- * A time interval to wait (in milliseconds) before reporting to the BLE socket
- * that data has stopped coming from the peripheral.
- */
-const BLETimeout = 4500;
-
-/**
- * A time interval to wait (in milliseconds) while a block that sends a BLE message is running.
- * @type {number}
- */
-const BLESendInterval = 100;
-
-/**
- * A string to report to the BLE socket when the micro:bit has stopped receiving data.
- * @type {string}
- */
-const BLEDataStoppedError = 'micro:bit extension stopped receiving data';
-
-/**
- * Enum for micro:bit protocol.
- * https://github.com/scratchfoundation/scratch-microbit-firmware/blob/master/protocol.md
- * @readonly
- * @enum {string}
- */
-const BLEUUID = {
-    service: 0xf005,
-    rxChar: '5261da01-fa7e-42ab-850b-7c80220097cc',
-    txChar: '5261da02-fa7e-42ab-850b-7c80220097cc'
-};
-
-/**
  * Manage communication with a MicroBit peripheral over a Scrath Link client socket.
  */
 class MicroBit {
+    /**
+     * Icon png to be displayed at the left edge of each extension block, encoded as a data URI.
+     * @type {string}
+     */
+    // eslint-disable-next-line max-len
+    static blockIconURI = 'data:image/png;base64,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';
+
+    /**
+     * Enum for micro:bit BLE command protocol.
+     * https://github.com/scratchfoundation/scratch-microbit-firmware/blob/master/protocol.md
+     * @readonly
+     * @enum {number}
+     */
+    static BLECommand = {
+        CMD_PIN_CONFIG: 0x80,
+        CMD_DISPLAY_TEXT: 0x81,
+        CMD_DISPLAY_LED: 0x82
+    };
+
+
+    /**
+     * A time interval to wait (in milliseconds) before reporting to the BLE socket
+     * that data has stopped coming from the peripheral.
+     */
+    static BLETimeout = 4500;
+
+    /**
+     * A time interval to wait (in milliseconds) while a block that sends a BLE message is running.
+     * @type {number}
+     */
+    static BLESendInterval = 100;
+
+    /**
+     * A string to report to the BLE socket when the micro:bit has stopped receiving data.
+     * @type {string}
+     */
+    static BLEDataStoppedError = 'micro:bit extension stopped receiving data';
+
+    /**
+     * Enum for micro:bit protocol.
+     * https://github.com/scratchfoundation/scratch-microbit-firmware/blob/master/protocol.md
+     * @readonly
+     * @enum {string}
+     */
+    static BLEUUID = {
+        service: 0xf005,
+        rxChar: '5261da01-fa7e-42ab-850b-7c80220097cc',
+        txChar: '5261da02-fa7e-42ab-850b-7c80220097cc'
+    };
 
     /**
      * Construct a MicroBit communication object.
@@ -158,7 +157,7 @@ class MicroBit {
         for (let i = 0; i < text.length; i++) {
             output[i] = text.charCodeAt(i);
         }
-        return this.send(BLECommand.CMD_DISPLAY_TEXT, output);
+        return this.send(MicroBit.BLECommand.CMD_DISPLAY_TEXT, output);
     }
 
     /**
@@ -166,7 +165,7 @@ class MicroBit {
      * @return {Promise} - a Promise that resolves when writing to peripheral.
      */
     displayMatrix (matrix) {
-        return this.send(BLECommand.CMD_DISPLAY_LED, matrix);
+        return this.send(MicroBit.BLECommand.CMD_DISPLAY_LED, matrix);
     }
 
     /**
@@ -220,7 +219,7 @@ class MicroBit {
         }
         this._ble = new BLE(this._runtime, this._extensionId, {
             filters: [
-                {services: [BLEUUID.service]}
+                {services: [MicroBit.BLEUUID.service]}
             ]
         }, this._onConnect, this.reset);
     }
@@ -296,7 +295,7 @@ class MicroBit {
         }
         const data = Base64Util.uint8ArrayToBase64(output);
 
-        this._ble.write(BLEUUID.service, BLEUUID.txChar, data, 'base64', true).then(
+        this._ble.write(MicroBit.BLEUUID.service, MicroBit.BLEUUID.txChar, data, 'base64', true).then(
             () => {
                 this._busy = false;
                 window.clearTimeout(this._busyTimeoutID);
@@ -309,10 +308,10 @@ class MicroBit {
      * @private
      */
     _onConnect () {
-        this._ble.read(BLEUUID.service, BLEUUID.rxChar, true, this._onMessage);
+        this._ble.read(MicroBit.BLEUUID.service, MicroBit.BLEUUID.rxChar, true, this._onMessage);
         this._timeoutID = window.setTimeout(
-            () => this._ble.handleDisconnectError(BLEDataStoppedError),
-            BLETimeout
+            () => this._ble.handleDisconnectError(MicroBit.BLEDataStoppedError),
+            MicroBit.BLETimeout
         );
     }
 
@@ -342,8 +341,8 @@ class MicroBit {
         // cancel disconnect timeout and start a new one
         window.clearTimeout(this._timeoutID);
         this._timeoutID = window.setTimeout(
-            () => this._ble.handleDisconnectError(BLEDataStoppedError),
-            BLETimeout
+            () => this._ble.handleDisconnectError(MicroBit.BLEDataStoppedError),
+            MicroBit.BLETimeout
         );
     }
 
@@ -587,7 +586,7 @@ class Scratch3MicroBitBlocks {
         return {
             id: Scratch3MicroBitBlocks.EXTENSION_ID,
             name: Scratch3MicroBitBlocks.EXTENSION_NAME,
-            blockIconURI: blockIconURI,
+            blockIconURI: MicroBit.blockIconURI,
             showStatusButton: true,
             blocks: [
                 {
@@ -858,7 +857,7 @@ class Scratch3MicroBitBlocks {
         return new Promise(resolve => {
             setTimeout(() => {
                 resolve();
-            }, BLESendInterval);
+            }, MicroBit.BLESendInterval);
         });
     }
 
@@ -897,7 +896,7 @@ class Scratch3MicroBitBlocks {
         return new Promise(resolve => {
             setTimeout(() => {
                 resolve();
-            }, BLESendInterval);
+            }, MicroBit.BLESendInterval);
         });
     }
 

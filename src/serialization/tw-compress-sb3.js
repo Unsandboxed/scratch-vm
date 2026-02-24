@@ -1,17 +1,17 @@
-// We don't generate new IDs using numbers at this time because their enumeration
-// order can affect script execution order as they always come first.
-// https://tc39.es/ecma262/#sec-ordinaryownpropertykeys
-const SOUP = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#%()*+,-./:;=?@[]^_`{|}~';
-const generateId = i => {
-    let str = '';
-    while (i >= 0) {
-        str = SOUP[i % SOUP.length] + str;
-        i = Math.floor(i / SOUP.length) - 1;
-    }
-    return str;
-};
-
 class Pool {
+    // We don't generate new IDs using numbers at this time because their enumeration
+    // order can affect script execution order as they always come first.
+    // https://tc39.es/ecma262/#sec-ordinaryownpropertykeys
+    static SOUP = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!#%()*+,-./:;=?@[]^_`{|}~';
+    static generateId = i => {
+        let str = '';
+        while (i >= 0) {
+            str = Pool.SOUP[i % Pool.SOUP.length] + str;
+            i = Math.floor(i / Pool.SOUP.length) - 1;
+        }
+        return str;
+    };
+
     constructor () {
         this.generatedIds = new Map();
         this.references = new Map();
@@ -36,10 +36,10 @@ class Pool {
         for (const entry of entries) {
             const oldId = entry[0];
 
-            let newId = generateId(i);
+            let newId = Pool.generateId(i);
             while (this.skippedIds.has(newId)) {
                 i++;
-                newId = generateId(i);
+                newId = Pool.generateId(i);
             }
 
             this.generatedIds.set(oldId, newId);
@@ -157,4 +157,5 @@ const compress = projectData => {
     }
 };
 
+compress._Pool = Pool;
 module.exports = compress;

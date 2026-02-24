@@ -138,10 +138,7 @@ class Compiler {
         /** @type {Map<string, CompileFunction>} A map of ir-opcodes to compilation functions. */
         this.compileFns = new Map();
         /** @type {object} @protected Internal exports. */
-        this._internalExports = {
-            ...inter,
-            ...enums
-        };
+        this._internalExports = require('../compiler/exports');
         /**
          * All the exports for the compiler.
          *

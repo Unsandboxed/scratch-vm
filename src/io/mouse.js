@@ -1,8 +1,8 @@
 const MathUtil = require('../util/math-util');
 
-const roundToThreeDecimals = number => Math.round(number * 1000) / 1000;
-
 class Mouse {
+    static roundToThreeDecimals = number => Math.round(number * 1000) / 1000;
+
     constructor (runtime) {
         this._clientX = 0;
         this._clientY = 0;
@@ -173,7 +173,7 @@ class Mouse {
         if (this.runtime.runtimeOptions.miscLimits) {
             return Math.round(float);
         }
-        return roundToThreeDecimals(float);
+        return Mouse.roundToThreeDecimals(float);
     }
 
     /**

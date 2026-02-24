@@ -4,7 +4,9 @@ const AsyncLimiter = require('../util/async-limiter');
 const {loadSvgString, serializeSvgToString} = require('@turbowarp/scratch-svg-renderer');
 const {parseVectorMetadata} = require('../serialization/tw-costume-import-export');
 
-const loadVector_ = function (costume, runtime, rotationCenter, optVersion) {
+const E = {svgRenderer: require('@turbowarp/scratch-svg-renderer')};
+
+E.loadVector_ = function (costume, runtime, rotationCenter, optVersion) {
     return new Promise(resolve => {
         let svgString = costume.asset.decodeText();
 
@@ -17,7 +19,7 @@ const loadVector_ = function (costume, runtime, rotationCenter, optVersion) {
                 costume.rotationCenterY = rotationCenter[1];
             }
         }
-    
+
         // SVG Renderer load fixes "quirks" associated with Scratch 2 projects
         if (optVersion && optVersion === 2) {
             // scratch-svg-renderer fixes syntax that causes loading issues,
@@ -54,7 +56,7 @@ const loadVector_ = function (costume, runtime, rotationCenter, optVersion) {
     });
 };
 
-const canvasPool = (function () {
+E.canvasPool = (function () {
     /**
      * A pool of canvas objects that can be reused to reduce memory
      * allocations. And time spent in those allocations and the later garbage
@@ -98,14 +100,16 @@ const canvasPool = (function () {
         }
     }
 
-    return new CanvasPool();
+    const pool = new CanvasPool();
+    pool._CanvasPool = CanvasPool;
+    return pool;
 }());
 
 /**
  * @param {string} src URL of image
  * @returns {Promise<HTMLImageElement>}
  */
-const readAsImageElement = src => new Promise((resolve, reject) => {
+E.readAsImageElement = src => new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = function () {
         resolve(image);
@@ -124,7 +128,7 @@ const readAsImageElement = src => new Promise((resolve, reject) => {
  * @param {Asset} asset scratch-storage asset
  * @returns {Promise<HTMLImageElement|ImageBitmap>}
  */
-const _persistentReadImage = async asset => {
+E._persistentReadImage = async asset => {
     // Sometimes, when a lot of images are loaded at once, especially in Chrome, reading an image
     // can throw an error even on valid images. To mitigate this, we'll retry image reading a few
     // time with delays.
@@ -144,7 +148,7 @@ const _persistentReadImage = async asset => {
                 }
                 return imageBitmap;
             }
-            return await readAsImageElement(asset.encodeDataURI());
+            return await E.readAsImageElement(asset.encodeDataURI());
         } catch (e) {
             if (!firstError) {
                 firstError = e;
@@ -157,7 +161,7 @@ const _persistentReadImage = async asset => {
 };
 
 // Browsers break when we do too many createImageBitmap at the same time.
-const readImage = new AsyncLimiter(_persistentReadImage, 25);
+E.readImage = new AsyncLimiter(E._persistentReadImage, 25);
 
 /**
  * Return a promise to fetch a bitmap from storage and return it as a canvas
@@ -173,7 +177,7 @@ const readImage = new AsyncLimiter(_persistentReadImage, 25);
  *     or reject on error.
  *     assetMatchesBase is true if the asset matches the base layer; false if it required adjustment
  */
-const fetchBitmapCanvas_ = function (costume, runtime, rotationCenter) {
+E.fetchBitmapCanvas_ = function (costume, runtime, rotationCenter) {
     if (!costume || !costume.asset) { // TODO: We can probably remove this check...
         // TODO: reject with an Error (breaking API change!)
         // eslint-disable-next-line prefer-promise-reject-errors
@@ -190,7 +194,7 @@ const fetchBitmapCanvas_ = function (costume, runtime, rotationCenter) {
             return null;
         }
 
-        return readImage.do(asset);
+        return E.readImage.do(asset);
     }))
         .then(([baseImageElement, textImageElement]) => {
             if (!baseImageElement) {
@@ -202,7 +206,7 @@ const fetchBitmapCanvas_ = function (costume, runtime, rotationCenter) {
             let imageOrCanvas;
             let canvas;
             if (textImageElement) {
-                canvas = canvasPool.create();
+                canvas = E.canvasPool.create();
                 canvas.width = baseImageElement.width;
                 canvas.height = baseImageElement.height;
                 const ctx = canvas.getContext('2d');
@@ -221,7 +225,7 @@ const fetchBitmapCanvas_ = function (costume, runtime, rotationCenter) {
                 );
                 // Old canvas is no longer used.
                 if (canvas) {
-                    canvasPool.release(canvas);
+                    E.canvasPool.release(canvas);
                 }
             }
 
@@ -256,22 +260,22 @@ const fetchBitmapCanvas_ = function (costume, runtime, rotationCenter) {
         });
 };
 
-const toDataURL = imageOrCanvas => {
+E.toDataURL = imageOrCanvas => {
     if (imageOrCanvas instanceof HTMLCanvasElement) {
         return imageOrCanvas.toDataURL();
     }
-    const canvas = canvasPool.create();
+    const canvas = E.canvasPool.create();
     canvas.width = imageOrCanvas.width;
     canvas.height = imageOrCanvas.height;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(imageOrCanvas, 0, 0);
     const url = canvas.toDataURL();
-    canvasPool.release(canvas);
+    E.canvasPool.release(canvas);
     return url;
 };
 
-const loadBitmap_ = function (costume, runtime, _rotationCenter) {
-    return fetchBitmapCanvas_(costume, runtime, _rotationCenter)
+E.loadBitmap_ = function (costume, runtime, _rotationCenter) {
+    return E.fetchBitmapCanvas_(costume, runtime, _rotationCenter)
         .then(fetched => {
             const updateCostumeAsset = function (dataURI) {
                 if (!runtime.v2BitmapAdapter) {
@@ -300,7 +304,7 @@ const loadBitmap_ = function (costume, runtime, _rotationCenter) {
             };
 
             if (!fetched.assetMatchesBase) {
-                updateCostumeAsset(toDataURL(fetched.image));
+                updateCostumeAsset(E.toDataURL(fetched.image));
             }
 
             return fetched;
@@ -343,7 +347,7 @@ const loadBitmap_ = function (costume, runtime, _rotationCenter) {
 // Handle all manner of costume errors with a Gray Question Mark (default costume)
 // and preserve as much of the original costume data as possible
 // Returns a promise of a costume
-const handleCostumeLoadError = function (costume, runtime) {
+E.handleCostumeLoadError = function (costume, runtime) {
     // Keep track of the old asset information until we're done loading the default costume
     const oldAsset = costume.asset; // could be null
     const oldAssetId = costume.assetId;
@@ -363,7 +367,7 @@ const handleCostumeLoadError = function (costume, runtime) {
     costume.md5 = `${costume.assetId}.${costume.asset.dataFormat}`;
 
     const defaultCostumePromise = (isVector) ?
-        loadVector_(costume, runtime) : loadBitmap_(costume, runtime);
+        E.loadVector_(costume, runtime) : E.loadBitmap_(costume, runtime);
 
     return defaultCostumePromise.then(loadedCostume => {
         loadedCostume.broken = {};
@@ -395,7 +399,7 @@ const handleCostumeLoadError = function (costume, runtime) {
  *     to 2, scratch 3 will perform an upgrade step to handle quirks in SVGs from Scratch 2.0.
  * @returns {?Promise} - a promise which will resolve after skinId is set, or null on error.
  */
-const loadCostumeFromAsset = function (costume, runtime, optVersion) {
+E.loadCostumeFromAsset = function (costume, runtime, optVersion) {
     costume.assetId = costume.asset.assetId;
     const renderer = runtime.renderer;
     if (!renderer) {
@@ -411,17 +415,17 @@ const loadCostumeFromAsset = function (costume, runtime, optVersion) {
         rotationCenter = [costume.rotationCenterX, costume.rotationCenterY];
     }
     if (costume.asset.assetType.runtimeFormat === AssetType.ImageVector.runtimeFormat) {
-        return loadVector_(costume, runtime, rotationCenter, optVersion)
+        return E.loadVector_(costume, runtime, rotationCenter, optVersion)
             .catch(error => {
                 log.warn(`Error loading vector image: ${error}`);
-                return handleCostumeLoadError(costume, runtime);
+                return E.handleCostumeLoadError(costume, runtime);
 
             });
     }
-    return loadBitmap_(costume, runtime, rotationCenter, optVersion)
+    return E.loadBitmap_(costume, runtime, rotationCenter, optVersion)
         .catch(error => {
             log.warn(`Error loading bitmap image: ${error}`);
-            return handleCostumeLoadError(costume, runtime);
+            return E.handleCostumeLoadError(costume, runtime);
         });
 };
 
@@ -440,7 +444,7 @@ const loadCostumeFromAsset = function (costume, runtime, optVersion) {
  *     to 2, scratch 3 will perform an upgrade step to handle quirks in SVGs from Scratch 2.0.
  * @returns {?Promise} - a promise which will resolve after skinId is set, or null on error.
  */
-const loadCostume = function (md5ext, costume, runtime, optVersion) {
+E.loadCostume = function (md5ext, costume, runtime, optVersion) {
     const idParts = StringUtil.splitFirst(md5ext, '.');
     const md5 = idParts[0];
     const ext = idParts[1].toLowerCase();
@@ -448,7 +452,7 @@ const loadCostume = function (md5ext, costume, runtime, optVersion) {
 
     if (costume.asset) {
         // Costume comes with asset. It could be coming from image upload, drag and drop, or file
-        return loadCostumeFromAsset(costume, runtime, optVersion);
+        return E.loadCostumeFromAsset(costume, runtime, optVersion);
     }
 
     // Need to load the costume from storage. The server should have a reference to this md5.
@@ -479,23 +483,20 @@ const loadCostume = function (md5ext, costume, runtime, optVersion) {
             if (assetArray[0]) {
                 costume.asset = assetArray[0];
             } else {
-                return handleCostumeLoadError(costume, runtime);
+                return E.handleCostumeLoadError(costume, runtime);
             }
 
             if (assetArray[1]) {
                 costume.textLayerAsset = assetArray[1];
             }
-            return loadCostumeFromAsset(costume, runtime, optVersion);
+            return E.loadCostumeFromAsset(costume, runtime, optVersion);
         })
         .catch(error => {
             // Handle case where storage.load rejects with errors
             // instead of resolving null
             log.warn('Error loading costume: ', error);
-            return handleCostumeLoadError(costume, runtime);
+            return E.handleCostumeLoadError(costume, runtime);
         });
 };
 
-module.exports = {
-    loadCostume,
-    loadCostumeFromAsset
-};
+module.exports = E;

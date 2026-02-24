@@ -9,68 +9,69 @@ const SecurityManager = require('./tw-security-manager');
 // TODO: move these out into a separate repository?
 // TODO: change extension spec so that library info, including extension ID, can be collected through static methods
 
-const defaultBuiltinExtensions = {
-    // This is an example that isn't loaded with the other core blocks,
-    // but serves as a reference for loading core blocks as extensions.
-    coreExample: () => require('../blocks/scratch3_core_example'),
-    // These are the non-core built-in extensions.
-    pen: () => require('../extensions/scratch3_pen'),
-    wedo2: () => require('../extensions/scratch3_wedo2'),
-    music: () => require('../extensions/scratch3_music'),
-    microbit: () => require('../extensions/scratch3_microbit'),
-    text2speech: () => require('../extensions/scratch3_text2speech'),
-    translate: () => require('../extensions/scratch3_translate'),
-    videoSensing: () => require('../extensions/scratch3_video_sensing'),
-    ev3: () => require('../extensions/scratch3_ev3'),
-    makeymakey: () => require('../extensions/scratch3_makeymakey'),
-    boost: () => require('../extensions/scratch3_boost'),
-    gdxfor: () => require('../extensions/scratch3_gdx_for'),
-    // tw: core extension
-    tw: () => require('../extensions/tw')
-};
-
-/**
- * @typedef {object} ArgumentInfo - Information about an extension block argument
- * @property {ArgumentType} type - the type of value this argument can take
- * @property {*|undefined} default - the default value of this argument (default: blank)
- */
-
-/**
- * @typedef {object} ConvertedBlockInfo - Raw extension block data paired with processed data ready for scratch-blocks
- * @property {ExtensionBlockMetadata} info - the raw block info
- * @property {object} json - the scratch-blocks JSON definition for this block
- * @property {string} xml - the scratch-blocks XML definition for this block
- */
-
-/**
- * @typedef {object} CategoryInfo - Information about a block category
- * @property {string} id - the unique ID of this category
- * @property {string} name - the human-readable name of this category
- * @property {string|undefined} blockIconURI - optional URI for the block icon image
- * @property {string} color1 - the primary color for this category, in '#rrggbb' format
- * @property {string} color2 - the secondary color for this category, in '#rrggbb' format
- * @property {string} color3 - the tertiary color for this category, in '#rrggbb' format
- * @property {Array.<ConvertedBlockInfo>} blocks - the blocks, separators, etc. in this category
- * @property {Array.<object>} menus - the menus provided by this category
- */
-
-/**
- * @typedef {object} PendingExtensionWorker - Information about an extension worker still initializing
- * @property {string} extensionURL - the URL of the extension to be loaded by this worker
- * @property {Function} resolve - function to call on successful worker startup
- * @property {Function} reject - function to call on failed worker startup
- */
-
-const createExtensionService = extensionManager => {
-    const service = {};
-    service.registerExtensionServiceSync = extensionManager.registerExtensionServiceSync.bind(extensionManager);
-    service.allocateWorker = extensionManager.allocateWorker.bind(extensionManager);
-    service.onWorkerInit = extensionManager.onWorkerInit.bind(extensionManager);
-    service.registerExtensionService = extensionManager.registerExtensionService.bind(extensionManager);
-    return service;
-};
-
 class ExtensionManager {
+    static defaultBuiltinExtensions = {
+        // This is an example that isn't loaded with the other core blocks,
+        // but serves as a reference for loading core blocks as extensions.
+        coreExample: () => require('../blocks/scratch3_core_example'),
+        // These are the non-core built-in extensions.
+        pen: () => require('../extensions/scratch3_pen'),
+        wedo2: () => require('../extensions/scratch3_wedo2'),
+        music: () => require('../extensions/scratch3_music'),
+        microbit: () => require('../extensions/scratch3_microbit'),
+        text2speech: () => require('../extensions/scratch3_text2speech'),
+        translate: () => require('../extensions/scratch3_translate'),
+        videoSensing: () => require('../extensions/scratch3_video_sensing'),
+        ev3: () => require('../extensions/scratch3_ev3'),
+        makeymakey: () => require('../extensions/scratch3_makeymakey'),
+        boost: () => require('../extensions/scratch3_boost'),
+        gdxfor: () => require('../extensions/scratch3_gdx_for'),
+        // tw: core extension
+        tw: () => require('../extensions/tw')
+    };
+
+    /**
+     * @typedef {object} ArgumentInfo - Information about an extension block argument
+     * @property {ArgumentType} type - the type of value this argument can take
+     * @property {*|undefined} default - the default value of this argument (default: blank)
+     */
+
+    /**
+     * @typedef {object} ConvertedBlockInfo -
+     *   Raw extension block data paired with processed data ready for scratch-blocks
+     * @property {ExtensionBlockMetadata} info - the raw block info
+     * @property {object} json - the scratch-blocks JSON definition for this block
+     * @property {string} xml - the scratch-blocks XML definition for this block
+     */
+
+    /**
+     * @typedef {object} CategoryInfo - Information about a block category
+     * @property {string} id - the unique ID of this category
+     * @property {string} name - the human-readable name of this category
+     * @property {string|undefined} blockIconURI - optional URI for the block icon image
+     * @property {string} color1 - the primary color for this category, in '#rrggbb' format
+     * @property {string} color2 - the secondary color for this category, in '#rrggbb' format
+     * @property {string} color3 - the tertiary color for this category, in '#rrggbb' format
+     * @property {Array.<ConvertedBlockInfo>} blocks - the blocks, separators, etc. in this category
+     * @property {Array.<object>} menus - the menus provided by this category
+     */
+
+    /**
+     * @typedef {object} PendingExtensionWorker - Information about an extension worker still initializing
+     * @property {string} extensionURL - the URL of the extension to be loaded by this worker
+     * @property {Function} resolve - function to call on successful worker startup
+     * @property {Function} reject - function to call on failed worker startup
+     */
+
+    static createExtensionService = extensionManager => {
+        const service = {};
+        service.registerExtensionServiceSync = extensionManager.registerExtensionServiceSync.bind(extensionManager);
+        service.allocateWorker = extensionManager.allocateWorker.bind(extensionManager);
+        service.onWorkerInit = extensionManager.onWorkerInit.bind(extensionManager);
+        service.registerExtensionService = extensionManager.registerExtensionService.bind(extensionManager);
+        return service;
+    };
+
     constructor (vm) {
         /**
          * The ID number to provide to the next extension worker.
@@ -125,9 +126,9 @@ class ExtensionManager {
         this.loadingAsyncExtensions = 0;
         this.asyncExtensionsLoadedCallbacks = [];
 
-        this.builtinExtensions = Object.assign({}, defaultBuiltinExtensions);
+        this.builtinExtensions = Object.assign({}, ExtensionManager.defaultBuiltinExtensions);
 
-        dispatch.setService('extensions', createExtensionService(this)).catch(e => {
+        dispatch.setService('extensions', ExtensionManager.createExtensionService(this)).catch(e => {
             log.error(`ExtensionManager was unable to register extension service: ${JSON.stringify(e)}`);
         });
     }
@@ -663,5 +664,32 @@ class ExtensionManager {
         return Object.values(this.workerURLs).includes(url);
     }
 }
+
+ExtensionManager.exports = {
+    SecurityManager,
+
+    external_EwEwEww: () => require('./tw-external'),
+
+    l10n: () => require('./tw-l10n'),
+    defineMessages: () => require('./define-messages'),
+    defaultExtensionUrls: () => require('./tw-default-extension-urls'),
+    extensionAPIcommon: () => require('./tw-extension-api-common'),
+    extensionAPIusb: () => require('./usb-unsandboxed-object'),
+
+    scratchXutilities: () => require('./tw-scratchx-utilities'),
+    scratchXcompatibilityLayer: () => require('./tw-scratchx-compatibility-layer'),
+    jqueryShim: () => require('./tw-jquery-shim'),
+    extensionWorkerContext: () => require('./tw-extension-worker-context'),
+    ExtensionWorker: () => require('./extension-worker'),
+    IFrameExtensionWorker: () => require('./tw-iframe-extension-worker'),
+    unsandboxedExtensionRunner: () => require('./tw-unsandboxed-extension-runner'),
+
+    ArgumentType: () => require('./argument-type'),
+    BlockShape: () => require('./block-shape'),
+    BlockType: () => require('./block-type'),
+    ContextMenuContext: () => require('./context-menu-context'),
+    ReporterScope: () => require('./reporter-scope'),
+    TargetType: () => require('./target-type')
+};
 
 module.exports = ExtensionManager;

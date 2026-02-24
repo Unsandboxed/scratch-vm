@@ -4,30 +4,35 @@ const log = require('../util/log');
 const Thread = require('./thread');
 const cast = require('../util/cast');
 
-/**
- * Single BlockUtility instance reused by execute for every pritimive ran.
- * @const
- */
-const blockUtility = new BlockUtility();
+const ExecuteInternals = {
+    /**
+     * Single BlockUtility instance reused by execute for every pritimive ran.
+     * @const
+     */
+    blockUtility: new BlockUtility(),
 
-/**
- * Profiler frame name for block functions.
- * @const {string}
- */
-const blockFunctionProfilerFrame = 'blockFunction';
+    /**
+     * Profiler frame name for block functions.
+     * @const {string}
+     */
+    blockFunctionProfilerFrame: 'blockFunction',
 
-/**
- * Profiler frame ID for 'blockFunction'.
- * @type {number}
- */
-let blockFunctionProfilerId = -1;
+    /**
+     * Profiler frame ID for 'blockFunction'.
+     * @type {number}
+     */
+    blockFunctionProfilerId: -1
+};
+
+ExecuteInternals.blockUtility._BlockUtility = BlockUtility;
+
 
 /**
  * Utility function to determine if a value is a Promise.
  * @param {*} value Value to check for a Promise.
  * @return {boolean} True if the value appears to be a Promise.
  */
-const isPromise = function (value) {
+ExecuteInternals.isPromise = function (value) {
     return (
         value !== null &&
         typeof value === 'object' &&
@@ -49,7 +54,7 @@ const isPromise = function (value) {
  */
 // @todo move this to callback attached to the thread when we have performance
 // metrics (dd)
-const handleReport = function (resolvedValue, sequencer, thread, blockCached, lastOperation) {
+ExecuteInternals.handleReport = function (resolvedValue, sequencer, thread, blockCached, lastOperation) {
     const currentBlockId = blockCached.id;
     const opcode = blockCached.opcode;
     const isHat = blockCached._isHat;
@@ -121,8 +126,8 @@ const handleReport = function (resolvedValue, sequencer, thread, blockCached, la
     }
 };
 
-const handlePromiseResolution = (resolvedValue, sequencer, thread, blockCached, lastOperation) => {
-    handleReport(resolvedValue, sequencer, thread, blockCached, lastOperation);
+ExecuteInternals.handlePromiseResolution = (resolvedValue, sequencer, thread, blockCached, lastOperation) => {
+    ExecuteInternals.handleReport(resolvedValue, sequencer, thread, blockCached, lastOperation);
     // If it's a command block or a top level reporter in a stackClick.
     // TW: Don't mangle the stack when we just finished executing a hat block.
     // Hat block is always the top and first block of the script. There are no loops to find.
@@ -150,18 +155,18 @@ const handlePromiseResolution = (resolvedValue, sequencer, thread, blockCached, 
     }
 };
 
-const handlePromise = (primitiveReportedValue, sequencer, thread, blockCached, lastOperation) => {
+ExecuteInternals.handlePromise = (primitiveReportedValue, sequencer, thread, blockCached, lastOperation) => {
     if (thread.status === Thread.STATUS_RUNNING) {
         // Primitive returned a promise; automatically yield thread.
         thread.setStatus(Thread.STATUS_PROMISE_WAIT);
     }
     // Promise handlers
     primitiveReportedValue.then(resolvedValue => {
-        handlePromiseResolution(resolvedValue, sequencer, thread, blockCached, lastOperation);
+        ExecuteInternals.handlePromiseResolution(resolvedValue, sequencer, thread, blockCached, lastOperation);
     }, rejectionReason => {
         // Promise rejected: the primitive had some error.
         log.warn('Primitive rejected promise: ', rejectionReason);
-        handlePromiseResolution(`${rejectionReason}`, sequencer, thread, blockCached, lastOperation);
+        ExecuteInternals.handlePromiseResolution(`${rejectionReason}`, sequencer, thread, blockCached, lastOperation);
     });
 };
 
@@ -305,7 +310,7 @@ class BlockCached {
          */
         this._ops = [];
 
-        const {runtime} = blockUtility.sequencer;
+        const {runtime} = ExecuteInternals.blockUtility.sequencer;
 
         const {opcode, fields, inputs} = this;
 
@@ -403,6 +408,7 @@ class BlockCached {
         }
     }
 }
+ExecuteInternals.BlockCached = BlockCached;
 
 /**
  * Initialize a BlockCached instance so its command/hat
@@ -410,16 +416,16 @@ class BlockCached {
  * @param {Profiler} profiler - The profiler that is currently enabled.
  * @param {BlockCached} blockCached - The blockCached instance to profile.
  */
-const _prepareBlockProfiling = function (profiler, blockCached) {
+ExecuteInternals._prepareBlockProfiling = function (profiler, blockCached) {
     blockCached._profiler = profiler;
 
-    if (blockFunctionProfilerId === -1) {
-        blockFunctionProfilerId = profiler.idByName(blockFunctionProfilerFrame);
+    if (ExecuteInternals.blockFunctionProfilerId === -1) {
+        ExecuteInternals.blockFunctionProfilerId = profiler.idByName(ExecuteInternals.blockFunctionProfilerFrame);
     }
 
     const ops = blockCached._ops;
     for (let i = 0; i < ops.length; i++) {
-        ops[i]._profilerFrame = profiler.frame(blockFunctionProfilerId, ops[i].opcode);
+        ops[i]._profilerFrame = profiler.frame(ExecuteInternals.blockFunctionProfilerId, ops[i].opcode);
     }
 };
 
@@ -428,10 +434,10 @@ const _prepareBlockProfiling = function (profiler, blockCached) {
  * @param {!Sequencer} sequencer Which sequencer is executing.
  * @param {!Thread} thread Thread which to read and execute.
  */
-const execute = function (sequencer, thread) {
+ExecuteInternals.execute = function (sequencer, thread) {
     const runtime = sequencer.runtime;
 
-    blockUtility.init(thread, sequencer);
+    ExecuteInternals.blockUtility.init(thread, sequencer);
 
     // Current block to execute is the one on the top of the stack.
     const currentBlockId = thread.peekStack();
@@ -541,12 +547,12 @@ const execute = function (sequencer, thread) {
 
         // Inputs are set during previous steps in the loop.
 
-        const primitiveReportedValue = blockFunction(argValues, blockUtility);
+        const primitiveReportedValue = blockFunction(argValues, ExecuteInternals.blockUtility);
 
-        const primitiveIsPromise = isPromise(primitiveReportedValue);
+        const primitiveIsPromise = ExecuteInternals.isPromise(primitiveReportedValue);
         if (primitiveIsPromise || currentStackFrame.waitingReporter) {
             if (primitiveIsPromise) {
-                handlePromise(primitiveReportedValue, sequencer, thread, opCached, lastOperation);
+                ExecuteInternals.handlePromise(primitiveReportedValue, sequencer, thread, opCached, lastOperation);
             }
 
             // Store the already reported values. They will be thawed into the
@@ -576,7 +582,7 @@ const execute = function (sequencer, thread) {
             break;
         } else if (thread.status === Thread.STATUS_RUNNING) {
             if (lastOperation) {
-                handleReport(primitiveReportedValue, sequencer, thread, opCached, lastOperation);
+                ExecuteInternals.handleReport(primitiveReportedValue, sequencer, thread, opCached, lastOperation);
             } else {
                 // By definition a block that is not last in the list has a
                 // parent.
@@ -600,7 +606,7 @@ const execute = function (sequencer, thread) {
 
     if (runtime.profiler !== null) {
         if (blockCached._profiler !== runtime.profiler) {
-            _prepareBlockProfiling(runtime.profiler, blockCached);
+            ExecuteInternals._prepareBlockProfiling(runtime.profiler, blockCached);
         }
         // Determine the index that is after the last executed block. `i` is
         // currently the block that was just executed. `i + 1` will be the block
@@ -613,4 +619,6 @@ const execute = function (sequencer, thread) {
     }
 };
 
-module.exports = execute;
+ExecuteInternals.execute.exports = ExecuteInternals;
+
+module.exports = ExecuteInternals.execute;

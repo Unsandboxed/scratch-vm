@@ -87,7 +87,7 @@ class Blocks {
              * @type {object.<string, object>}
              */
             compiledScripts: {},
-            
+
             /**
              * tw: A cache of procedure code opcodes to a parsed intermediate representation
              * @type {object.<string, object>}
@@ -497,7 +497,7 @@ class Blocks {
                     }
                 }
                 stage.createVariable(e.varId, e.varName, e.varType, e.isCloud);
-                
+
                 this.runtime.addPendingMonitor(e.varId);
 
                 // TODO same as above, this should probably be batched
@@ -1475,6 +1475,23 @@ BlocksRuntimeCache.getScripts = function (blocks, opcode) {
         }
     }
     return scripts;
+};
+
+Blocks.exports = {
+    BlocksExecuteCache,
+    BlocksRuntimeCache,
+
+    Variable: require('./variable'),
+    Comment: require('./comment'),
+    MonitorRecord,
+    MonitorState: require('./tw-monitor-state'),
+    ScratchBlocksConstants: require('./scratch-blocks-constants'),
+
+    newBlockIds: require('../util/new-block-ids'),
+    getMonitorId: require('../util/get-monitor-id'),
+
+    adapter,
+    mutationAdapter
 };
 
 module.exports = Blocks;

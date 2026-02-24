@@ -1,20 +1,6 @@
 /**
  * @fileoverview
- * Reimplements a subset of the old (pre-September 2025) compiler
- * to maintain compatibility with extensions patching the old compiler.
- *
- * Safety and compatibility is more important than performance. There may be
- * unnecessary type casts and scripts may be marked as yielding even when they
- * don't actually yield. Additionally, anything running in this compatibility layer
- * is not expected to receive the performance benefits of the new compiler.
- *
- * These assumptions are made about extensions using this compatibility layer:
- *  - Extensions do not try to combine this compatibility layer with any APIs
- *    provided by the new compiler.
- *  - Extensions treat IR nodes received from descendSubstack and similar as
- *    opaque objects.
- *  - Extensions need to implement the JS generators for all AST node kinds
- *    they use. Can not rely on the default JS generator.
+ * yucky, no support whatsoever, dont rely on this ever!!!!!!!!!! -miyo
  */
 
 const {InputOpcode, InputType} = require('./enums');

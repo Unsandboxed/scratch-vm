@@ -1,38 +1,39 @@
 const Cast = require('../util/cast');
 
-/**
- * Names used internally for keys used in scratch, also known as "scratch keys".
- * @enum {string}
- */
-const KEY_NAME = {
-    SPACE: 'space',
-    LEFT: 'left arrow',
-    UP: 'up arrow',
-    RIGHT: 'right arrow',
-    DOWN: 'down arrow',
-    ENTER: 'enter',
-    // tw: extra keys
-    BACKSPACE: 'backspace',
-    DELETE: 'delete',
-    SHIFT: 'shift',
-    CAPS_LOCK: 'caps lock',
-    SCROLL_LOCK: 'scroll lock',
-    CONTROL: 'control',
-    ESCAPE: 'escape',
-    INSERT: 'insert',
-    HOME: 'home',
-    END: 'end',
-    PAGE_UP: 'page up',
-    PAGE_DOWN: 'page down'
-};
-
-/**
- * A set of the names of Scratch keys.
- * @type {Set<string>}
- */
-const KEY_NAME_SET = new Set(Object.values(KEY_NAME));
-
 class Keyboard {
+    /**
+     * Names used internally for keys used in scratch, also known as "scratch keys".
+     * @enum {string}
+     */
+    static KEY_NAME = {
+        SPACE: 'space',
+        LEFT: 'left arrow',
+        UP: 'up arrow',
+        RIGHT: 'right arrow',
+        DOWN: 'down arrow',
+        ENTER: 'enter',
+        // tw: extra keys
+        BACKSPACE: 'backspace',
+        DELETE: 'delete',
+        SHIFT: 'shift',
+        CAPS_LOCK: 'caps lock',
+        SCROLL_LOCK: 'scroll lock',
+        CONTROL: 'control',
+        ESCAPE: 'escape',
+        INSERT: 'insert',
+        HOME: 'home',
+        END: 'end',
+        PAGE_UP: 'page up',
+        PAGE_DOWN: 'page down'
+    };
+
+    /**
+     * A set of the names of Scratch keys.
+     * @type {Set<string>}
+     */
+    static KEY_NAME_SET = new Set(Object.values(Keyboard.KEY_NAME));
+
+
     constructor (runtime) {
         /**
          * List of currently pressed scratch keys.
@@ -68,29 +69,29 @@ class Keyboard {
         keyString = Cast.toString(keyString);
         // Convert space and arrow keys to their Scratch key names.
         switch (keyString) {
-        case ' ': return KEY_NAME.SPACE;
+        case ' ': return Keyboard.KEY_NAME.SPACE;
         case 'ArrowLeft':
-        case 'Left': return KEY_NAME.LEFT;
+        case 'Left': return Keyboard.KEY_NAME.LEFT;
         case 'ArrowUp':
-        case 'Up': return KEY_NAME.UP;
+        case 'Up': return Keyboard.KEY_NAME.UP;
         case 'Right':
-        case 'ArrowRight': return KEY_NAME.RIGHT;
+        case 'ArrowRight': return Keyboard.KEY_NAME.RIGHT;
         case 'Down':
-        case 'ArrowDown': return KEY_NAME.DOWN;
-        case 'Enter': return KEY_NAME.ENTER;
+        case 'ArrowDown': return Keyboard.KEY_NAME.DOWN;
+        case 'Enter': return Keyboard.KEY_NAME.ENTER;
         // tw: extra keys
-        case 'Backspace': return KEY_NAME.BACKSPACE;
-        case 'Delete': return KEY_NAME.DELETE;
-        case 'Shift': return KEY_NAME.SHIFT;
-        case 'CapsLock': return KEY_NAME.CAPS_LOCK;
-        case 'ScrollLock': return KEY_NAME.SCROLL_LOCK;
-        case 'Control': return KEY_NAME.CONTROL;
-        case 'Escape': return KEY_NAME.ESCAPE;
-        case 'Insert': return KEY_NAME.INSERT;
-        case 'Home': return KEY_NAME.HOME;
-        case 'End': return KEY_NAME.END;
-        case 'PageUp': return KEY_NAME.PAGE_UP;
-        case 'PageDown': return KEY_NAME.PAGE_DOWN;
+        case 'Backspace': return Keyboard.KEY_NAME.BACKSPACE;
+        case 'Delete': return Keyboard.KEY_NAME.DELETE;
+        case 'Shift': return Keyboard.KEY_NAME.SHIFT;
+        case 'CapsLock': return Keyboard.KEY_NAME.CAPS_LOCK;
+        case 'ScrollLock': return Keyboard.KEY_NAME.SCROLL_LOCK;
+        case 'Control': return Keyboard.KEY_NAME.CONTROL;
+        case 'Escape': return Keyboard.KEY_NAME.ESCAPE;
+        case 'Insert': return Keyboard.KEY_NAME.INSERT;
+        case 'Home': return Keyboard.KEY_NAME.HOME;
+        case 'End': return Keyboard.KEY_NAME.END;
+        case 'PageUp': return Keyboard.KEY_NAME.PAGE_UP;
+        case 'PageDown': return Keyboard.KEY_NAME.PAGE_DOWN;
         }
         // Ignore modifier keys
         if (keyString.length > 1) {
@@ -114,11 +115,11 @@ class Keyboard {
                 return String.fromCharCode(keyArg);
             }
             switch (keyArg) {
-            case 32: return KEY_NAME.SPACE;
-            case 37: return KEY_NAME.LEFT;
-            case 38: return KEY_NAME.UP;
-            case 39: return KEY_NAME.RIGHT;
-            case 40: return KEY_NAME.DOWN;
+            case 32: return Keyboard.KEY_NAME.SPACE;
+            case 37: return Keyboard.KEY_NAME.LEFT;
+            case 38: return Keyboard.KEY_NAME.UP;
+            case 39: return Keyboard.KEY_NAME.RIGHT;
+            case 40: return Keyboard.KEY_NAME.DOWN;
             }
         }
 
@@ -127,7 +128,7 @@ class Keyboard {
         // If the arg matches a special key name, return it.
         // No special keys have a name that is only 1 character long, so we can avoid the lookup
         // entirely in the most common case.
-        if (keyArg.length > 1 && KEY_NAME_SET.has(keyArg)) {
+        if (keyArg.length > 1 && Keyboard.KEY_NAME_SET.has(keyArg)) {
             return keyArg;
         }
 
@@ -138,16 +139,16 @@ class Keyboard {
 
         // Check for the space character.
         if (keyArg === ' ') {
-            return KEY_NAME.SPACE;
+            return Keyboard.KEY_NAME.SPACE;
         }
         // tw: support Scratch 2 hacked blocks
         // There are more hacked blocks but most of them get mangled by Scratch 2 -> Scratch 3 conversion
         if (keyArg === '\r') {
             // this probably belongs upstream
-            return KEY_NAME.ENTER;
+            return Keyboard.KEY_NAME.ENTER;
         }
         if (keyArg === '\u001b') {
-            return KEY_NAME.ESCAPE;
+            return Keyboard.KEY_NAME.ESCAPE;
         }
 
         return keyArg.toUpperCase();

@@ -4,66 +4,66 @@ const BlockType = require('../../extension-support/block-type');
 const Cast = require('../../util/cast');
 
 /**
- * Icon svg to be displayed at the left edge of each extension block, encoded as a data URI.
- * @type {string}
- */
-// eslint-disable-next-line max-len
-const blockIconURI = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MCA0MCI+PHN0eWxlPi5zdDJ7ZmlsbDpyZWR9LnN0M3tmaWxsOiNlMGUwZTB9LnN0NHtmaWxsOm5vbmU7c3Ryb2tlOiM2NjY7c3Ryb2tlLXdpZHRoOi41O3N0cm9rZS1taXRlcmxpbWl0OjEwfTwvc3R5bGU+PHBhdGggaWQ9IkxheWVyXzYiIGZpbGw9IiNmZmYiIGQ9Ik0zNSAyOEg1YTEgMSAwIDAgMS0xLTFWMTJjMC0uNi40LTEgMS0xaDMwYy41IDAgMSAuNCAxIDF2MTVjMCAuNS0uNSAxLTEgMSIvPjxnIGlkPSJMYXllcl80Ij48cGF0aCBkPSJNNCAyNWgzMnYyLjdINHptOS0xaC0yLjJhMSAxIDAgMCAxLTEtMXYtOS43YzAtLjYuNC0xIDEtMUgxM2MuNiAwIDEgLjQgMSAxVjIzYzAgLjYtLjUgMS0xIDEiIGNsYXNzPSJzdDIiLz48cGF0aCBkPSJNNi4xIDE5LjN2LTIuMmMwLS41LjQtMSAxLTFoOS43Yy41IDAgMSAuNSAxIDF2Mi4yYzAgLjUtLjUgMS0xIDFINy4xYTEgMSAwIDAgMS0xLTEiIGNsYXNzPSJzdDIiLz48Y2lyY2xlIGN4PSIyMi44IiBjeT0iMTguMiIgcj0iMy40IiBjbGFzcz0ic3QyIi8+PGNpcmNsZSBjeD0iMzAuNiIgY3k9IjE4LjIiIHI9IjMuNCIgY2xhc3M9InN0MiIvPjxwYXRoIGQ9Ik00LjIgMjdoMzEuOXYuN0g0LjJ6IiBjbGFzcz0ic3QyIi8+PC9nPjxnIGlkPSJMYXllcl81Ij48Y2lyY2xlIGN4PSIyMi44IiBjeT0iMTguMiIgcj0iMi4zIiBjbGFzcz0ic3QzIi8+PGNpcmNsZSBjeD0iMzAuNiIgY3k9IjE4LjIiIHI9IjIuMyIgY2xhc3M9InN0MyIvPjxwYXRoIGQ9Ik0xMi41IDIyLjloLTEuMmMtLjMgMC0uNS0uMi0uNS0uNVYxNGMwLS4zLjItLjUuNS0uNWgxLjJjLjMgMCAuNS4yLjUuNXY4LjRjMCAuMy0uMi41LS41LjUiIGNsYXNzPSJzdDMiLz48cGF0aCBkPSJNNy4yIDE4Ljd2LTEuMmMwLS4zLjItLjUuNS0uNWg4LjRjLjMgMCAuNS4yLjUuNXYxLjJjMCAuMy0uMi41LS41LjVINy43Yy0uMyAwLS41LS4yLS41LS41TTQgMjZoMzJ2Mkg0eiIgY2xhc3M9InN0MyIvPjwvZz48ZyBpZD0iTGF5ZXJfMyI+PHBhdGggZD0iTTM1LjIgMjcuOUg0LjhhMSAxIDAgMCAxLTEtMVYxMi4xYzAtLjYuNS0xIDEtMWgzMC41Yy41IDAgMSAuNCAxIDFWMjdhMSAxIDAgMCAxLTEuMS45eiIgY2xhc3M9InN0NCIvPjxwYXRoIGQ9Ik0zNS4yIDI3LjlINC44YTEgMSAwIDAgMS0xLTFWMTIuMWMwLS42LjUtMSAxLTFoMzAuNWMuNSAwIDEgLjQgMSAxVjI3YTEgMSAwIDAgMS0xLjEuOXoiIGNsYXNzPSJzdDQiLz48L2c+PC9zdmc+';
-
-/**
- * Length of the buffer to store key presses for the "when keys pressed in order" hat
- * @type {number}
- */
-const KEY_BUFFER_LENGTH = 100;
-
-/**
- * Timeout in milliseconds to reset the completed flag for a sequence.
- * @type {number}
- */
-const SEQUENCE_HAT_TIMEOUT = 100;
-
-/**
- * An id for the space key on a keyboard.
- */
-const KEY_ID_SPACE = 'SPACE';
-
-/**
- * An id for the left arrow key on a keyboard.
- */
-const KEY_ID_LEFT = 'LEFT';
-
-/**
- * An id for the right arrow key on a keyboard.
- */
-const KEY_ID_RIGHT = 'RIGHT';
-
-/**
- * An id for the up arrow key on a keyboard.
- */
-const KEY_ID_UP = 'UP';
-
-/**
- * An id for the down arrow key on a keyboard.
- */
-const KEY_ID_DOWN = 'DOWN';
-
-/**
- * Names used by keyboard io for keys used in scratch.
- * @enum {string}
- */
-const SCRATCH_KEY_NAME = {
-    [KEY_ID_SPACE]: 'space',
-    [KEY_ID_LEFT]: 'left arrow',
-    [KEY_ID_UP]: 'up arrow',
-    [KEY_ID_RIGHT]: 'right arrow',
-    [KEY_ID_DOWN]: 'down arrow'
-};
-
-/**
  * Class for the makey makey blocks in Scratch 3.0
  * @constructor
  */
 class Scratch3MakeyMakeyBlocks {
+    /**
+     * Icon svg to be displayed at the left edge of each extension block, encoded as a data URI.
+     * @type {string}
+     */
+    // eslint-disable-next-line max-len
+    staticblockIconURI = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MCA0MCI+PHN0eWxlPi5zdDJ7ZmlsbDpyZWR9LnN0M3tmaWxsOiNlMGUwZTB9LnN0NHtmaWxsOm5vbmU7c3Ryb2tlOiM2NjY7c3Ryb2tlLXdpZHRoOi41O3N0cm9rZS1taXRlcmxpbWl0OjEwfTwvc3R5bGU+PHBhdGggaWQ9IkxheWVyXzYiIGZpbGw9IiNmZmYiIGQ9Ik0zNSAyOEg1YTEgMSAwIDAgMS0xLTFWMTJjMC0uNi40LTEgMS0xaDMwYy41IDAgMSAuNCAxIDF2MTVjMCAuNS0uNSAxLTEgMSIvPjxnIGlkPSJMYXllcl80Ij48cGF0aCBkPSJNNCAyNWgzMnYyLjdINHptOS0xaC0yLjJhMSAxIDAgMCAxLTEtMXYtOS43YzAtLjYuNC0xIDEtMUgxM2MuNiAwIDEgLjQgMSAxVjIzYzAgLjYtLjUgMS0xIDEiIGNsYXNzPSJzdDIiLz48cGF0aCBkPSJNNi4xIDE5LjN2LTIuMmMwLS41LjQtMSAxLTFoOS43Yy41IDAgMSAuNSAxIDF2Mi4yYzAgLjUtLjUgMS0xIDFINy4xYTEgMSAwIDAgMS0xLTEiIGNsYXNzPSJzdDIiLz48Y2lyY2xlIGN4PSIyMi44IiBjeT0iMTguMiIgcj0iMy40IiBjbGFzcz0ic3QyIi8+PGNpcmNsZSBjeD0iMzAuNiIgY3k9IjE4LjIiIHI9IjMuNCIgY2xhc3M9InN0MiIvPjxwYXRoIGQ9Ik00LjIgMjdoMzEuOXYuN0g0LjJ6IiBjbGFzcz0ic3QyIi8+PC9nPjxnIGlkPSJMYXllcl81Ij48Y2lyY2xlIGN4PSIyMi44IiBjeT0iMTguMiIgcj0iMi4zIiBjbGFzcz0ic3QzIi8+PGNpcmNsZSBjeD0iMzAuNiIgY3k9IjE4LjIiIHI9IjIuMyIgY2xhc3M9InN0MyIvPjxwYXRoIGQ9Ik0xMi41IDIyLjloLTEuMmMtLjMgMC0uNS0uMi0uNS0uNVYxNGMwLS4zLjItLjUuNS0uNWgxLjJjLjMgMCAuNS4yLjUuNXY4LjRjMCAuMy0uMi41LS41LjUiIGNsYXNzPSJzdDMiLz48cGF0aCBkPSJNNy4yIDE4Ljd2LTEuMmMwLS4zLjItLjUuNS0uNWg4LjRjLjMgMCAuNS4yLjUuNXYxLjJjMCAuMy0uMi41LS41LjVINy43Yy0uMyAwLS41LS4yLS41LS41TTQgMjZoMzJ2Mkg0eiIgY2xhc3M9InN0MyIvPjwvZz48ZyBpZD0iTGF5ZXJfMyI+PHBhdGggZD0iTTM1LjIgMjcuOUg0LjhhMSAxIDAgMCAxLTEtMVYxMi4xYzAtLjYuNS0xIDEtMWgzMC41Yy41IDAgMSAuNCAxIDFWMjdhMSAxIDAgMCAxLTEuMS45eiIgY2xhc3M9InN0NCIvPjxwYXRoIGQ9Ik0zNS4yIDI3LjlINC44YTEgMSAwIDAgMS0xLTFWMTIuMWMwLS42LjUtMSAxLTFoMzAuNWMuNSAwIDEgLjQgMSAxVjI3YTEgMSAwIDAgMS0xLjEuOXoiIGNsYXNzPSJzdDQiLz48L2c+PC9zdmc+';
+
+    /**
+     * Length of the buffer to store key presses for the "when keys pressed in order" hat
+     * @type {number}
+     */
+    static KEY_BUFFER_LENGTH = 100;
+
+    /**
+     * Timeout in milliseconds to reset the completed flag for a sequence.
+     * @type {number}
+     */
+    static SEQUENCE_HAT_TIMEOUT = 100;
+
+    /**
+     * An id for the space key on a keyboard.
+     */
+    static KEY_ID_SPACE = 'SPACE';
+
+    /**
+     * An id for the left arrow key on a keyboard.
+     */
+    static KEY_ID_LEFT = 'LEFT';
+
+    /**
+     * An id for the right arrow key on a keyboard.
+     */
+    static KEY_ID_RIGHT = 'RIGHT';
+
+    /**
+     * An id for the up arrow key on a keyboard.
+     */
+    static KEY_ID_UP = 'UP';
+
+    /**
+     * An id for the down arrow key on a keyboard.
+     */
+    static KEY_ID_DOWN = 'DOWN';
+
+    /**
+     * Names used by keyboard io for keys used in scratch.
+     * @enum {string}
+     */
+    static SCRATCH_KEY_NAME = {
+        [Scratch3MakeyMakeyBlocks.KEY_ID_SPACE]: 'space',
+        [Scratch3MakeyMakeyBlocks.KEY_ID_LEFT]: 'left arrow',
+        [Scratch3MakeyMakeyBlocks.KEY_ID_UP]: 'up arrow',
+        [Scratch3MakeyMakeyBlocks.KEY_ID_RIGHT]: 'right arrow',
+        [Scratch3MakeyMakeyBlocks.KEY_ID_DOWN]: 'down arrow'
+    };
+
     constructor (runtime) {
         /**
          * The runtime instantiating this block package.
@@ -116,27 +116,27 @@ class Scratch3MakeyMakeyBlocks {
     */
     get KEY_TEXT_SHORT () {
         return {
-            [KEY_ID_SPACE]: formatMessage({
+            [Scratch3MakeyMakeyBlocks.KEY_ID_SPACE]: formatMessage({
                 id: 'makeymakey.spaceKey',
                 default: 'space',
                 description: 'The space key on a computer keyboard.'
             }),
-            [KEY_ID_LEFT]: formatMessage({
+            [Scratch3MakeyMakeyBlocks.KEY_ID_LEFT]: formatMessage({
                 id: 'makeymakey.leftArrowShort',
                 default: 'left',
                 description: 'Short name for the left arrow key on a computer keyboard.'
             }),
-            [KEY_ID_UP]: formatMessage({
+            [Scratch3MakeyMakeyBlocks.KEY_ID_UP]: formatMessage({
                 id: 'makeymakey.upArrowShort',
                 default: 'up',
                 description: 'Short name for the up arrow key on a computer keyboard.'
             }),
-            [KEY_ID_RIGHT]: formatMessage({
+            [Scratch3MakeyMakeyBlocks.KEY_ID_RIGHT]: formatMessage({
                 id: 'makeymakey.rightArrowShort',
                 default: 'right',
                 description: 'Short name for the right arrow key on a computer keyboard.'
             }),
-            [KEY_ID_DOWN]: formatMessage({
+            [Scratch3MakeyMakeyBlocks.KEY_ID_DOWN]: formatMessage({
                 id: 'makeymakey.downArrowShort',
                 default: 'down',
                 description: 'Short name for the down arrow key on a computer keyboard.'
@@ -150,6 +150,12 @@ class Scratch3MakeyMakeyBlocks {
      * @type {array}
      */
     get DEFAULT_SEQUENCES () {
+        const {
+            KEY_ID_LEFT,
+            KEY_ID_RIGHT,
+            KEY_ID_UP,
+            KEY_ID_DOWN
+        } = Scratch3MakeyMakeyBlocks;
         return [
             `${KEY_ID_LEFT} ${KEY_ID_UP} ${KEY_ID_RIGHT}`,
             `${KEY_ID_RIGHT} ${KEY_ID_UP} ${KEY_ID_LEFT}`,
@@ -171,7 +177,7 @@ class Scratch3MakeyMakeyBlocks {
         return {
             id: 'makeymakey',
             name: 'Makey Makey',
-            blockIconURI: blockIconURI,
+            blockIconURI: Scratch3MakeyMakeyBlocks.blockIconURI,
             blocks: [
                 {
                     opcode: 'whenMakeyKeyPressed',
@@ -185,7 +191,7 @@ class Scratch3MakeyMakeyBlocks {
                         KEY: {
                             type: ArgumentType.STRING,
                             menu: 'KEY',
-                            defaultValue: KEY_ID_SPACE
+                            defaultValue: Scratch3MakeyMakeyBlocks.KEY_ID_SPACE
                         }
                     }
                 },
@@ -216,7 +222,7 @@ class Scratch3MakeyMakeyBlocks {
                                 default: 'space',
                                 description: 'The space key on a computer keyboard.'
                             }),
-                            value: KEY_ID_SPACE
+                            value: Scratch3MakeyMakeyBlocks.KEY_ID_SPACE
                         },
                         {
                             text: formatMessage({
@@ -224,7 +230,7 @@ class Scratch3MakeyMakeyBlocks {
                                 default: 'up arrow',
                                 description: 'The up arrow key on a computer keyboard.'
                             }),
-                            value: KEY_ID_UP
+                            value: Scratch3MakeyMakeyBlocks.KEY_ID_UP
                         },
                         {
                             text: formatMessage({
@@ -232,7 +238,7 @@ class Scratch3MakeyMakeyBlocks {
                                 default: 'down arrow',
                                 description: 'The down arrow key on a computer keyboard.'
                             }),
-                            value: KEY_ID_DOWN
+                            value: Scratch3MakeyMakeyBlocks.KEY_ID_DOWN
                         },
                         {
                             text: formatMessage({
@@ -240,7 +246,7 @@ class Scratch3MakeyMakeyBlocks {
                                 default: 'right arrow',
                                 description: 'The right arrow key on a computer keyboard.'
                             }),
-                            value: KEY_ID_RIGHT
+                            value: Scratch3MakeyMakeyBlocks.KEY_ID_RIGHT
                         },
                         {
                             text: formatMessage({
@@ -248,7 +254,7 @@ class Scratch3MakeyMakeyBlocks {
                                 default: 'left arrow',
                                 description: 'The left arrow key on a computer keyboard.'
                             }),
-                            value: KEY_ID_LEFT
+                            value: Scratch3MakeyMakeyBlocks.KEY_ID_LEFT
                         },
                         {text: 'w', value: 'w'},
                         {text: 'a', value: 'a'},
@@ -303,8 +309,8 @@ class Scratch3MakeyMakeyBlocks {
         let key = args.KEY;
         // Convert the key arg, if it is a KEY_ID, to the key name used by
         // the Keyboard io module.
-        if (SCRATCH_KEY_NAME[args.KEY]) {
-            key = SCRATCH_KEY_NAME[args.KEY];
+        if (Scratch3MakeyMakeyBlocks.SCRATCH_KEY_NAME[args.KEY]) {
+            key = Scratch3MakeyMakeyBlocks.SCRATCH_KEY_NAME[args.KEY];
         }
         const isDown = util.ioQuery('keyboard', 'getKeyIsDown', [key]);
         return (isDown && this.frameToggle);
@@ -322,7 +328,7 @@ class Scratch3MakeyMakeyBlocks {
         key = key.toUpperCase();
         this.keyPressBuffer.push(key);
         // Keep the buffer under the length limit
-        if (this.keyPressBuffer.length > KEY_BUFFER_LENGTH) {
+        if (this.keyPressBuffer.length > Scratch3MakeyMakeyBlocks.KEY_BUFFER_LENGTH) {
             this.keyPressBuffer.shift();
         }
         // Check the buffer for each sequence in use
@@ -349,7 +355,7 @@ class Scratch3MakeyMakeyBlocks {
                 // time to all trigger before resetting the flag.
                 setTimeout(() => {
                     this.sequences[str].completed = false;
-                }, SEQUENCE_HAT_TIMEOUT);
+                }, Scratch3MakeyMakeyBlocks.SEQUENCE_HAT_TIMEOUT);
             }
         }
     }

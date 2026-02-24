@@ -7,25 +7,25 @@ const log = require('../util/log');
 const {isWorker} = require('./tw-extension-worker-context');
 const createTranslate = require('./tw-l10n');
 
-const translate = createTranslate(null);
-
-const loadScripts = url => {
-    if (isWorker) {
-        importScripts(url);
-    } else {
-        return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.onload = () => resolve();
-            script.onerror = () => {
-                reject(new Error(`Error in sandboxed script: ${url}. Check the console for more information.`));
-            };
-            script.src = url;
-            document.body.appendChild(script);
-        });
-    }
-};
-
 class ExtensionWorker {
+    static translate = createTranslate(null);
+
+    static loadScripts = url => {
+        if (isWorker) {
+            importScripts(url);
+        } else {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.onload = () => resolve();
+                script.onerror = () => {
+                    reject(new Error(`Error in sandboxed script: ${url}. Check the console for more information.`));
+                };
+                script.src = url;
+                document.body.appendChild(script);
+            });
+        }
+    };
+
     constructor () {
         this.nextExtensionId = 0;
 
@@ -41,7 +41,7 @@ class ExtensionWorker {
                 this.workerId = id;
 
                 try {
-                    await loadScripts(extension);
+                    await ExtensionWorker.loadScripts(extension);
                     await this.firstRegistrationPromise;
 
                     const initialRegistrations = this.initialRegistrations;
@@ -88,13 +88,16 @@ Object.assign(global.Scratch, ScratchCommon, {
     canEmbed: () => Promise.resolve(false),
     canDownload: () => Promise.resolve(false),
     download: () => Promise.reject(new Error('Scratch.download not supported in sandboxed extensions')),
-    translate
+    translate: ExtensionWorker.translate
 });
 
 /**
  * Expose only specific parts of the worker to extensions.
  */
 const extensionWorker = new ExtensionWorker();
+extensionWorker._ExtensionWorker = ExtensionWorker;
+
+global._ExtensionWorker = extensionWorker;
 global.Scratch.extensions = {
     isPremature: false,
     isUSB: true,

@@ -16,29 +16,29 @@ const log = require('../util/log');
  * @property {Asset} [asset] scratch-storage asset if system: false
  */
 
-/**
- * @param {string} font
- * @returns {string}
- */
-const removeInvalidCharacters = font => font.replace(/[^-\w ]/g, '');
-
-/**
- * @param {InternalFont[]} fonts Modified in-place
- * @param {InternalFont} newFont
- * @returns {InternalFont|null}
- */
-const addOrUpdateFont = (fonts, newFont) => {
-    let oldFont;
-    const oldIndex = fonts.findIndex(i => i.family.toLowerCase() === newFont.family.toLowerCase());
-    if (oldIndex !== -1) {
-        oldFont = fonts[oldIndex];
-        fonts.splice(oldIndex, 1);
-    }
-    fonts.push(newFont);
-    return oldFont;
-};
-
 class FontManager extends EventEmitter {
+    /**
+     * @param {string} font
+     * @returns {string}
+     */
+    static removeInvalidCharacters = font => font.replace(/[^-\w ]/g, '');
+
+    /**
+     * @param {InternalFont[]} fonts Modified in-place
+     * @param {InternalFont} newFont
+     * @returns {InternalFont|null}
+     */
+    static addOrUpdateFont = (fonts, newFont) => {
+        let oldFont;
+        const oldIndex = fonts.findIndex(i => i.family.toLowerCase() === newFont.family.toLowerCase());
+        if (oldIndex !== -1) {
+            oldFont = fonts[oldIndex];
+            fonts.splice(oldIndex, 1);
+        }
+        fonts.push(newFont);
+        return oldFont;
+    };
+
     /**
      * @param {Runtime} runtime
      */
@@ -99,14 +99,14 @@ class FontManager extends EventEmitter {
     isValidFamily (family) {
         return this.isValidSystemFont(family) && this.isValidCustomFont(family);
     }
-    
+
     /**
      * @param {string} family Untrusted font name input
      * @returns {string}
      */
     getUnusedSystemFont (family) {
         return StringUtil.caseInsensitiveUnusedName(
-            removeInvalidCharacters(family),
+            FontManager.removeInvalidCharacters(family),
             this.fonts.map(i => i.family)
         );
     }
@@ -117,7 +117,7 @@ class FontManager extends EventEmitter {
      */
     getUnusedCustomFont (family) {
         return StringUtil.caseInsensitiveUnusedName(
-            removeInvalidCharacters(family),
+            FontManager.removeInvalidCharacters(family),
             [
                 ...this.fonts.map(i => i.family),
                 ...this.restrictedFonts
@@ -145,7 +145,7 @@ class FontManager extends EventEmitter {
         if (!this.isValidSystemFont(family)) {
             throw new Error('Invalid system font family');
         }
-        const oldFont = addOrUpdateFont(this.fonts, {
+        const oldFont = FontManager.addOrUpdateFont(this.fonts, {
             system: true,
             family,
             fallback
@@ -165,7 +165,7 @@ class FontManager extends EventEmitter {
         if (!this.isValidCustomFont(family)) {
             throw new Error('Invalid custom font family');
         }
-        addOrUpdateFont(this.fonts, {
+        FontManager.addOrUpdateFont(this.fonts, {
             system: false,
             family,
             fallback,

@@ -1,43 +1,43 @@
 // Due to the existence of features such as interpolation and "0 FPS" being treated as "screen refresh rate",
 // The VM loop logic has become much more complex
 
-// Use setTimeout to polyfill requestAnimationFrame in Node.js environments
-const _requestAnimationFrame = typeof requestAnimationFrame === 'function' ?
-    requestAnimationFrame :
-    (f => setTimeout(f, 1000 / 60));
-const _cancelAnimationFrame = typeof requestAnimationFrame === 'function' ?
-    cancelAnimationFrame :
-    clearTimeout;
-
-const animationFrameWrapper = callback => {
-    let id;
-    const handle = () => {
-        id = _requestAnimationFrame(handle);
-        callback();
-    };
-    const cancel = () => _cancelAnimationFrame(id);
-    id = _requestAnimationFrame(handle);
-    return {
-        cancel
-    };
-};
-
-/**
- * We've found that having an empty requestAnimationFrame loop running in the background improves frame
- * pacing in many situations. See https://github.com/TurboWarp/scratch-vm/issues/257.
- *
- * Having an extra loop running increases CPU usage and battery usage even if it's not doing anything.
- * So, we only do this when the intended framerate is high enough that the user clearly wants smooth
- * motion, and only if the user is on a platform where we have evidence that this helps:
- *  - Chrome, Edge, and other Chromium on Windows
- *
- * @param {number} framerate Intended framerate
- * @returns {boolean} true if no-op animation frame loop should be used
- */
-const shouldUseNoopAnimationFrame = framerate =>
-    framerate >= 30 && navigator.userAgent.includes('Chrome') && navigator.userAgent.includes('Windows');
-
 class FrameLoop {
+    // Use setTimeout to polyfill requestAnimationFrame in Node.js environments
+    static _requestAnimationFrame = typeof requestAnimationFrame === 'function' ?
+        requestAnimationFrame :
+        (f => setTimeout(f, 1000 / 60));
+    static _cancelAnimationFrame = typeof requestAnimationFrame === 'function' ?
+        cancelAnimationFrame :
+        clearTimeout;
+
+    static animationFrameWrapper = callback => {
+        let id;
+        const handle = () => {
+            id = FrameLoop._requestAnimationFrame(handle);
+            callback();
+        };
+        const cancel = () => FrameLoop._cancelAnimationFrame(id);
+        id = FrameLoop._requestAnimationFrame(handle);
+        return {
+            cancel
+        };
+    };
+
+    /**
+     * We've found that having an empty requestAnimationFrame loop running in the background improves frame
+     * pacing in many situations. See https://github.com/TurboWarp/scratch-vm/issues/257.
+     *
+     * Having an extra loop running increases CPU usage and battery usage even if it's not doing anything.
+     * So, we only do this when the intended framerate is high enough that the user clearly wants smooth
+     * motion, and only if the user is on a platform where we have evidence that this helps:
+     *  - Chrome, Edge, and other Chromium on Windows
+     *
+     * @param {number} framerate Intended framerate
+     * @returns {boolean} true if no-op animation frame loop should be used
+     */
+    static shouldUseNoopAnimationFrame = framerate =>
+        framerate >= 30 && navigator.userAgent.includes('Chrome') && navigator.userAgent.includes('Windows');
+
     constructor (runtime) {
         this.runtime = runtime;
         this.running = false;
@@ -85,14 +85,14 @@ class FrameLoop {
     start () {
         this.running = true;
         if (this.framerate === 0) {
-            this._stepAnimation = animationFrameWrapper(this.stepCallback);
+            this._stepAnimation = FrameLoop.animationFrameWrapper(this.stepCallback);
             this.runtime.currentStepTime = 1000 / 60;
         } else {
             // Interpolation should never be enabled when framerate === 0 as that's just redundant
             if (this.interpolation) {
-                this._interpolationAnimation = animationFrameWrapper(this.interpolationCallback);
-            } else if (shouldUseNoopAnimationFrame(this.framerate)) {
-                this._noopAnimation = animationFrameWrapper(this.noopCallback);
+                this._interpolationAnimation = FrameLoop.animationFrameWrapper(this.interpolationCallback);
+            } else if (FrameLoop.shouldUseNoopAnimationFrame(this.framerate)) {
+                this._noopAnimation = FrameLoop.animationFrameWrapper(this.noopCallback);
             }
             this._stepInterval = setInterval(this.stepCallback, 1000 / this.framerate);
             this.runtime.currentStepTime = 1000 / this.framerate;

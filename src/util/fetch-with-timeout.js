@@ -51,6 +51,7 @@ const fetchWithTimeout = (resource, init, timeout) => {
 };
 
 module.exports = {
+    myFetch,
     fetchWithTimeout,
     setFetch
 };

@@ -10,74 +10,75 @@
 const {motionVector, scratchAtan2} = require('./math');
 
 /**
- * The width of the intended resolution to analyze for motion.
- * @type {number}
- */
-const WIDTH = 480;
-
-/**
- * The height of the intended resolution to analyze for motion.
- * @type {number}
- */
-const HEIGHT = 360;
-
-/**
- * A constant value to scale the magnitude of the x and y components called u
- * and v. This creates the motionAmount value.
- *
- * Old note: chosen empirically to give a range of roughly 0-100
- *
- * @type {number}
- */
-const AMOUNT_SCALE = 100;
-
-/**
- * A constant value to scale the magnitude of the x and y components called u
- * and v in the local motion derivative. This creates the motionAmount value on
- * a target's motion state.
- *
- * Old note: note 2e-4 * activePixelNum is an experimentally tuned threshold
- * for my logitech Pro 9000 webcam - TTH
- *
- * @type {number}
- */
-const LOCAL_AMOUNT_SCALE = AMOUNT_SCALE * 2e-4;
-
-/**
- * The motion amount must be higher than the THRESHOLD to calculate a new
- * direction value.
- * @type {number}
- */
-const THRESHOLD = 10;
-
-/**
- * The size of the radius of the window of summarized values when considering
- * the motion inside the full resolution of the sample.
- * @type {number}
- */
-const WINSIZE = 8;
-
-/**
- * A ceiling for the motionAmount stored to a local target's motion state. The
- * motionAmount is not allowed to be larger than LOCAL_MAX_AMOUNT.
- * @type {number}
- */
-const LOCAL_MAX_AMOUNT = 100;
-
-/**
- * The motion amount for a target's local motion must be higher than the
- * LOCAL_THRESHOLD to calculate a new direction value.
- * @type {number}
- */
-const LOCAL_THRESHOLD = THRESHOLD / 3;
-
-/**
  * Store the necessary image pixel data to compares frames of a video and
  * detect an amount and direction of motion in the full sample or in a
  * specified area.
  * @constructor
  */
 class VideoMotion {
+    /**
+     * The width of the intended resolution to analyze for motion.
+     * @type {number}
+     */
+    static WIDTH = 480;
+
+    /**
+     * The height of the intended resolution to analyze for motion.
+     * @type {number}
+     */
+    static HEIGHT = 360;
+
+    /**
+     * A constant value to scale the magnitude of the x and y components called u
+     * and v. This creates the motionAmount value.
+     *
+     * Old note: chosen empirically to give a range of roughly 0-100
+     *
+     * @type {number}
+     */
+    static AMOUNT_SCALE = 100;
+
+    /**
+     * A constant value to scale the magnitude of the x and y components called u
+     * and v in the local motion derivative. This creates the motionAmount value on
+     * a target's motion state.
+     *
+     * Old note: note 2e-4 * activePixelNum is an experimentally tuned threshold
+     * for my logitech Pro 9000 webcam - TTH
+     *
+     * @type {number}
+     */
+    static LOCAL_AMOUNT_SCALE = VideoMotion.AMOUNT_SCALE * 2e-4;
+
+    /**
+     * The motion amount must be higher than the THRESHOLD to calculate a new
+     * direction value.
+     * @type {number}
+     */
+    static THRESHOLD = 10;
+
+    /**
+     * The size of the radius of the window of summarized values when considering
+     * the motion inside the full resolution of the sample.
+     * @type {number}
+     */
+    static WINSIZE = 8;
+
+    /**
+     * A ceiling for the motionAmount stored to a local target's motion state. The
+     * motionAmount is not allowed to be larger than LOCAL_MAX_AMOUNT.
+     * @type {number}
+     */
+    static LOCAL_MAX_AMOUNT = 100;
+
+    /**
+     * The motion amount for a target's local motion must be higher than the
+     * LOCAL_THRESHOLD to calculate a new direction value.
+     * @type {number}
+     */
+    static LOCAL_THRESHOLD = VideoMotion.THRESHOLD / 3;
+
+
     constructor () {
         /**
          * The number of frames that have been added from a source.
@@ -122,21 +123,23 @@ class VideoMotion {
          * One for the current value. And one for the last value.
          * @type {number}
          */
-        this._arrays = new ArrayBuffer(WIDTH * HEIGHT * 2 * 1);
+        this._arrays = new ArrayBuffer(VideoMotion.WIDTH * VideoMotion.HEIGHT * 2 * 1);
 
         /**
          * A clamped uint8 view of _arrays. One component of each index of the
          * curr member is copied into this array.
          * @type {number}
          */
-        this._curr = new Uint8ClampedArray(this._arrays, WIDTH * HEIGHT * 0 * 1, WIDTH * HEIGHT);
+        this._curr = new Uint8ClampedArray(this._arrays,
+            VideoMotion.WIDTH * VideoMotion.HEIGHT * 0 * 1, VideoMotion.WIDTH * VideoMotion.HEIGHT);
 
         /**
          * A clamped uint8 view of _arrays. One component of each index of the
          * prev member is copied into this array.
          * @type {number}
          */
-        this._prev = new Uint8ClampedArray(this._arrays, WIDTH * HEIGHT * 1 * 1, WIDTH * HEIGHT);
+        this._prev = new Uint8ClampedArray(this._arrays,
+            VideoMotion.WIDTH * VideoMotion.HEIGHT * 1 * 1, VideoMotion.WIDTH * VideoMotion.HEIGHT);
     }
 
     /**
@@ -196,9 +199,9 @@ class VideoMotion {
             _prev: prev
         } = this;
 
-        const winStep = (WINSIZE * 2) + 1;
-        const wmax = WIDTH - WINSIZE - 1;
-        const hmax = HEIGHT - WINSIZE - 1;
+        const winStep = (VideoMotion.WINSIZE * 2) + 1;
+        const wmax = VideoMotion.WIDTH - VideoMotion.WINSIZE - 1;
+        const hmax = VideoMotion.HEIGHT - VideoMotion.WINSIZE - 1;
 
         // Accumulate 2d motion vectors from groups of pixels and average it
         // later.
@@ -209,8 +212,8 @@ class VideoMotion {
         // Iterate over groups of cells building up the components to determine
         // a motion vector for each cell instead of the whole frame to avoid
         // integer overflows.
-        for (let i = WINSIZE + 1; i < hmax; i += winStep) {
-            for (let j = WINSIZE + 1; j < wmax; j += winStep) {
+        for (let i = VideoMotion.WINSIZE + 1; i < hmax; i += winStep) {
+            for (let j = VideoMotion.WINSIZE + 1; j < wmax; j += winStep) {
                 let A2 = 0;
                 let A1B2 = 0;
                 let B1 = 0;
@@ -218,10 +221,11 @@ class VideoMotion {
                 let C2 = 0;
 
                 // This is a performance critical math region.
-                let address = ((i - WINSIZE) * WIDTH) + j - WINSIZE;
+                let address = ((i - VideoMotion.WINSIZE) * VideoMotion.WIDTH) + j - VideoMotion.WINSIZE;
                 let nextAddress = address + winStep;
-                const maxAddress = ((i + WINSIZE) * WIDTH) + j + WINSIZE;
-                for (; address <= maxAddress; address += WIDTH - winStep, nextAddress += WIDTH) {
+                const maxAddress = ((i + VideoMotion.WINSIZE) * VideoMotion.WIDTH) + j + VideoMotion.WINSIZE;
+                for (; address <= maxAddress;
+                    address += VideoMotion.WIDTH - winStep, nextAddress += VideoMotion.WIDTH) {
                     for (; address <= nextAddress; address += 1) {
                         // The difference in color between the last frame and
                         // the current frame.
@@ -231,7 +235,7 @@ class VideoMotion {
                         const gradX = ((curr[address - 1]) - (curr[address + 1]));
                         // The difference between the pixel above and the pixel
                         // below.
-                        const gradY = ((curr[address - WIDTH]) - (curr[address + WIDTH]));
+                        const gradY = ((curr[address - VideoMotion.WIDTH]) - (curr[address + VideoMotion.WIDTH]));
 
                         // Add the combined values of this pixel to previously
                         // considered pixels.
@@ -262,8 +266,8 @@ class VideoMotion {
         vv /= n;
 
         // Scale the magnitude of the averaged UV vector.
-        this.motionAmount = Math.round(AMOUNT_SCALE * Math.hypot(uu, vv));
-        if (this.motionAmount > THRESHOLD) {
+        this.motionAmount = Math.round(VideoMotion.AMOUNT_SCALE * Math.hypot(uu, vv));
+        if (this.motionAmount > VideoMotion.THRESHOLD) {
             // Scratch direction
             this.motionDirection = scratchAtan2(vv, uu);
         }
@@ -299,10 +303,10 @@ class VideoMotion {
             const boundingRect = drawable.getFastBounds();
             // Transform the bounding box from scratch space to a space from 0,
             // 0 to WIDTH, HEIGHT.
-            const xmin = Math.max(Math.floor(boundingRect.left + (WIDTH / 2)), 1);
-            const xmax = Math.min(Math.floor(boundingRect.right + (WIDTH / 2)), WIDTH - 1);
-            const ymin = Math.max(Math.floor((HEIGHT / 2) - boundingRect.top), 1);
-            const ymax = Math.min(Math.floor((HEIGHT / 2) - boundingRect.bottom), HEIGHT - 1);
+            const xmin = Math.max(Math.floor(boundingRect.left + (VideoMotion.WIDTH / 2)), 1);
+            const xmax = Math.min(Math.floor(boundingRect.right + (VideoMotion.WIDTH / 2)), VideoMotion.WIDTH - 1);
+            const ymin = Math.max(Math.floor((VideoMotion.HEIGHT / 2) - boundingRect.top), 1);
+            const ymax = Math.min(Math.floor((VideoMotion.HEIGHT / 2) - boundingRect.bottom), VideoMotion.HEIGHT - 1);
 
             let A2 = 0;
             let A1B2 = 0;
@@ -320,13 +324,13 @@ class VideoMotion {
                     // HEIGHT and 0 to WIDTH. Transform that into Scratch's
                     // range of HEIGHT / 2 to -HEIGHT / 2 and -WIDTH / 2 to
                     // WIDTH / 2;
-                    position[0] = j - (WIDTH / 2);
-                    position[1] = (HEIGHT / 2) - i;
+                    position[0] = j - (VideoMotion.WIDTH / 2);
+                    position[1] = (VideoMotion.HEIGHT / 2) - i;
                     // Consider only pixels in the drawable that can touch the
                     // edge or other drawables. Empty space in the current skin
                     // is skipped.
                     if (drawable.isTouching(position)) {
-                        const address = (i * WIDTH) + j;
+                        const address = (i * VideoMotion.WIDTH) + j;
                         // The difference in color between the last frame and
                         // the current frame.
                         const gradT = ((prev[address]) - (curr[address]));
@@ -335,7 +339,7 @@ class VideoMotion {
                         const gradX = ((curr[address - 1]) - (curr[address + 1]));
                         // The difference between the pixel above and the pixel
                         // below.
-                        const gradY = ((curr[address - WIDTH]) - (curr[address + WIDTH]));
+                        const gradY = ((curr[address - VideoMotion.WIDTH]) - (curr[address + VideoMotion.WIDTH]));
 
                         // Add the combined values of this pixel to previously
                         // considered pixels.
@@ -358,19 +362,19 @@ class VideoMotion {
                 // Store the area of the sprite in pixels
                 activePixelNum = scaleFactor;
 
-                scaleFactor /= (2 * WINSIZE * 2 * WINSIZE);
+                scaleFactor /= (2 * VideoMotion.WINSIZE * 2 * VideoMotion.WINSIZE);
                 u = u / scaleFactor;
                 v = v / scaleFactor;
             }
 
             // Scale the magnitude of the averaged UV vector and the number of
             // overlapping drawable pixels.
-            state.motionAmount = Math.round(LOCAL_AMOUNT_SCALE * activePixelNum * Math.hypot(u, v));
-            if (state.motionAmount > LOCAL_MAX_AMOUNT) {
+            state.motionAmount = Math.round(VideoMotion.LOCAL_AMOUNT_SCALE * activePixelNum * Math.hypot(u, v));
+            if (state.motionAmount > VideoMotion.LOCAL_MAX_AMOUNT) {
                 // Clip all magnitudes greater than 100.
-                state.motionAmount = LOCAL_MAX_AMOUNT;
+                state.motionAmount = VideoMotion.LOCAL_MAX_AMOUNT;
             }
-            if (state.motionAmount > LOCAL_THRESHOLD) {
+            if (state.motionAmount > VideoMotion.LOCAL_THRESHOLD) {
                 // Scratch direction.
                 state.motionDirection = scratchAtan2(v, u);
             }

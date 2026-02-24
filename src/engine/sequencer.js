@@ -3,41 +3,43 @@ const Thread = require('./thread');
 const execute = require('./execute.js');
 const compilerExecute = require('../compiler/jsexecute');
 
-/**
- * Profiler frame name for stepping a single thread.
- * @const {string}
- */
-const stepThreadProfilerFrame = 'Sequencer.stepThread';
+const SequencerInternals = {
+    /**
+     * Profiler frame name for stepping a single thread.
+     * @const {string}
+     */
+    stepThreadProfilerFrame: 'Sequencer.stepThread',
 
-/**
- * Profiler frame name for the inner loop of stepThreads.
- * @const {string}
- */
-const stepThreadsInnerProfilerFrame = 'Sequencer.stepThreads#inner';
+    /**
+     * Profiler frame name for the inner loop of stepThreads.
+     * @const {string}
+     */
+    stepThreadsInnerProfilerFrame: 'Sequencer.stepThreads#inner',
 
-/**
- * Profiler frame name for execute.
- * @const {string}
- */
-const executeProfilerFrame = 'execute';
+    /**
+     * Profiler frame name for execute.
+     * @const {string}
+     */
+    cexecuteProfilerFrame: 'execute',
 
-/**
- * Profiler frame ID for stepThreadProfilerFrame.
- * @type {number}
- */
-let stepThreadProfilerId = -1;
+    /**
+     * Profiler frame ID for stepThreadProfilerFrame.
+     * @type {number}
+     */
+    stepThreadProfilerId: -1,
 
-/**
- * Profiler frame ID for stepThreadsInnerProfilerFrame.
- * @type {number}
- */
-let stepThreadsInnerProfilerId = -1;
+    /**
+     * Profiler frame ID for stepThreadsInnerProfilerFrame.
+     * @type {number}
+     */
+    stepThreadsInnerProfilerId: -1,
 
-/**
- * Profiler frame ID for executeProfilerFrame.
- * @type {number}
- */
-let executeProfilerId = -1;
+    /**
+     * Profiler frame ID for executeProfilerFrame.
+     * @type {number}
+     */
+    executeProfilerId: -1
+};
 
 class Sequencer {
     constructor (runtime) {
@@ -91,10 +93,11 @@ class Sequencer {
                this.timer.timeElapsed() < WORK_TIME &&
                (this.runtime.turboMode || !this.runtime.redrawRequested)) {
             if (this.runtime.profiler !== null) {
-                if (stepThreadsInnerProfilerId === -1) {
-                    stepThreadsInnerProfilerId = this.runtime.profiler.idByName(stepThreadsInnerProfilerFrame);
+                if (SequencerInternals.stepThreadsInnerProfilerId === -1) {
+                    SequencerInternals.stepThreadsInnerProfilerId =
+                    this.runtime.profiler.idByName(SequencerInternals.stepThreadsInnerProfilerFrame);
                 }
-                this.runtime.profiler.start(stepThreadsInnerProfilerId);
+                this.runtime.profiler.start(SequencerInternals.stepThreadsInnerProfilerId);
             }
 
             numActiveThreads = 0;
@@ -123,12 +126,13 @@ class Sequencer {
                     activeThread.status === Thread.STATUS_YIELD) {
                     // Normal-mode thread: step.
                     if (this.runtime.profiler !== null) {
-                        if (stepThreadProfilerId === -1) {
-                            stepThreadProfilerId = this.runtime.profiler.idByName(stepThreadProfilerFrame);
+                        if (SequencerInternals.stepThreadProfilerId === -1) {
+                            SequencerInternals.stepThreadProfilerId =
+                            this.runtime.profiler.idByName(SequencerInternals.stepThreadProfilerFrame);
                         }
 
                         // Increment the number of times stepThread is called.
-                        this.runtime.profiler.increment(stepThreadProfilerId);
+                        this.runtime.profiler.increment(SequencerInternals.stepThreadProfilerId);
                     }
                     this.stepThread(activeThread);
                     activeThread.warpTimer = null;
@@ -211,12 +215,13 @@ class Sequencer {
             }
             // Execute the current block.
             if (this.runtime.profiler !== null) {
-                if (executeProfilerId === -1) {
-                    executeProfilerId = this.runtime.profiler.idByName(executeProfilerFrame);
+                if (SequencerInternals.executeProfilerId === -1) {
+                    SequencerInternals.executeProfilerId =
+                        this.runtime.profiler.idByName(SequencerInternals.executeProfilerFrame);
                 }
 
                 // Increment the number of times execute is called.
-                this.runtime.profiler.increment(executeProfilerId);
+                this.runtime.profiler.increment(SequencerInternals.executeProfilerId);
             }
             if (thread.target === null) {
                 this.retireThread(thread);
@@ -411,4 +416,5 @@ class Sequencer {
     }
 }
 
+Sequencer._SequencerInternals = SequencerInternals;
 module.exports = Sequencer;
