@@ -266,7 +266,7 @@ class JSGenerator {
             // For exact Scratch parity, evaluate the input before checking old edge state.
             // Can matter if the input is not instantly evaluated.
             this.source += `const resolvedValue = ${this.descendInput(node.condition)};\n`;
-            if (node.info.alwaysActivated) {
+            if (node.info.alwaysActivated || (node.mutation && !!JSON.parse(node.mutation.hatalwaysactivated || false))) {
                 this.source += `if (!resolvedValue) {\n`;
                 this.retire();
                 this.source += '}\n';

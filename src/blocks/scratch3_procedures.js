@@ -28,7 +28,7 @@ class Scratch3ProcedureBlocks {
             procedures_call: {
                 restartExistingThreads: false,
                 edgeActivated: true,
-                alwaysActivated: true,
+                alwaysActivated: false,
                 isProcedure: true
             }
         };

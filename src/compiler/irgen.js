@@ -676,7 +676,8 @@ class ScriptTreeGenerator {
                     new IntermediateStackBlock(StackOpcode.HAT_EDGE, {
                         id: hatBlock.id,
                         condition: (this.descendInput(hatBlock)).toType(InputType.BOOLEAN),
-                        info: hatInfo
+                        info: hatInfo,
+                        mutation: hatBlock.mutation || null
                     }),
                     ...this.walkStack(nextBlock).blocks
                 ]);
@@ -685,7 +686,8 @@ class ScriptTreeGenerator {
                 new IntermediateStackBlock(StackOpcode.HAT_EDGE, {
                     id: hatBlock.id,
                     condition: this.descendCompatLayerInput(hatBlock).toType(InputType.BOOLEAN),
-                    info: hatInfo
+                    info: hatInfo,
+                    mutation: hatBlock.mutation || null
                 }),
                 ...this.walkStack(nextBlock).blocks
             ]);
