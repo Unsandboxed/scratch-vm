@@ -4,10 +4,10 @@
 class FrameLoop {
     // Use setTimeout to polyfill requestAnimationFrame in Node.js environments
     static _requestAnimationFrame = typeof requestAnimationFrame === 'function' ?
-        requestAnimationFrame :
+        requestAnimationFrame.bind(global) :
         (f => setTimeout(f, 1000 / 60));
     static _cancelAnimationFrame = typeof requestAnimationFrame === 'function' ?
-        cancelAnimationFrame :
+        cancelAnimationFrame.bind(global) :
         clearTimeout;
 
     static animationFrameWrapper = callback => {

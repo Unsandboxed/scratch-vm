@@ -12,7 +12,7 @@
 const SetupCompiler = function (runtime) {
     const compilerData = runtime.compilerData;
     if (!runtime.compilerData) return;
-    const exports = require('./exports');
+    const exports = require('./exports.js');
     // CORE
     require('./setup-compiler/motion')(compilerData, exports);
     require('./setup-compiler/looks')(compilerData, exports);

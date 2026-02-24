@@ -30,7 +30,7 @@ const {
     functionNameVariablePool,
     generatorNameVariablePool,
     VariablePool
-} = require('./exports.js');
+} = require('./shared-exports.js');
 
 class JSGenerator {
     /**
