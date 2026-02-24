@@ -53,6 +53,7 @@ const handleReport = function (resolvedValue, sequencer, thread, blockCached, la
     const currentBlockId = blockCached.id;
     const opcode = blockCached.opcode;
     const isHat = blockCached._isHat;
+    const isHatAlwaysActivated = blockCached._isHatAlwaysActivated;
     const isConditional = blockCached._isConditional;
     const isLoop = blockCached._isLoop;
 
@@ -62,6 +63,15 @@ const handleReport = function (resolvedValue, sequencer, thread, blockCached, la
         if (thread.stackClick) {
             thread.setStatus(Thread.STATUS_RUNNING);
         } else if (sequencer.runtime.getIsEdgeActivatedHat(opcode)) {
+            if (sequencer.runtime.getIsAlwaysActivatedHat(opcode) || isHatAlwaysActivated) {
+                if (resolvedValue) {
+                    thread.setStatus(Thread.STATUS_RUNNING);
+                } else {
+                    sequencer.retireThread(thread);
+                }
+                return;
+            }
+
             // If this is an edge-activated hat, only proceed if the value is
             // true and used to be false, or the stack was activated explicitly
             // via stack click
@@ -222,6 +232,12 @@ class BlockCached {
         this._isHat = false;
 
         /**
+         * Is the block an always activated hat?
+         * @type {boolean}
+         */
+        this._isHatAlwaysActivated = false;
+
+        /**
          * The block opcode's implementation function.
          * @type {?function}
          */
@@ -295,6 +311,10 @@ class BlockCached {
 
         // Assign opcode isHat and blockFunction data to avoid dynamic lookups.
         this._isHat = runtime.getIsHat(opcode);
+        this._isHatAlwaysActivated = runtime.getIsAlwaysActivatedHat(opcode);
+        if (!this._isHatAlwaysActivated && this.mutation && JSON.parse(this.mutation.hatalwaysactivated || false)) {
+            this._isHatAlwaysActivated = true;
+        }
         this._blockFunction = runtime.getOpcodeFunction(opcode);
         this._definedBlockFunction = typeof this._blockFunction !== 'undefined';
 

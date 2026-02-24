@@ -29,7 +29,7 @@ module.exports = function (compilerData, {
             return new IntermediateInput(procedureInfo.opcode, this.type, procedureInfo.inputs, this.yields);
         }
         const procedureCode = block.mutation.proccode;
-        if (block.mutation.return) {
+        if (block.mutation.return && !block.mutation.hat) {
             const visualReport = stg.descendVisualReport(block);
             if (visualReport) {
                 return visualReport;
