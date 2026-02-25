@@ -9,6 +9,7 @@ const BlocksRuntimeCache = require('./blocks-runtime-cache');
 const log = require('../util/log');
 const Variable = require('./variable');
 const getMonitorIdForBlockWithArgs = require('../util/get-monitor-id');
+const uid = require('../util/uid');
 
 /**
  * @fileoverview
@@ -792,6 +793,10 @@ class Blocks {
                     Cast.toBooleanSimple(block.mutation.global) !==
                     Cast.toBooleanSimple(adapter.global)
                 ) this.runtime.requestGlobalProceduresRefresh();
+                if (block.mutation.proccode !== adapter.proccode) {
+                    this.runtime.markDirtyGlobalProcedure(block.mutation.proccode, adapter.proccode);
+                    this.runtime.requestGlobalProceduresRefresh();
+                }
             }
             block.mutation = adapter;
             break;
@@ -1463,6 +1468,138 @@ class Blocks {
         if (i > -1) this._scripts.splice(i, 1);
         // Update `topLevel` property on the top block.
         if (this._blocks[topBlockId]) this._blocks[topBlockId].topLevel = false;
+    }
+
+    /**
+     * Remakes a procedure based towards a new proccode.
+     */
+    _updateDirtyCaller(block, newProccode, pniad) {
+        const inputTypes = newProccode.split(/%(?=[nsb])/g).flatMap((v, i) => {
+            if (i === 0) {
+                return [];
+            }
+
+            switch (v.at(0)) {
+            case 'n':
+                return 'number';
+            case 's':
+                return 'string';
+            case 'b':
+                return 'boolean';
+            default:
+                return [];
+            }
+        });
+
+        const [paramNames, paramIds, paramDefaults] = pniad;
+        const _ompIds = JSON.parse(block.mutation.argumentids || '[]');
+
+        const exists = new Set();
+
+        // Delete any params that do not exist.
+        for (let i = 0; i < _ompIds.length; i++) {
+            if (paramIds.includes(_ompIds[i])) {
+                exists.add(_ompIds[i]);
+                continue;
+            }
+            delete block.fields[_ompIds[i]];
+            const input = block.inputs[_ompIds[i]];
+            if (input) {
+                if (input.shadow) this.deleteBlock(input.shadow);
+                // TODO: Disconnect the block instead of deleting it.
+                if (input.block) this.deleteBlock(input.block);
+                continue;
+            }
+        }
+
+        const updateInput = (name, blocki, shadowi) => {
+            if (!block.inputs[name]) {
+                block.inputs[name] = {
+                    name: name
+                };
+            }
+            block.inputs[name].block = blocki;
+            block.inputs[name].shadow = shadowi;
+        };
+
+        // Create the new procedure inputs.
+        for (let i = 0; i < paramIds.length; i++) {
+            if (exists.has(paramIds[i])) continue; // The input already exists.
+
+            const newBlockId = uid();
+            switch (inputTypes[i]) {
+            case 'string':
+                updateInput(paramIds[i], null, newBlockId);
+                this.createBlock({
+                    id: newBlockId,
+                    opcode: 'text',
+                    inputs: {},
+                    fields: {
+                        TEXT: {
+                            name: 'TEXT',
+                            value: paramDefaults[i],
+                            id: (void 0)
+                        }
+                    },
+                    next: null,
+                    topLevel: false,
+                    parent: block.id,
+                    shadow: true
+                });
+                break;
+            case 'number':
+                updateInput(paramIds[i], null, newBlockId);
+                this.createBlock({
+                    id: newBlockId,
+                    opcode: 'math_number',
+                    inputs: {},
+                    fields: {
+                        NUM: {
+                            name: 'NUM',
+                            value: paramDefaults[i],
+                            id: (void 0)
+                        }
+                    },
+                    next: null,
+                    topLevel: false,
+                    parent: block.id,
+                    shadow: true
+                });
+                break;
+            // Booleans don't get blocks.
+            // eslint-disable-next-line no-fallthrough
+            case 'boolean':
+            default:
+                break;
+            }
+        }
+
+        // Update the mutation data.
+        block.mutation.proccode = newProccode;
+        block.mutation.argumentnames = JSON.stringify(paramNames);
+        block.mutation.argumentids = JSON.stringify(paramIds);
+        block.mutation.argumentdefaults = JSON.stringify(paramDefaults);
+    }
+
+    /**
+     * Updates dirty global procedures in this block container.
+     */
+    updateDirtyGlobalProcedures(dirtyProccode, newProccode, pniad) {
+        const dirtyCallers = Object.values(this._blocks).filter(block => (
+            block.opcode === 'procedures_call' && (
+                block.mutation && block.mutation.proccode === dirtyProccode
+            )
+        ));
+
+        if (dirtyCallers.length === 0) return;
+
+        for (const dirtyCaller of dirtyCallers) {
+            console.log('dirty caller needs to be updated to ', newProccode, ' <> ', dirtyCaller);
+            this._updateDirtyCaller(dirtyCaller, newProccode, pniad);
+        }
+
+        this.resetCache();
+        this.emitProjectChanged();
     }
 }
 

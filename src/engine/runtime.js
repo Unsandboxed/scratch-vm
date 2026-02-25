@@ -370,6 +370,14 @@ class Runtime extends EventEmitter {
         this._refreshGlobalProcedures = false;
 
         /**
+         * Map of old global procedure proccodes to their new ones. (used if a global procedure is updated)
+         *
+         * @type {Record<string, string>}
+         * @protected
+         */
+        this._dirtyGlobalProcedures = Object.create(null);
+
+        /**
          * Map to look up all monitor block information by opcode.
          * @type {object}
          * @private
@@ -4162,6 +4170,10 @@ class Runtime extends EventEmitter {
         return this._globalProcedures[proccode];
     }
 
+    markDirtyGlobalProcedure (oldProccode, newProccode) {
+        this._dirtyGlobalProcedures[oldProccode] = newProccode;
+    }
+
     /**
      * Refreshes the global procedures for the runtime. (used by the sequencer and scratch-blocks)
      * @param {?Target|Target[]} targets Optional target(s) to refresh the global's of
@@ -4183,8 +4195,6 @@ class Runtime extends EventEmitter {
         for (let i = 0; i < this.targets.length; i++) {
             const target = this.targets[i];
             if (!targets.has(target.id)) continue;
-            // todo: check if this matters in the long run
-            targets.delete(target.id);
             // hack: use the cache to get an easy list of currently existing procedure definitions.
             target.blocks.populateProcedureCache();
             const proccodes = Object.keys(target.blocks._cache.procedureDefinitions);
@@ -4208,7 +4218,10 @@ class Runtime extends EventEmitter {
             Premoved = Premoved.union(new Set(
                 this.getGlobalProceduresFromTarget(target.id)
             ).difference(new Set(proccodes)));
+            target.blocks.resetCache(); // Reset the cache because the procedures might be dirty now.
         }
+
+        let res = false;
 
         const changed = Array.from(Pnew.union(Premoved));
         if (changed.length > 0) {
@@ -4223,9 +4236,46 @@ class Runtime extends EventEmitter {
                 // otherwise delete it (this can happen for a variety of reasons)
                 delete this._globalProcedures[proccode];
             }
-            return true;
+
+            for (const proccode in this._dirtyGlobalProcedures) {
+                // If the dirty procedure was deleted then it cannot be dirty anymore;
+                // or if the dirty procedures old name exists.
+                if (this._globalProcedures[proccode]) {
+                    delete this._dirtyGlobalProcedures[proccode];
+                }
+                if (!this._globalProcedures[this._dirtyGlobalProcedures[proccode]]) {
+                    delete this._dirtyGlobalProcedures[proccode];
+                }
+            }
+
+            res = true;
         }
-        return false;
+
+        const dirtyGlobalProcedures = Object.keys(this._dirtyGlobalProcedures);
+        if (dirtyGlobalProcedures.length > 0) {
+            for (let i = 0; i < this.targets.length; i++) {
+                const target = this.targets[i];
+                if (!targets.has(target.id)) continue;
+                for (const dirtyProccode of dirtyGlobalProcedures) {
+                    // If this target defines the dirty procedure then its not going to be dirty here, as
+                    // dirty procedures only effect procedures that are not where the procedure was defined.
+                    if (target.blocks.getBlock(
+                        this._globalProcedures[this._dirtyGlobalProcedures[dirtyProccode]]
+                    )) continue;
+
+                    target.blocks.updateDirtyGlobalProcedures(
+                        dirtyProccode,
+                        this._dirtyGlobalProcedures[dirtyProccode],
+                        this.getGlobalProcedureParamNamesIdsAndDefaults(
+                            this._dirtyGlobalProcedures[dirtyProccode]
+                        )
+                    );
+                }
+            }
+            this._dirtyGlobalProcedures = {};
+        }
+
+        return res;
     }
 
     /**

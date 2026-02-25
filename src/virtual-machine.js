@@ -1764,7 +1764,7 @@ class VirtualMachine extends EventEmitter {
             .map(k => this.editingTarget.comments[k])
             .filter(c => c.blockId === null);
 
-        let globalProcedureMutations = [];
+        const globalProcedureMutations = [];
         const localProcedureMutations = this.editingTarget.blocks.getLocalProcedureMutationXMLs();
         const globalProcedures = this.runtime._globalProcedures;
 
