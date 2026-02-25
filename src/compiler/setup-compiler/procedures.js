@@ -30,7 +30,7 @@ module.exports = function (compilerData, {
             return new IntermediateInput(procedureInfo.opcode, this.type, procedureInfo.inputs, this.yields);
         }
         const procedureCode = block.mutation.proccode;
-        if (block.mutation.return && !JSON.parse(block.mutation.hat || false)) {
+        if (!!JSON.parse(block.mutation.return) && !JSON.parse(block.mutation.hat || false)) {
             const visualReport = stg.descendVisualReport(block);
             if (visualReport) {
                 return visualReport;
@@ -60,15 +60,18 @@ module.exports = function (compilerData, {
             for (const input of node.arguments) {
                 if (input instanceof IntermediateInput) {
                     args.push(jsg.descendInput(input));
+                    continue;
                 }
 
-                const oldSrc = jsg.source;
-                jsg.source = '';
-                jsg.descendStack(input, new Frame(false));
-                const branchSrc = jsg.source;
-                jsg.source = oldSrc;
-
-                args.push(`(function${jsg.script.yields ? '*' : ''}(){;${branchSrc};})`);
+                const oldWarp = jsg.isWarp;
+                const oldIsProcedureBranch = jsg.isProcedureBranch;
+                jsg.isWarp = procedureData.isWarp;
+                jsg.isProcedureBranch = true;
+                args.push(`(function*(returnProcedure){;${
+                    jsg.descendStackForSource(input, new Frame(false))
+                };})`);
+                jsg.isWarp = oldWarp;
+                jsg.isProcedureBranch = oldIsProcedureBranch;
             }
             const joinedArgs = args.join(',');
             const yieldForRecursion = !jsg.isWarp && procedureCode === jsg.script.procedureCode;
@@ -82,18 +85,14 @@ module.exports = function (compilerData, {
             }
             return `${procedureReference}(${joinedArgs})`;
         }
+
         const yieldForRecursion = !jsg.isWarp && procedureCode === jsg.script.procedureCode;
         if (yieldForRecursion) {
             // Direct yields.
             jsg.yieldNotWarp();
         }
-        if (procedureData.yields) {
-            jsg.source += 'yield* ';
-            if (!jsg.script.yields) {
-                throw new Error('Script uses yielding procedure but is not marked as yielding.');
-            }
-        }
-        jsg.source += `thread.procedures["${sanitize(procedureVariant)}"](`;
+
+        let callSrc = `thread.procedures["${sanitize(procedureVariant)}"](`;
         const args = [];
         for (const input of node.arguments) {
             if (input instanceof IntermediateInput) {
@@ -101,16 +100,27 @@ module.exports = function (compilerData, {
                 continue;
             }
 
-            const oldSrc = jsg.source;
-            jsg.source = '';
-            jsg.descendStack(input, new Frame(false));
-            const branchSrc = jsg.source;
-            jsg.source = oldSrc;
-
-            args.push(`(function${jsg.script.yields ? '*' : ''}(){;${branchSrc};})`);
+            const oldWarp = jsg.isWarp;
+            const oldIsProcedureBranch = jsg.isProcedureBranch;
+            jsg.isWarp = procedureData.isWarp;
+            jsg.isProcedureBranch = true;
+            args.push(`(function*(returnProcedure){;${
+                jsg.descendStackForSource(input, new Frame(false))
+            };})`);
+            jsg.isWarp = oldWarp;
+            jsg.isProcedureBranch = oldIsProcedureBranch;
         }
-        jsg.source += args.join(',');
-        jsg.source += `);\n`;
+        callSrc += args.join(',');
+        callSrc += `);\n`;
+
+        if (procedureData.yields) {
+            callSrc = `yield* ${callSrc}`;
+            if (!jsg.script.yields) {
+                throw new Error('Script uses yielding procedure but is not marked as yielding.');
+            }
+        }
+
+        jsg.source += callSrc;
     }, {
         dynamicChanges: true,
         type: InputType.ANY
@@ -162,19 +172,22 @@ module.exports = function (compilerData, {
         type: InputType.BOOLEAN
     });
     compilerData.registerBlock('argument_statement', function (stg, block) {
-        // see argument_reporter_string_number above
         const name = block.fields.VALUE.value;
         const index = stg.script.arguments.lastIndexOf(name);
         return new IntermediateStackBlock(this.ir_opcode, {index}, this.yields);
         // eslint-disable-next-line no-unused-vars
     }, function (jsg, block) {
-        if (block.inputs.index === -1) {
+        if (block.inputs.index === -1 || !jsg.isProcedure) {
             return;
         }
-        jsg.source += `void(yield* p${block.inputs.index}());`;
+        // eslint-disable-next-line max-len
+        jsg.source += `void(yield* p${block.inputs.index}(function(v) {procedureReturnV[0]=true;procedureReturnV[1]=v}));`;
+        jsg.source += `if (procedureReturnV[0]) {`;
+        jsg.stopScriptAndReturn(`procedureReturnV[1]`);
+        jsg.source += `};`;
     }, {
         input: false,
         yields: true,
-        dynamicChanges: true
+        dynamicChanges: false
     });
 };

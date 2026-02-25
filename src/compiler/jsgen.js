@@ -46,6 +46,7 @@ class JSGenerator {
 
         this.isWarp = script.isWarp;
         this.isProcedure = script.isProcedure;
+        this.isProcedureBranch = false;
         this.warpTimer = script.warpTimer;
 
         /**
@@ -518,7 +519,9 @@ class JSGenerator {
     }
 
     stopScript () {
-        if (this.isProcedure) {
+        if (this.isProcedureBranch) {
+            this.source += `return returnProcedure("");\n`;
+        } else if (this.isProcedure) {
             this.source += 'return "";\n';
         } else {
             this.retire();
@@ -529,7 +532,9 @@ class JSGenerator {
      * @param {string} valueJS JS code of value to return.
      */
     stopScriptAndReturn (valueJS) {
-        if (this.isProcedure) {
+        if (this.isProcedureBranch) {
+            this.source += `return returnProcedure(${valueJS});\n`;
+        } else if (this.isProcedure) {
             this.source += `return ${valueJS};\n`;
         } else {
             this.retire();
@@ -575,6 +580,10 @@ class JSGenerator {
         }
         script += ') {\n';
 
+        if (this.isProcedure) {
+            script += 'const procedureReturnV = [false, null]; ';
+        }
+
         script += this.source;
 
         script += '}; })';
@@ -584,9 +593,12 @@ class JSGenerator {
 
     /**
      * Compile this script.
+     * @param {?IntermediateScript} parentScript
      * @returns {Function} The factory function for the script.
      */
-    compile () {
+    compile (parentScript) {
+        this.parentScript = parentScript;
+
         if (this.script.stack) {
             this.descendStack(this.script.stack, new Frame(false));
         }
