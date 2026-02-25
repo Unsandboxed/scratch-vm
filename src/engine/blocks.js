@@ -4,7 +4,6 @@ const xmlEscape = require('../util/xml-escape');
 const MonitorRecord = require('./monitor-record');
 const Clone = require('../util/clone');
 const Cast = require('../util/cast');
-const {Map} = require('immutable');
 const BlocksExecuteCache = require('./blocks-execute-cache');
 const BlocksRuntimeCache = require('./blocks-runtime-cache');
 const log = require('../util/log');
