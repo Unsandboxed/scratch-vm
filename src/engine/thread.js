@@ -23,6 +23,24 @@ class _StackFrame {
         this.isLoop = false;
 
         /**
+         * Whether this level of the stack is in a branch.
+         * @type {boolean}
+         */
+        this.isBranch = false;
+
+        /**
+         * Level of branch depth.
+         * @type {number}
+         */
+        this.branchDepth = 0;
+
+        /**
+         * Callbacks for when this branch ends.
+         * @type {Array.<!(() => void)>}
+         */
+        this.onBranchEnd = [];
+
+        /**
          * Whether this level is in warp mode.  Is set by some legacy blocks and
          * "turbo mode"
          * @type {boolean}
@@ -109,6 +127,14 @@ class _StackFrame {
         this.op = null;
         this.isBreakable = false;
         this.isIterable = false;
+
+        for (let i = 0; i < this.onBranchEnd.length; i++) {
+            this.onBranchEnd[i]();
+        }
+
+        this.onBranchEnd = [];
+        this.isBranch = false;
+        this.branchDepth = 0;
 
         return this;
     }
@@ -225,6 +251,12 @@ class Thread {
          * @type {?Timer}
          */
         this.warpTimer = null;
+
+        /**
+         * The block utility instance
+         * @type {?BlockUtility}
+         */
+        this.blockUtility = null;
 
         this.justReported = null;
 

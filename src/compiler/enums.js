@@ -39,10 +39,10 @@ const InputType = {
     NUMBER_NEG_REAL: 0x060,
     /** The value -Infinity */
     NUMBER_NEG_INF: 0x080,
-  
+
     /** The value NaN */
     NUMBER_NAN: 0x100,
-  
+
     /** Either 0 or -0. Equal to NUMBER_ZERO | NUMBER_NEG_ZERO */
     NUMBER_ANY_ZERO: 0x018,
     /** Either Infinity or -Infinity. Equal to NUMBER_POS_INF | NUMBER_NEG_INF */
@@ -61,32 +61,32 @@ const InputType = {
     NUMBER_FRACT: 0x44,
     /** Any real number. Equal to NUMBER_POS_REAL | NUMBER_ANY_ZERO | NUMBER_NEG_REAL */
     NUMBER_REAL: 0x07E,
-  
+
     /** Any number, excluding NaN. Equal to NUMBER_REAL | NUMBER_INF */
     NUMBER: 0x0FF,
     /** Any number, including NaN. Equal to NUMBER | NUMBER_NAN */
     NUMBER_OR_NAN: 0x1FF,
     /** Anything that can be interperated as a number. Equal to NUMBER | STRING_NUM | BOOLEAN */
     NUMBER_INTERPRETABLE: 0x12FF,
-  
+
     /** Any string which as a non-NaN neumeric interpretation, excluding ''.  */
     STRING_NUM: 0x200,
     /** Any string which has no non-NaN neumeric interpretation, including ''. */
     STRING_NAN: 0x400,
     /** Either of the strings 'true' or 'false'. */
     STRING_BOOLEAN: 0x800,
-  
+
     /** Any string. Equal to STRING_NUM | STRING_NAN | STRING_BOOLEAN */
     STRING: 0xE00,
-  
+
     /** Any boolean. */
     BOOLEAN: 0x1000,
     /** Any input that can be interperated as a boolean. Equal to BOOLEAN | STRING_BOOLEAN */
     BOOLEAN_INTERPRETABLE: 0x1800,
-  
+
     /** Any value type (a type a scratch variable can hold). Equal to NUMBER_OR_NAN | STRING | BOOLEAN | OBJECTLIKE */
     ANY: 0x27FFF,
-  
+
     /** An array of values in the form [R, G, B] */
     COLOR: 0x2000,
 
@@ -97,7 +97,7 @@ const InputType = {
     /** A object */
     OBJECT: 0x24000
 };
-  
+
 /**
 * Enum for the opcodes of the stackable blocks used in the IR AST.
 * @readonly
@@ -105,11 +105,12 @@ const InputType = {
 */
 const StackOpcode = {
     NOP: 'noop',
-  
+
     ADDON_CALL: 'addons.call',
     VISUAL_REPORT: 'visualReport',
     COMPATIBILITY_LAYER: 'compat',
-  
+    OLD_COMPILER_COMPATIBILITY_LAYER: 'oldCompiler',
+
     HAT_EDGE: 'hat.edge',
     HAT_PREDICATE: 'hat.predicate'
 };
@@ -121,10 +122,10 @@ const StackOpcode = {
 */
 const InputOpcode = {
     NOP: 'noop',
-  
+
     ADDON_CALL: 'addons.call',
     CONSTANT: 'constant',
-  
+
     CAST_NUMBER: 'cast.toNumber',
     CAST_NUMBER_INDEX: 'cast.toInteger',
     CAST_NUMBER_OR_NAN: 'cast.toNumberOrNaN',
@@ -134,8 +135,97 @@ const InputOpcode = {
     CAST_ARRAY: 'cast.toArray',
     CAST_OBJECT: 'cast.toObject',
     CAST_OBJECTLIKE: 'cast.toObjectLike',
-  
-    COMPATIBILITY_LAYER: 'compat'
+
+    COMPATIBILITY_LAYER: 'compat',
+    OLD_COMPILER_COMPATIBILITY_LAYER: 'oldCompiler',
+
+    LOOKS_BACKDROP_NUMBER: 'looks.backdropNumber',
+    LOOKS_BACKDROP_NAME: 'looks.backdropName',
+    LOOKS_COSTUME_NUMBER: 'looks.costumeNumber',
+    LOOKS_COSTUME_NAME: 'looks.costumeName',
+    LOOKS_SIZE_GET: 'looks.size',
+
+    VAR_GET: 'var.get',
+
+    LIST_GET: 'list.get',
+    LIST_LENGTH: 'list.length',
+    LIST_CONTAINS: 'list.contains',
+    LIST_INDEX_OF: 'list.indexOf',
+    LIST_CONTENTS: 'list.contents',
+
+    MOTION_X_GET: 'motion.x',
+    MOTION_Y_GET: 'motion.y',
+    MOTION_DIRECTION_GET: 'motion.direction',
+
+    OP_ADD: 'op.add',
+    OP_AND: 'op.and',
+    OP_CONTAINS: 'op.contains',
+    OP_DIVIDE: 'op.divide',
+    OP_EQUALS: 'op.equals',
+    OP_GREATER: 'op.greater',
+    OP_LESS: 'op.less',
+    OP_JOIN: 'op.join',
+    OP_LENGTH: 'op.length',
+    OP_LETTER_OF: 'op.letterOf',
+    OP_ABS: 'op.abs',
+    OP_FLOOR: 'op.floor',
+    OP_CEILING: 'op.ceiling',
+    OP_SQRT: 'op.sqrt',
+    OP_SIN: 'op.sin',
+    OP_COS: 'op.cos',
+    OP_TAN: 'op.tan',
+    OP_ASIN: 'op.asin',
+    OP_ACOS: 'op.acos',
+    OP_ATAN: 'op.atan',
+    OP_LOG_E: 'op.ln',
+    OP_LOG_10: 'op.log',
+    OP_POW_E: 'op.e^',
+    OP_POW_10: 'op.10^',
+    OP_MOD: 'op.mod',
+    OP_MULTIPLY: 'op.multiply',
+    OP_NOT: 'op.not',
+    OP_OR: 'op.or',
+    OP_RANDOM: 'op.random',
+    OP_ROUND: 'op.round',
+    OP_SUBTRACT: 'op.subtract',
+
+    SENSING_ANSWER: 'sensing.answer',
+    SENSING_COLOR_TOUCHING_COLOR: 'sensing.colorTouchingColor',
+    SENSING_TIME_YEAR: 'sensing.year',
+    SENSING_TIME_MONTH: 'sensing.month',
+    SENSING_TIME_DATE: 'sensing.date',
+    SENSING_TIME_WEEKDAY: 'sensing.dayofweek',
+    SENSING_TIME_HOUR: 'sensing.hour',
+    SENSING_TIME_MINUTE: 'sensing.minute',
+    SENSING_TIME_SECOND: 'sensing.second',
+    SENSING_TIME_DAYS_SINCE_2000: 'sensing.daysSince2000',
+    SENSING_DISTANCE: 'sensing.distance',
+    SENSING_KEY_DOWN: 'keyboard.pressed',
+    SENSING_MOUSE_DOWN: 'mouse.down',
+    SENSING_MOUSE_X: 'mouse.x',
+    SENSING_MOUSE_Y: 'mouse.y',
+    SENSING_OF: 'sensing.of',
+    SENSING_OF_BACKDROP_NAME: 'sensing.of.backdropName',
+    SENSING_OF_BACKDROP_NUMBER: 'sensing.of.backdropNumber',
+    SENSING_OF_COSTUME_NAME: 'sensing.of.costumeName',
+    SENSING_OF_COSTUME_NUMBER: 'sensing.of.costumeNumber',
+    SENSING_OF_VOLUME: 'sensing.of.volume',
+    SENSING_OF_POS_X: 'sensing.of.x',
+    SENSING_OF_POS_Y: 'sensing.of.y',
+    SENSING_OF_DIRECTION: 'sensing.of.direction',
+    SENSING_OF_SIZE: 'sensing.of.size',
+    SENSING_OF_VAR: 'sensing.of.var',
+    SENSING_TIMER_GET: 'timer.get',
+    SENSING_TOUCHING_COLOR: 'sensing.touchingColor',
+    SENSING_TOUCHING_OBJECT: 'sensing.touching',
+    SENSING_USERNAME: 'sensing.username',
+
+    PROCEDURE_CALL: 'procedures.call',
+    PROCEDURE_ARGUMENT: 'procedures.argument',
+
+    CONTROL_COUNTER: 'control.counter',
+
+    TW_KEY_LAST_PRESSED: 'tw.lastKeyPressed'
 };
 
 module.exports = {

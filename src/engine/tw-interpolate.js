@@ -1,3 +1,5 @@
+const Runtime = require('./runtime.js');
+
 /**
  * Prepare the targets of a runtime for interpolation.
  * @param {Runtime} runtime The Runtime with targets to prepare for interpolation.
@@ -98,9 +100,17 @@ const interpolate = (runtime, time) => {
         }
 
         // Don't waste time interpolating sprites that are hidden.
-        if (!target.visible) {
+        if (
+            !target.visible ||
+            (
+                target.effects.ghost === 100 &&
+                interpolationData.ghost === 100
+            )
+        ) {
             continue;
         }
+
+        runtime.emit(Runtime.BEFORE_INTERPOLATE, target);
 
         const drawableID = target.drawableID;
 
@@ -178,6 +188,8 @@ const interpolate = (runtime, time) => {
                 renderer.updateDrawableDirectionScale(drawableID, direction, scale);
             }
         }
+
+        runtime.emit(Runtime.AFTER_INTERPOLATE, target);
     }
 };
 

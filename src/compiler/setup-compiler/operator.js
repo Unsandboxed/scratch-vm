@@ -102,7 +102,17 @@ module.exports = function (compilerData, {
             const node = block.inputs;
             const left = node.left;
             const right = node.right;
-    
+
+            // When either operand is known to never be a number,
+            // only use string comparison to avoid all number parsing.
+            if (
+                !left.isSometimesType(InputType.NUMBER_INTERPRETABLE) ||
+                !right.isSometimesType(InputType.NUMBER_INTERPRETABLE)
+            ) {
+                return `(${
+                    jsg.descendInput(left.toType(InputType.STRING))
+                }.toLowerCase() === ${jsg.descendInput(right.toType(InputType.STRING))}.toLowerCase())`;
+            }
             // When both operands are known to be numbers, we can use ===
             if (
                 left.isAlwaysType(InputType.NUMBER_INTERPRETABLE) &&
@@ -117,16 +127,6 @@ module.exports = function (compilerData, {
                 return `(${
                     jsg.descendInput(left.toType(InputType.NUMBER))
                 } === ${jsg.descendInput(right.toType(InputType.NUMBER))})`;
-            }
-            // When either operand is known to never be a number,
-            // only use string comparison to avoid all number parsing.
-            if (
-                !left.isSometimesType(InputType.NUMBER_INTERPRETABLE) ||
-                !right.isSometimesType(InputType.NUMBER_INTERPRETABLE)
-            ) {
-                return `(${
-                    jsg.descendInput(left.toType(InputType.STRING))
-                }.toLowerCase() === ${jsg.descendInput(right.toType(InputType.STRING))}.toLowerCase())`;
             }
             // No compile-time optimizations possible - use fallback method.
             return `compareEqual(${jsg.descendInput(left)}, ${jsg.descendInput(right)})`;
@@ -215,7 +215,7 @@ module.exports = function (compilerData, {
             const node = block.inputs;
             const left = node.left;
             const right = node.right;
-            return `(lessGreaterThan(${
+            return `(compareLessThan(${
                 jsg.descendInput(left)
             }, ${jsg.descendInput(right)})||compareEqual(${
                 jsg.descendInput(left)

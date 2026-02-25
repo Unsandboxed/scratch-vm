@@ -118,7 +118,11 @@ const serializePrimitiveBlock = function (block) {
         const primitiveDesc = [primitiveConstant, field.value];
         if (block.opcode === 'event_broadcast_menu') {
             primitiveDesc.push(field.id);
-        } else if (block.opcode === 'data_variable' || block.opcode === 'data_listcontents' || block.opcode === 'data_listarraycontents') {
+        } else if (
+            block.opcode === 'data_variable' ||
+            block.opcode === 'data_listcontents' ||
+            block.opcode === 'data_listarraycontents'
+        ) {
             primitiveDesc.push(field.id);
             if (block.topLevel) {
                 primitiveDesc.push(block.x ? Math.round(block.x) : 0);
@@ -706,10 +710,7 @@ const serializeMonitors = function (monitors, runtime, extensions) {
                 serializedMonitor.isDiscrete = monitorData.isDiscrete;
             }
             return serializedMonitor;
-        })
-        // By default the sequence is lazily evaluated, but we want it to be evaluated right
-        // now to update the used extension list.
-        .toArray();
+        });
 };
 
 /**
@@ -1449,7 +1450,7 @@ const deserializeMonitor = function (monitorData, runtime, targets, extensions) 
         }
     }
 
-    runtime.requestAddMonitor(MonitorRecord(monitorData));
+    runtime.requestAddMonitor(new MonitorRecord(monitorData));
 };
 
 // Replace variable IDs throughout the project with
@@ -1524,7 +1525,7 @@ const checkPlatformCompatibility = (json, runtime) => {
  * @param {Runtime} runtime
  */
 const applyCompatibilityOptions = runtime => {
-    runtime.setFramerate(30);
+    runtime.setCompatibilityMode(true);
     runtime.setStageSize(480, 360);
     runtime.setRuntimeOptions({fencing: true});
 };

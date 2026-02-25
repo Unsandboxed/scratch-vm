@@ -2,7 +2,6 @@ const BlockUtility = require('./block-utility');
 const BlocksExecuteCache = require('./blocks-execute-cache');
 const log = require('../util/log');
 const Thread = require('./thread');
-const {Map} = require('immutable');
 const cast = require('../util/cast');
 
 /**
@@ -54,6 +53,7 @@ const handleReport = function (resolvedValue, sequencer, thread, blockCached, la
     const currentBlockId = blockCached.id;
     const opcode = blockCached.opcode;
     const isHat = blockCached._isHat;
+    const isHatAlwaysActivated = blockCached._isHatAlwaysActivated;
     const isConditional = blockCached._isConditional;
     const isLoop = blockCached._isLoop;
 
@@ -63,6 +63,15 @@ const handleReport = function (resolvedValue, sequencer, thread, blockCached, la
         if (thread.stackClick) {
             thread.setStatus(Thread.STATUS_RUNNING);
         } else if (sequencer.runtime.getIsEdgeActivatedHat(opcode)) {
+            if (sequencer.runtime.getIsAlwaysActivatedHat(opcode) || isHatAlwaysActivated) {
+                if (resolvedValue) {
+                    thread.setStatus(Thread.STATUS_RUNNING);
+                } else {
+                    sequencer.retireThread(thread);
+                }
+                return;
+            }
+
             // If this is an edge-activated hat, only proceed if the value is
             // true and used to be false, or the stack was activated explicitly
             // via stack click
@@ -92,7 +101,7 @@ const handleReport = function (resolvedValue, sequencer, thread, blockCached, la
         // at the top of the thread stack.
         if (lastOperation && typeof resolvedValue !== 'undefined' && thread.atStackTop()) {
             if (thread.stackClick) {
-                sequencer.runtime.visualReport(currentBlockId, resolvedValue);
+                sequencer.runtime.visualReport(currentBlockId, resolvedValue, thread.target);
             }
             if (thread.updateMonitor) {
                 const targetId = sequencer.runtime.monitorBlocks.getBlock(currentBlockId).targetId;
@@ -100,11 +109,11 @@ const handleReport = function (resolvedValue, sequencer, thread, blockCached, la
                     // Target no longer exists
                     return;
                 }
-                sequencer.runtime.requestUpdateMonitor(Map({
+                sequencer.runtime.requestUpdateMonitor({
                     id: currentBlockId,
                     spriteName: targetId ? sequencer.runtime.getTargetById(targetId).getName() : null,
                     value: resolvedValue
-                }));
+                });
             }
         }
         // Finished any yields.
@@ -200,9 +209,10 @@ class BlockCached {
 
         /**
          * Procedure mutation.
-         * @type {?object}
+         * @type {object | null}
          */
-        this.mutation = cached.mutation;
+        // The mutation should never be undefined, but it CAN be null.
+        this.mutation = cached.mutation ?? null;
 
         /**
          * The profiler the block is configured with.
@@ -221,6 +231,12 @@ class BlockCached {
          * @type {boolean}
          */
         this._isHat = false;
+
+        /**
+         * Is the block an always activated hat?
+         * @type {boolean}
+         */
+        this._isHatAlwaysActivated = false;
 
         /**
          * The block opcode's implementation function.
@@ -296,6 +312,10 @@ class BlockCached {
 
         // Assign opcode isHat and blockFunction data to avoid dynamic lookups.
         this._isHat = runtime.getIsHat(opcode);
+        this._isHatAlwaysActivated = runtime.getIsAlwaysActivatedHat(opcode);
+        if (!this._isHatAlwaysActivated && this.mutation && JSON.parse(this.mutation.hatalwaysactivated || false)) {
+            this._isHatAlwaysActivated = true;
+        }
         this._blockFunction = runtime.getOpcodeFunction(opcode);
         this._definedBlockFunction = typeof this._blockFunction !== 'undefined';
 
@@ -412,10 +432,7 @@ const _prepareBlockProfiling = function (profiler, blockCached) {
 const execute = function (sequencer, thread) {
     const runtime = sequencer.runtime;
 
-    // store sequencer and thread so block functions can access them through
-    // convenience methods.
-    blockUtility.sequencer = sequencer;
-    blockUtility.thread = thread;
+    blockUtility.init(thread, sequencer);
 
     // Current block to execute is the one on the top of the stack.
     const currentBlockId = thread.peekStack();

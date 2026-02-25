@@ -50,6 +50,7 @@ module.exports = function (compilerData, {
         case 'minute': return new IntermediateInput('sensing.currenttime.minute', this.type);
         case 'second': return new IntermediateInput('sensing.currenttime.second', this.type);
         case 'millisecond': return new IntermediateInput('sensing.currenttime.millisecond', this.type);
+        case 'timestamp': return new IntermediateInput('sensing.currenttime.timestamp', this.type);
         // @ts-ignore
         default: return this.createConstantInput(0);
         }
@@ -66,7 +67,8 @@ module.exports = function (compilerData, {
         'sensing.currenttime.hour',
         'sensing.currenttime.minute',
         'sensing.currenttime.second',
-        'sensing.currenttime.millisecond'
+        'sensing.currenttime.millisecond',
+        'sensing.currenttime.timestamp'
     ], [
         () => `(new Date().getFullYear())`,
         () => `(new Date().getMonth() + 1)`,
@@ -75,7 +77,8 @@ module.exports = function (compilerData, {
         () => `(new Date().getHours())`,
         () => `(new Date().getMinutes())`,
         () => `(new Date().getSeconds())`,
-        () => `(new Date().getMilliseconds())`
+        () => `(new Date().getMilliseconds())`,
+        () => `(new Date().valueOf())`
     ]);
     compilerData.registerBlock([
         'sensing_dayssince2000',
@@ -150,13 +153,13 @@ module.exports = function (compilerData, {
                 this.type = InputType.NUMBER_REAL;
                 return new IntermediateInput('sensing.of.direction', this.type, {object});
             case 'costume #':
-                this.type = InputType.NUMBER_POS_REAL;
+                this.type = InputType.NUMBER_POS_REAL | InputType.NUMBER_ZERO;
                 return new IntermediateInput('sensing.of.costume_number', this.type, {object});
             case 'costume name':
-                this.type = InputType.STRING;
+                this.type = InputType.STRING | InputType.NUMBER_ZERO;
                 return new IntermediateInput('sensing.of.costume_name', this.type, {object});
             case 'size':
-                this.type = InputType.NUMBER_POS_REAL;
+                this.type = InputType.NUMBER_POS_REAL | InputType.NUMBER_ZERO;
                 return new IntermediateInput('sensing.of.size', this.type, {object});
             }
         }

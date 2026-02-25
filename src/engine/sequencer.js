@@ -224,6 +224,7 @@ class Sequencer {
             } else {
                 execute(this, thread);
             }
+
             thread.blockGlowInFrame = currentBlockId;
             // If the thread is paused then we just shouldnt continue with logic
             if (thread.status === Thread.STATUS_PAUSED) return;
@@ -249,6 +250,7 @@ class Sequencer {
                 // Nothing more to execute.
                 return;
             }
+
             // If no control flow has happened, switch to next block.
             if (
                 thread.stack.length === initialStackSize &&
@@ -269,6 +271,18 @@ class Sequencer {
 
                 const stackFrame = thread.peekStackFrame();
                 isWarpMode = stackFrame.warpMode;
+
+                // NOTE: At this point whatever black and its substacks it may have had, have been ran.
+
+                if (stackFrame.isBranch) {
+                    stackFrame.branchDepth = stackFrame.branchDepth - 1;
+
+                    for (let i = 0; i < stackFrame.onBranchEnd.length; i++) {
+                        stackFrame.onBranchEnd[i]();
+                    }
+
+                    stackFrame.onBranchEnd.length = 0;
+                }
 
                 if (stackFrame.isLoop) {
                     // The current level of the stack is marked as a loop.
@@ -291,6 +305,7 @@ class Sequencer {
                     // to the next block for this level of the stack.
                     continue;
                 }
+
                 // Get next block of existing block on the stack.
                 thread.goToNextBlock();
             }
@@ -302,8 +317,9 @@ class Sequencer {
      * @param {!Thread} thread Thread object to step to branch.
      * @param {number} branchNum Which branch to step to (i.e., 1, 2).
      * @param {boolean} isLoop Whether this block is a loop.
+     * @param {?(() => void)} onEnd Optional callback for when the branch ends.
      */
-    stepToBranch (thread, branchNum, isLoop) {
+    stepToBranch (thread, branchNum, isLoop, onEnd) {
         if (!branchNum) {
             branchNum = 1;
         }
@@ -312,7 +328,19 @@ class Sequencer {
             currentBlockId,
             branchNum
         );
-        thread.peekStackFrame().isLoop = isLoop;
+
+        const stackFrame = thread.peekStackFrame();
+
+        stackFrame.isBranch = true;
+        stackFrame.isLoop = isLoop;
+
+        if (branchId) {
+            stackFrame.branchDepth = stackFrame.branchDepth + 1;
+        }
+        if (onEnd) {
+            stackFrame.onBranchEnd.push(onEnd);
+        }
+
         if (branchId) {
             // Push branch ID to the thread's stack.
             thread.pushStack(branchId);
