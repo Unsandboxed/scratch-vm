@@ -13,6 +13,7 @@ const {
     IntermediateScript,
     IntermediateRepresentation
 } = require('./intermediate');
+const oldCompilerCompatiblity = require('./old-compiler-compatibility.js');
 
 /**
  * @fileoverview Generate intermediate representations from Scratch blocks.
@@ -23,7 +24,7 @@ const {
 /**
  * @typedef DescendedVariable
  * @property {'target'|'stage'} scope
- * @property {string} id
+ * @property {string | null} id
  * @property {string} name
  * @property {boolean} isCloud
  */
@@ -92,6 +93,12 @@ class ScriptTreeGenerator {
                 }
             }
         }
+
+        this.oldCompilerStub = (
+            oldCompilerCompatiblity.enabled ?
+                new oldCompilerCompatiblity.ScriptTreeGeneratorStub(this) :
+                null
+        );
     }
 
     setProcedureVariant (procedureVariant) {
@@ -199,7 +206,7 @@ class ScriptTreeGenerator {
             block = this.runtime.compilerData.inputs.get(block.opcode).stg(this, block, preserveStrings, true);
             return block;
         }
-        
+
         const opcodeFunction = this.runtime.getOpcodeFunction(block.opcode);
         if (opcodeFunction) {
             // It might be a non-compiled primitive from a standard category
@@ -249,6 +256,9 @@ class ScriptTreeGenerator {
             if (blockInfo) {
                 const type = blockInfo.info.blockType;
                 if (this.runtime.compilerData.bt_stacks.has(type)) {
+                    return this.descendCompatLayerStack(block);
+                }
+                if (this.runtime.compilerData.bt_branchables.has(type)) {
                     return this.descendCompatLayerStack(block);
                 }
             }
@@ -430,7 +440,7 @@ class ScriptTreeGenerator {
         const data = this._descendVariable(id, variable.value, type);
         // If variable ID was null, this might do some unnecessary updates, but that is a rare
         // edge case and it won't have any adverse effects anyways.
-        this.variableCache[data.id] = data;
+        this.variableCache[String(data.id)] = data;
         return data;
     }
 
@@ -447,7 +457,7 @@ class ScriptTreeGenerator {
 
         // Look for by ID in target...
         if (Object.prototype.hasOwnProperty.call(target.variables, id)) {
-            const currVar = target.variables[id];
+            const currVar = target.variables[String(id)];
             return {
                 scope: 'target',
                 id: currVar.id,
@@ -459,7 +469,7 @@ class ScriptTreeGenerator {
         // Look for by ID in stage...
         if (!target.isStage) {
             if (stage && Object.prototype.hasOwnProperty.call(stage.variables, id)) {
-                const currVar = stage.variables[id];
+                const currVar = stage.variables[String(id)];
                 return {
                     scope: 'stage',
                     id: currVar.id,
@@ -506,7 +516,7 @@ class ScriptTreeGenerator {
 
         // Intentionally not using newVariable.id so that this matches vanilla Scratch quirks regarding
         // handling of null variable IDs.
-        target.variables[id] = newVariable;
+        target.variables[String(id)] = newVariable;
 
         if (target.sprite) {
             // Create the variable in all instances of this sprite.
@@ -514,7 +524,7 @@ class ScriptTreeGenerator {
             // sprite.clones has all instances of this sprite including the original and all clones
             for (const clone of target.sprite.clones) {
                 if (!Object.prototype.hasOwnProperty.call(clone.variables, id)) {
-                    clone.variables[id] = new Variable(id, name, type, false, false);
+                    clone.variables[String(id)] = new Variable(id, name, type, false, false);
                 }
             }
         }
@@ -549,6 +559,7 @@ class ScriptTreeGenerator {
             id: block.id,
             inputs,
             fields,
+            mutation: block.mutation ?? null,
             breakable: false,
             iterable: false
         }, true);
@@ -593,6 +604,7 @@ class ScriptTreeGenerator {
             inputs,
             fields,
             substacks,
+            mutation: block.mutation ?? null,
             breakable: block.isBreakable ?? false,
             iterable: block.isIterable ?? false
         }, true);
@@ -642,7 +654,7 @@ class ScriptTreeGenerator {
         const opcode = hatBlock.opcode;
         const hatInfo = this.runtime._hats[opcode];
 
-        if (this.thread.stackClick) {
+        if (this.thread.stackClick && !hatInfo.isProcedure) {
             // We still need to treat the hat as a normal block (so executableHat should be false) for
             // interpreter parity, but the reuslt is ignored.
             const opcodeFunction = this.runtime.getOpcodeFunction(opcode);
@@ -659,10 +671,23 @@ class ScriptTreeGenerator {
             // Edge-activated HAT
             this.script.yields = true;
             this.script.executableHat = true;
+            if (hatInfo.isProcedure) {
+                return new IntermediateStack([
+                    new IntermediateStackBlock(StackOpcode.HAT_EDGE, {
+                        id: hatBlock.id,
+                        condition: (this.descendInput(hatBlock)).toType(InputType.BOOLEAN),
+                        info: hatInfo,
+                        mutation: hatBlock.mutation || null
+                    }),
+                    ...this.walkStack(nextBlock).blocks
+                ]);
+            }
             return new IntermediateStack([
                 new IntermediateStackBlock(StackOpcode.HAT_EDGE, {
                     id: hatBlock.id,
-                    condition: this.descendCompatLayerInput(hatBlock).toType(InputType.BOOLEAN)
+                    condition: this.descendCompatLayerInput(hatBlock).toType(InputType.BOOLEAN),
+                    info: hatInfo,
+                    mutation: hatBlock.mutation || null
                 }),
                 ...this.walkStack(nextBlock).blocks
             ]);
@@ -708,8 +733,12 @@ class ScriptTreeGenerator {
 
         // We do need to evaluate empty hats
         const hatInfo = this.runtime._hats[topBlock.opcode];
-        const isHat = !!hatInfo;
-        if (isHat) {
+        if (!!hatInfo && (
+            // If the block is a procedure call then only treat it as a hat if its mutation says its a hat.
+            topBlock.opcode === 'procedures_call' ?
+                (topBlock.mutation && (topBlock.mutation.hat === 'true' || topBlock.mutation.hat === true)) :
+                true
+        )) {
             this.script.stack = this.walkHat(topBlock);
         } else {
             // We don't evaluate the procedures_definition top block as it never does anything

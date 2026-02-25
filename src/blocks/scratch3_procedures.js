@@ -1,3 +1,5 @@
+const Cast = require('../util/cast.js');
+
 class Scratch3ProcedureBlocks {
     constructor (runtime) {
         /**
@@ -22,6 +24,17 @@ class Scratch3ProcedureBlocks {
         };
     }
 
+    getHats () {
+        return {
+            procedures_call: {
+                restartExistingThreads: false,
+                edgeActivated: true,
+                alwaysActivated: false,
+                isProcedure: true
+            }
+        };
+    }
+
     definition () {
         // No-op: execute the blocks.
     }
@@ -29,9 +42,10 @@ class Scratch3ProcedureBlocks {
     call (args, util) {
         const stackFrame = util.stackFrame;
         const isReporter = !!args.mutation.return;
+        const isHat = !!args.mutation.hat;
 
         if (stackFrame.executed) {
-            if (isReporter) {
+            if (isReporter || isHat) {
                 const returnValue = stackFrame.returnValue;
                 // This stackframe will be reused for other reporters in this block, so clean it up for them.
                 // Can't use reset() because that will reset too much.
@@ -39,7 +53,7 @@ class Scratch3ProcedureBlocks {
                 threadStackFrame.params = null;
                 delete stackFrame.returnValue;
                 delete stackFrame.executed;
-                return returnValue;
+                return isHat ? Cast.toBoolean(returnValue) : returnValue;
             }
             return;
         }
@@ -51,6 +65,9 @@ class Scratch3ProcedureBlocks {
         // block is dragged between sprites without the definition.
         // Match Scratch 2.0 behavior and noop.
         if (paramNamesIdsAndDefaults === null) {
+            if (isHat) {
+                return false;
+            }
             if (isReporter) {
                 return '';
             }
@@ -89,14 +106,13 @@ class Scratch3ProcedureBlocks {
 
         stackFrame.executed = true;
 
-        if (isReporter) {
+        if (isReporter || isHat) {
             util.thread.peekStackFrame().waitingReporter = true;
             // Default return value
-            stackFrame.returnValue = '';
+            stackFrame.returnValue = isHat ? false : '';
         }
 
         util.startProcedure(procedureCode);
-        util.thread.tryCompile();
     }
 
     return (args, util) {

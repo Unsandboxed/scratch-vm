@@ -72,7 +72,8 @@ class Scratch3SensingBlocks {
             sensing_askandwait: this.askAndWait,
             sensing_answer: this.getAnswer,
             sensing_username: this.getUsername,
-            sensing_userid: () => {} // legacy no-op block
+            sensing_userid: () => {}, // legacy no-op block
+            sensing_online: this.isOnline
         };
     }
 
@@ -104,6 +105,9 @@ class Scratch3SensingBlocks {
                 // importing multiple monitors from the same opcode from sb2 files,
                 // something that is not currently supported in scratch 3.
                 getId: (_, fields) => getMonitorIdForBlockWithArgs('current', fields) // _${param}`
+            },
+            sensing_online: {
+                getId: () => 'online'
             }
         };
     }
@@ -347,6 +351,17 @@ class Scratch3SensingBlocks {
 
     getUsername (args, util) {
         return util.ioQuery('userData', 'getUsername');
+    }
+
+    isOnline () {
+        // USB: This does diviate from TurboWarp to allow for it to match scratch.
+        // But it WILL still work in NodeJS
+
+        if (typeof navigator === 'object' && typeof navigator.onLine === 'boolean') {
+            return navigator.onLine;
+        }
+
+        return '';
     }
 }
 

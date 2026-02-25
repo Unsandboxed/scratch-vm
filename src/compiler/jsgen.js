@@ -3,6 +3,7 @@
 const log = require('../util/log');
 const jsexecute = require('./jsexecute');
 const {StackOpcode, InputOpcode, InputType} = require('./enums.js');
+const oldCompilerCompatibility = require('./old-compiler-compatibility.js');
 
 // These imports are used by jsdoc comments but eslint doesn't know that
 /* eslint-disable no-unused-vars */
@@ -67,6 +68,8 @@ class JSGenerator {
         this.isInHat = false;
 
         this.debug = this.target.runtime.debug;
+
+        this.oldCompilerStub = new oldCompilerCompatibility.JSGeneratorStub(this);
     }
 
     /**
@@ -125,9 +128,9 @@ class JSGenerator {
                 return `(+${this.descendInput(node.target.toType(InputType.BOOLEAN))})`;
             }
             if (node.target.isAlwaysType(InputType.NUMBER_OR_NAN)) {
-                return `(${this.descendInput(node.target)} || 0)`;
+                return `toNotNaN(${this.descendInput(node.target)})`;
             }
-            return `(+${this.descendInput(node.target)} || 0)`;
+            return `toNotNaN(+${this.descendInput(node.target)})`;
         case InputOpcode.CAST_NUMBER_OR_NAN:
             return `(+${this.descendInput(node.target)})`;
         case InputOpcode.CAST_NUMBER_INDEX:
@@ -172,6 +175,9 @@ class JSGenerator {
             }
             // Compatibility layer inputs never use flags.
             return `(${this.generateCompatibilityLayerCall(node, false)})`;
+
+        case InputOpcode.OLD_COMPILER_COMPATIBILITY_LAYER:
+            return this.oldCompilerStub.descendInputFromNewCompiler(block);
 
         case InputOpcode.CONSTANT:
             if (block.isAlwaysType(InputType.NUMBER)) {
@@ -251,19 +257,28 @@ class JSGenerator {
             break;
         }
 
+        case InputOpcode.OLD_COMPILER_COMPATIBILITY_LAYER:
+            return this.oldCompilerStub.descendStackedBlockFromNewCompiler(block);
+
         case StackOpcode.HAT_EDGE:
             this.isInHat = true;
             this.source += '{\n';
             // For exact Scratch parity, evaluate the input before checking old edge state.
             // Can matter if the input is not instantly evaluated.
             this.source += `const resolvedValue = ${this.descendInput(node.condition)};\n`;
-            this.source += `const id = "${sanitize(node.id)}";\n`;
-            this.source += 'const hasOldEdgeValue = target.hasEdgeActivatedValue(id);\n';
-            this.source += `const oldEdgeValue = target.updateEdgeActivatedValue(id, resolvedValue);\n`;
-            this.source += `const edgeWasActivated = hasOldEdgeValue ? (!oldEdgeValue && resolvedValue) : resolvedValue;\n`;
-            this.source += `if (!edgeWasActivated) {\n`;
-            this.retire();
-            this.source += '}\n';
+            if (node.info.alwaysActivated || (node.mutation && !!JSON.parse(node.mutation.hatalwaysactivated || false))) {
+                this.source += `if (!resolvedValue) {\n`;
+                this.retire();
+                this.source += '}\n';
+            } else {
+                this.source += `const id = "${sanitize(node.id)}";\n`;
+                this.source += 'const hasOldEdgeValue = target.hasEdgeActivatedValue(id);\n';
+                this.source += `const oldEdgeValue = target.updateEdgeActivatedValue(id, resolvedValue);\n`;
+                this.source += `const edgeWasActivated = hasOldEdgeValue ? (!oldEdgeValue && resolvedValue) : resolvedValue;\n`;
+                this.source += `if (!edgeWasActivated) {\n`;
+                this.retire();
+                this.source += '}\n';
+            }
             this.source += 'yield;\n';
             this.source += '}\n';
             this.isInHat = false;
@@ -285,7 +300,7 @@ class JSGenerator {
             const value = this.localVariables.next();
             this.source += `const ${value} = ${this.descendInput(node.input)};`;
             // blocks like legacy no-ops can return a literal `undefined`
-            this.source += `if (${value} !== undefined) runtime.visualReport("${sanitize(this.script.topBlockId)}", ${value});\n`;
+            this.source += `if (${value} !== undefined) runtime.visualReport("${sanitize(this.script.topBlockId)}", ${value}, target);\n`;
             break;
         }
 
@@ -462,12 +477,22 @@ class JSGenerator {
         for (const inputName of Object.keys(node.inputs)) {
             const input = node.inputs[inputName];
             const compiledInput = this.descendInput(input);
-            result += `"${sanitize(inputName)}":${compiledInput},`;
+            if (inputName !== 'mutation' || node.mutation === null) {
+                result += `"${sanitize(inputName)}":${compiledInput},`;
+            }
         }
         for (const fieldName of Object.keys(node.fields)) {
             const field = node.fields[fieldName];
             result += `"${sanitize(fieldName)}":"${sanitize(field)}",`;
         }
+        if (node.mutation !== null) {
+            try {
+                result += `"mutation":${JSON.stringify(node.mutation)},`;
+            } catch (error) {
+                console.error('Failed to sanitize mutation', node.mutation, 'for node', node);
+            }
+        }
+
         const opcodeFunction = this.evaluateOnce(`runtime.getOpcodeFunction("${sanitize(opcode)}")`);
         result += `}, ${opcodeFunction}, ${this.isWarp}, ${setFlags}, "${sanitize(node.id)}", ${frameName})`;
 
