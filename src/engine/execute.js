@@ -312,6 +312,9 @@ class BlockCached {
 
         // Assign opcode isHat and blockFunction data to avoid dynamic lookups.
         this._isHat = runtime.getIsHat(opcode);
+        if (this._isHat && opcode === 'procedures_call') {
+            this._isHat = !!this.mutation && !!JSON.parse(this.mutation.hat || false);
+        }
         this._isHatAlwaysActivated = runtime.getIsAlwaysActivatedHat(opcode);
         if (!this._isHatAlwaysActivated && this.mutation && JSON.parse(this.mutation.hatalwaysactivated || false)) {
             this._isHatAlwaysActivated = true;
