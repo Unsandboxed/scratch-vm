@@ -41,8 +41,8 @@ class Scratch3ProcedureBlocks {
 
     call (args, util) {
         const stackFrame = util.stackFrame;
-        const isReporter = !!JSON.parse(args.mutation.return || 0);
-        const isHat = !!JSON.parse(args.mutation.hat || false);
+        const isReporter = Cast.toBooleanSimple(args.mutation.return);
+        const isHat = Cast.toBooleanSimple(args.mutation.hat);
 
         if (stackFrame.executed) {
             if (isReporter || isHat) {
@@ -162,7 +162,7 @@ class Scratch3ProcedureBlocks {
         const branchInfo = util.getParam(args.VALUE) || {};
         if (!branchInfo.fieldId) return;
 
-        const block = util.target.blocks.getBlock(branchInfo.blockId);
+        const block = util.thread.blockContainer.getBlock(branchInfo.blockId);
         if (!block) return;
 
         const branch = block.inputs[branchInfo.fieldId];

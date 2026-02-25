@@ -1792,7 +1792,7 @@ class VirtualMachine extends EventEmitter {
                             ${this.editingTarget.blocks.toXML(this.editingTarget.comments)}
                         </xml>`;
 
-        console.log(this.emit('workspaceUpdate', {xml: xmlString}));
+        this.emit('workspaceUpdate', {xml: xmlString});
     }
 
     /**

@@ -29,7 +29,8 @@ const {
     factoryNameVariablePool,
     functionNameVariablePool,
     generatorNameVariablePool,
-    VariablePool
+    VariablePool,
+    Cast
 } = require('./shared-exports');
 
 class JSGenerator {
@@ -267,7 +268,7 @@ class JSGenerator {
             // For exact Scratch parity, evaluate the input before checking old edge state.
             // Can matter if the input is not instantly evaluated.
             this.source += `const resolvedValue = ${this.descendInput(node.condition)};\n`;
-            if (node.info.alwaysActivated || (node.mutation && !!JSON.parse(node.mutation.hatalwaysactivated || false))) {
+            if (node.info.alwaysActivated || Cast.toBooleanSimple(node.mutation && node.mutation.hatalwaysactivated)) {
                 this.source += `if (!resolvedValue) {\n`;
                 this.retire();
                 this.source += '}\n';
@@ -548,12 +549,16 @@ class JSGenerator {
     createScriptFactory () {
         let script = '';
 
+        // Debug: Make the definition run in the target where it was defined (if its a procedure),
+        //        instead of the caller target.
+        const DBG_EXECUTE_IN_DEFTARGET = false;
+
         // Setup the factory
         script += `(function ${this.getScriptFactoryName()}(thread) { `;
         script += 'const runtime = thread.target.runtime; ';
         script += `const target = ${this.isProcedure ? `${
             this.target.id === this.script.targetId ? 'thread.target' : `runtime.getTargetById("${
-                this.script.targetId
+                DBG_EXECUTE_IN_DEFTARGET ? this.script.targetId : this.target.id
             }")`
         }` : 'thread.target'}; `;
         script += 'const stage = runtime.getTargetForStage();\n';

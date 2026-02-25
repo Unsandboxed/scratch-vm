@@ -4,7 +4,8 @@ module.exports = function (compilerData, {
     IntermediateStackBlock,
     Frame,
     InputType,
-    sanitize
+    sanitize,
+    Cast
 }) {
     /* eslint-disable no-invalid-this,prefer-arrow-callback,arrow-parens */
     // @ts-ignore
@@ -30,7 +31,7 @@ module.exports = function (compilerData, {
             return new IntermediateInput(procedureInfo.opcode, this.type, procedureInfo.inputs, this.yields);
         }
         const procedureCode = block.mutation.proccode;
-        if (!!JSON.parse(block.mutation.return) && !JSON.parse(block.mutation.hat || false)) {
+        if (Cast.toBooleanSimple(block.mutation.return) && !Cast.toBooleanSimple(block.mutation.hat)) {
             const visualReport = stg.descendVisualReport(block);
             if (visualReport) {
                 return visualReport;
@@ -48,6 +49,7 @@ module.exports = function (compilerData, {
         const procedureVariant = node.variant;
         const procedureData = jsg.ir.procedures[procedureVariant];
         if (procedureData.stack === null) {
+            console.warn('TODO still need to evaluate arguments for side effects');
             // TODO still need to evaluate arguments for side effects
             return '""';
         }
@@ -67,7 +69,7 @@ module.exports = function (compilerData, {
                 const oldIsProcedureBranch = jsg.isProcedureBranch;
                 jsg.isWarp = procedureData.isWarp;
                 jsg.isProcedureBranch = true;
-                args.push(`(function*(returnProcedure){;${
+                args.push(`(function*(returnProcedure, thread, target){;${
                     jsg.descendStackForSource(input, new Frame(false))
                 };})`);
                 jsg.isWarp = oldWarp;
@@ -104,7 +106,7 @@ module.exports = function (compilerData, {
             const oldIsProcedureBranch = jsg.isProcedureBranch;
             jsg.isWarp = procedureData.isWarp;
             jsg.isProcedureBranch = true;
-            args.push(`(function*(returnProcedure){;${
+            args.push(`(function*(returnProcedure, thread, target){;${
                 jsg.descendStackForSource(input, new Frame(false))
             };})`);
             jsg.isWarp = oldWarp;
@@ -181,7 +183,7 @@ module.exports = function (compilerData, {
             return;
         }
         // eslint-disable-next-line max-len
-        jsg.source += `void(yield* p${block.inputs.index}(function(v) {procedureReturnV[0]=true;procedureReturnV[1]=v}));`;
+        jsg.source += `void(yield* p${block.inputs.index}(function(v) {procedureReturnV[0]=true;procedureReturnV[1]=v}, thread, target));`;
         jsg.source += `if (procedureReturnV[0]) {`;
         jsg.stopScriptAndReturn(`procedureReturnV[1]`);
         jsg.source += `};`;

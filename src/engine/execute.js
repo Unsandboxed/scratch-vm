@@ -2,7 +2,7 @@ const BlockUtility = require('./block-utility');
 const BlocksExecuteCache = require('./blocks-execute-cache');
 const log = require('../util/log');
 const Thread = require('./thread');
-const cast = require('../util/cast');
+const Cast = require('../util/cast');
 
 /**
  * Single BlockUtility instance reused by execute for every pritimive ran.
@@ -95,7 +95,7 @@ const handleReport = function (resolvedValue, sequencer, thread, blockCached, la
             sequencer.retireThread(thread);
         }
     } else if ((isConditional || isLoop) && typeof resolvedValue !== 'undefined') {
-        sequencer.stepToBranch(thread, cast.toNumber(resolvedValue), isLoop);
+        sequencer.stepToBranch(thread, Cast.toNumber(resolvedValue), isLoop);
     } else {
         // In a non-hat, report the value visually if necessary if
         // at the top of the thread stack.
@@ -313,10 +313,10 @@ class BlockCached {
         // Assign opcode isHat and blockFunction data to avoid dynamic lookups.
         this._isHat = runtime.getIsHat(opcode);
         if (this._isHat && opcode === 'procedures_call') {
-            this._isHat = !!this.mutation && !!JSON.parse(this.mutation.hat || false);
+            this._isHat = Cast.toBooleanSimple(this.mutation && this.mutation.hat);
         }
         this._isHatAlwaysActivated = runtime.getIsAlwaysActivatedHat(opcode);
-        if (!this._isHatAlwaysActivated && this.mutation && JSON.parse(this.mutation.hatalwaysactivated || false)) {
+        if (!this._isHatAlwaysActivated && Cast.toBooleanSimple(this.mutation && this.mutation.hatalwaysactivated)) {
             this._isHatAlwaysActivated = true;
         }
         this._blockFunction = runtime.getOpcodeFunction(opcode);
@@ -474,7 +474,7 @@ const execute = function (sequencer, thread) {
                     // Something is plugged into the broadcast input.
                     // Cast it to a string. We don't need an id here.
                     argValues.BROADCAST_OPTION.id = null;
-                    argValues.BROADCAST_OPTION.name = cast.toString(inputValue);
+                    argValues.BROADCAST_OPTION.name = Cast.toString(inputValue);
                 } else {
                     argValues[inputName] = inputValue;
                 }
@@ -508,7 +508,7 @@ const execute = function (sequencer, thread) {
                 // Something is plugged into the broadcast input.
                 // Cast it to a string. We don't need an id here.
                 argValues.BROADCAST_OPTION.id = null;
-                argValues.BROADCAST_OPTION.name = cast.toString(inputValue);
+                argValues.BROADCAST_OPTION.name = Cast.toString(inputValue);
             } else {
                 argValues[inputName] = inputValue;
             }
@@ -591,7 +591,7 @@ const execute = function (sequencer, thread) {
                     // Something is plugged into the broadcast input.
                     // Cast it to a string. We don't need an id here.
                     parentValues.BROADCAST_OPTION.id = null;
-                    parentValues.BROADCAST_OPTION.name = cast.toString(primitiveReportedValue);
+                    parentValues.BROADCAST_OPTION.name = Cast.toString(primitiveReportedValue);
                 } else {
                     parentValues[inputName] = primitiveReportedValue;
                 }

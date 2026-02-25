@@ -61,9 +61,13 @@ class ScriptTreeGenerator {
         /** @private */
         this.target = thread.target;
         /** @private */
+        this.globalTarget = this.target.runtime.getTargetById(targetId) || this.target;
+        /** @private */
         this.targetId = targetId;
         /** @private */
-        this.blocks = thread.blockContainer;
+        this.blocks = this.globalTarget.blocks;
+        /** @private */
+        this.localBlocks = this.target.blocks;
         /** @private */
         this.runtime = this.target.runtime;
         /** @private */
@@ -331,11 +335,8 @@ class ScriptTreeGenerator {
         const procedureCode = block.mutation.proccode;
         let paramNamesIdsAndDefaults = this.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
         if (!paramNamesIdsAndDefaults) {
-            console.log("params not found, falling back onto global procedure");
             paramNamesIdsAndDefaults = this.runtime.getGlobalProcedureParamNamesIdsAndDefaults(procedureCode);
         }
-
-        console.log(paramNamesIdsAndDefaults, this.runtime);
 
         if (paramNamesIdsAndDefaults === null) {
             return {opcode: StackOpcode.NOP, yields: false};
@@ -367,12 +368,20 @@ class ScriptTreeGenerator {
             };
         }
 
-        const definitionId = this.blocks.getProcedureDefinition(procedureCode);
+        const oldBlocks = this.blocks;
+
+        let definitionId = this.blocks.getProcedureDefinition(procedureCode);
+        if (!definitionId) {
+            [{blocks: this.blocks}, definitionId] = this.runtime.getGlobalProcedureDefinition(procedureCode);
+        }
+
         const definitionBlock = this.blocks.getBlock(definitionId);
         if (!definitionBlock) {
             return {opcode: StackOpcode.NOP, yields: false};
         }
         const innerDefinition = this.blocks.getBlock(definitionBlock.inputs.custom_block.block);
+
+        this.blocks = oldBlocks;
 
         let isWarp = this.script.isWarp;
         if (!isWarp) {
@@ -404,6 +413,8 @@ class ScriptTreeGenerator {
             args.push(value);
         }
 
+        this.blocks = oldBlocks;
+
         return {
             opcode: 'procedures.call',
             inputs: {
@@ -411,7 +422,7 @@ class ScriptTreeGenerator {
                 variant,
                 arguments: args
             },
-            yields: !this.script.isWarp && procedureCode === this.script.procedureCode
+            yields: !this.script.isWarp && procedureCode === this.script.procedureCode,
         };
     }
 
@@ -850,7 +861,7 @@ class IRGenerator {
      * @returns {IntermediateRepresentation} Intermediate representation.
      */
     generate () {
-        const entry = this.generateScriptTree(new ScriptTreeGenerator(this.thread), this.thread.topBlock);
+        const entry = this.generateScriptTree(new ScriptTreeGenerator(this.thread, this.thread.target.id), this.thread.topBlock);
 
         // Compile any required procedures.
         // As procedures can depend on other procedures, this process may take several iterations.
@@ -868,7 +879,6 @@ class IRGenerator {
                 } else {
                     const isWarp = parseIsWarp(procedureVariant);
                     const generator = new ScriptTreeGenerator(this.thread, target.id);
-                    debugger;
                     generator.setProcedureVariant(procedureVariant);
                     if (isWarp) generator.enableWarp();
                     const compiledProcedure = this.generateScriptTree(generator, definitionId);
