@@ -154,7 +154,6 @@ module.exports = function (compilerData, {
     compilerData.registerBlock('argument_statement', function (stg, block) {
         // see argument_reporter_string_number above
         const name = block.fields.VALUE.value;
-        console.log(name, stg.script.arguments);
         const index = stg.script.arguments.lastIndexOf(name);
         return new IntermediateStackBlock(this.ir_opcode, {index}, this.yields);
         // eslint-disable-next-line no-unused-vars

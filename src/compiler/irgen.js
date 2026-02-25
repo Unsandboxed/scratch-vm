@@ -391,6 +391,8 @@ class ScriptTreeGenerator {
                 } else {
                     value = this.descendInputOfBlock(block, paramIds[i], true);
                 }
+            } else if (paramIds[i].startsWith('SUBSTACK')) {
+                value = new IntermediateStack();
             } else {
                 value = this.createConstantInput(paramDefaults[i], true);
             }
