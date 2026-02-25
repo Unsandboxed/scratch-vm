@@ -1594,7 +1594,6 @@ class Blocks {
         if (dirtyCallers.length === 0) return;
 
         for (const dirtyCaller of dirtyCallers) {
-            console.log('dirty caller needs to be updated to ', newProccode, ' <> ', dirtyCaller);
             this._updateDirtyCaller(dirtyCaller, newProccode, pniad);
         }
 
