@@ -567,20 +567,20 @@ class IROptimizer {
         }
 
         switch (stackBlock.opcode) {
-        case StackOpcode.VAR_SET:
+        case 'data.setvariableto':
             modified = this.analyzeInputs(inputs, state) || modified;
             modified = state.setVariableType(inputs.variable, inputs.value.type) || modified;
             break;
-        case StackOpcode.CONTROL_WHILE:
-        case StackOpcode.CONTROL_FOR:
+        case 'control.while':
+        case 'control.for_each':
             modified = this.analyzeInputs(inputs, state) || modified;
             modified = this.analyzeLoopedStack(inputs.do, state, stackBlock, true) || modified;
             break;
-        case StackOpcode.CONTROL_REPEAT:
+        case 'control.repeat':
             modified = this.analyzeInputs(inputs, state) || modified;
             modified = this.analyzeLoopedStack(inputs.do, state, stackBlock, false) || modified;
             break;
-        case StackOpcode.CONTROL_IF_ELSE: {
+        case 'control.if_else': {
             modified = this.analyzeInputs(inputs, state) || modified;
             const trueState = state.clone();
             modified = this.analyzeStack(inputs.whenTrue, trueState) || modified;
@@ -588,17 +588,17 @@ class IROptimizer {
             modified = state.or(trueState) || modified;
             break;
         }
-        case StackOpcode.CONTROL_STOP_SCRIPT: {
+        case 'control.stop_script': {
             modified = this.analyzeInputs(inputs, state) || modified;
             this.addPossibleExitState(state);
             break;
         }
-        case StackOpcode.CONTROL_WAIT_UNTIL: {
+        case 'control.wait_until': {
             modified = state.clear() || modified;
             modified = this.analyzeInputs(inputs, state) || modified;
             break;
         }
-        case StackOpcode.PROCEDURE_CALL: {
+        case 'procedures.call': {
             modified = this.analyzeInputs(inputs, state) || modified;
             modified = this.analyzeInputs(inputs.inputs, state) || modified;
             const script = this.ir.procedures[inputs.variant];
