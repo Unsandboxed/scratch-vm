@@ -14,22 +14,22 @@ const compile = (/** @type {import("../engine/thread")} */ thread) => {
     const procedures = {};
     const target = thread.target;
 
-    const compileScript = (/** @type {import("./intermediate").IntermediateScript} */ script) => {
+    const compileScript = (/** @type {import("./intermediate").IntermediateScript} */ script, parentScript) => {
         if (script.cachedCompileResult) {
             return script.cachedCompileResult;
         }
 
         const compiler = new JSGenerator(script, ir, target);
-        const result = compiler.compile();
+        const result = compiler.compile(parentScript);
         script.cachedCompileResult = result;
         return result;
     };
 
-    const entry = compileScript(ir.entry);
+    const entry = compileScript(ir.entry, null);
 
     for (const procedureVariant of Object.keys(ir.procedures)) {
         const procedureData = ir.procedures[procedureVariant];
-        const procedureTree = compileScript(procedureData);
+        const procedureTree = compileScript(procedureData, entry);
         procedures[procedureVariant] = procedureTree;
     }
 

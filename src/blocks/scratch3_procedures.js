@@ -80,13 +80,15 @@ class Scratch3ProcedureBlocks {
         // not take any arguments. This is so that `getParam` down the line does not look
         // at earlier stack frames for the values of a given parameter (#1729)
         util.initParams();
-        for (let i = 0; i < paramIds.length; i++) {
+        for (let i = 0, j = 0; i < paramIds.length; i++) {
             if (Object.prototype.hasOwnProperty.call(args, paramIds[i])) {
                 util.pushParam(paramNames[i], args[paramIds[i]]);
             } else if (paramIds[i].startsWith('SUBSTACK')) {
                 util.pushParam(paramNames[i], {
                     blockId: util.thread.peekStackFrame().op.id,
-                    fieldId: paramIds[i]
+                    fieldId: paramIds[i],
+                    i: i,
+                    j: ++j
                 });
             } else {
                 util.pushParam(paramNames[i], paramDefaults[i]);
@@ -160,15 +162,29 @@ class Scratch3ProcedureBlocks {
         const branchInfo = util.getParam(args.VALUE) || {};
         if (!branchInfo.fieldId) return;
 
-        const blockId = branchInfo.blockId;
-        const block = util.target.blocks.getBlock(blockId);
+        const block = util.target.blocks.getBlock(branchInfo.blockId);
         if (!block) return;
 
         const branch = block.inputs[branchInfo.fieldId];
         if (!branch) return;
-        const branchId = branch.block;
 
-        util.thread.pushStack(branchId);
+        const stackFrame = util.thread.peekStackFrame();
+        const params = stackFrame.params;
+        stackFrame.params = {};
+
+        stackFrame.isBranch = true;
+        stackFrame.isLoop = false;
+
+        stackFrame.branchDepth = stackFrame.branchDepth + 1;
+        stackFrame.onBranchEnd.push(() => {
+            if (params) {
+                util.thread.peekStackFrame().params = params;
+            } else {
+                util.thread.peekStackFrame().params = null;
+            }
+        });
+
+        util.thread.pushStack(branch.block);
     }
 }
 
