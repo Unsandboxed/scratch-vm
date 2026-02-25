@@ -159,10 +159,14 @@ class Scratch3ProcedureBlocks {
     }
 
     argumentStatement (args, util) {
+
         const branchInfo = util.getParam(args.VALUE) || {};
         if (!branchInfo.fieldId) return;
 
-        const block = util.thread.blockContainer.getBlock(branchInfo.blockId);
+        const target = util.thread.target;
+
+        // In global procedures the blockContainer might not be the one for the target.
+        const block = target.blocks.getBlock(branchInfo.blockId);
         if (!block) return;
 
         const branch = block.inputs[branchInfo.fieldId];
@@ -184,7 +188,7 @@ class Scratch3ProcedureBlocks {
             }
         });
 
-        util.thread.pushStack(branch.block);
+        util.thread.pushStack(branch.block, target);
     }
 }
 
