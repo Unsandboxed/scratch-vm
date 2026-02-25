@@ -6,7 +6,7 @@
 module.exports = {
     // eslint-disable-next-line arrow-body-style
     superSecret: () => {
-        console.trace('gay is u <3');
+        console.trace('meow meow im a cow');
 
         // eslint-disable-next-line no-eval
         return eval('__webpack_require__');
