@@ -83,7 +83,7 @@ class Scratch3ProcedureBlocks {
         for (let i = 0; i < paramIds.length; i++) {
             if (Object.prototype.hasOwnProperty.call(args, paramIds[i])) {
                 util.pushParam(paramNames[i], args[paramIds[i]]);
-            } else if (paramIds[i].startsWith("SUBSTACK")) {
+            } else if (paramIds[i].startsWith('SUBSTACK')) {
                 util.pushParam(paramNames[i], {
                     blockId: util.thread.peekStackFrame().op.id,
                     fieldId: paramIds[i]
@@ -168,7 +168,6 @@ class Scratch3ProcedureBlocks {
         if (!branch) return;
         const branchId = branch.block;
 
-        // todo: should we wait for the branch to finish?
         util.thread.pushStack(branchId);
     }
 }

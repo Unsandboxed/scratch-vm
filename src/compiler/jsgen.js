@@ -305,7 +305,7 @@ class JSGenerator {
         }
 
         default:
-            log.warn(`JS: Unknown stacked block: ${block.opcode}`, node);
+            log.warn(`JS: Unknown stacked block: ${block.opcode}`, node, block);
             throw new Error(`JS: Unknown stacked block: ${block.opcode}`);
         }
     }
