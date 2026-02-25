@@ -41,8 +41,8 @@ class Scratch3ProcedureBlocks {
 
     call (args, util) {
         const stackFrame = util.stackFrame;
-        const isReporter = !!args.mutation.return;
-        const isHat = !!args.mutation.hat;
+        const isReporter = !!JSON.parse(args.mutation.return || 0);
+        const isHat = !!JSON.parse(args.mutation.hat || false);
 
         if (stackFrame.executed) {
             if (isReporter || isHat) {

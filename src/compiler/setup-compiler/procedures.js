@@ -30,7 +30,7 @@ module.exports = function (compilerData, {
             return new IntermediateInput(procedureInfo.opcode, this.type, procedureInfo.inputs, this.yields);
         }
         const procedureCode = block.mutation.proccode;
-        if (block.mutation.return && !block.mutation.hat) {
+        if (block.mutation.return && !JSON.parse(block.mutation.hat || false)) {
             const visualReport = stg.descendVisualReport(block);
             if (visualReport) {
                 return visualReport;
@@ -58,7 +58,17 @@ module.exports = function (compilerData, {
             const procedureReference = `thread.procedures["${sanitize(procedureVariant)}"]`;
             const args = [];
             for (const input of node.arguments) {
-                args.push(jsg.descendInput(input));
+                if (input instanceof IntermediateInput) {
+                    args.push(jsg.descendInput(input));
+                }
+
+                const oldSrc = jsg.source;
+                jsg.source = '';
+                jsg.descendStack(input, new Frame(false));
+                const branchSrc = jsg.source;
+                jsg.source = oldSrc;
+
+                args.push(`(function${jsg.script.yields ? '*' : ''}(){;${branchSrc};})`);
             }
             const joinedArgs = args.join(',');
             const yieldForRecursion = !jsg.isWarp && procedureCode === jsg.script.procedureCode;

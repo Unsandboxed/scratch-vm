@@ -201,7 +201,7 @@ class JSGenerator {
             } throw new Error(`JS: Unknown constant input type '${block.type}'.`);
 
         default:
-            log.warn(`JS: Unknown input: ${block.opcode}`, node);
+            log.warn(`JS: Unknown input: ${block.opcode}`, node, block);
             throw new Error(`JS: Unknown input: ${block.opcode}`);
         }
     }

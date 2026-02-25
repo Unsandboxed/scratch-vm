@@ -87,7 +87,7 @@ class Blocks {
              * @type {object.<string, object>}
              */
             compiledScripts: {},
-            
+
             /**
              * tw: A cache of procedure code opcodes to a parsed intermediate representation
              * @type {object.<string, object>}
@@ -497,7 +497,7 @@ class Blocks {
                     }
                 }
                 stage.createVariable(e.varId, e.varName, e.varType, e.isCloud);
-                
+
                 this.runtime.addPendingMonitor(e.varId);
 
                 // TODO same as above, this should probably be batched
