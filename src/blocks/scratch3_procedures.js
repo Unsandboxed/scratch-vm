@@ -17,6 +17,7 @@ class Scratch3ProcedureBlocks {
         return {
             procedures_definition: this.definition,
             procedures_call: this.call,
+            procedures_set_parameter: this.setParameter,
             procedures_return: this.return,
             argument_statement: this.argumentStatement,
             argument_reporter_string_number: this.argumentReporterStringNumber,
@@ -79,6 +80,7 @@ class Scratch3ProcedureBlocks {
         // Initialize params for the current stackFrame to {}, even if the procedure does
         // not take any arguments. This is so that `getParam` down the line does not look
         // at earlier stack frames for the values of a given parameter (#1729)
+        console.log("params init");
         util.initParams();
         for (let i = 0, j = 0; i < paramIds.length; i++) {
             if (Object.prototype.hasOwnProperty.call(args, paramIds[i])) {
@@ -115,6 +117,32 @@ class Scratch3ProcedureBlocks {
         }
 
         util.startProcedure(procedureCode);
+    }
+
+    setParameter (args, util) {
+        const blockId = util.thread.peekStack();
+        const block = util.target.blocks.getBlock(blockId);
+        if (!block) return;
+        
+        const paramInput = block.inputs.PARAM;
+        if (!paramInput) return;
+
+        const param = util.target.blocks.getBlock(paramInput.block);
+        if (!param) return;
+
+        if (
+            param.opcode === "argument_reporter_string_number" || 
+            param.opcode === "argument_reporter_boolean"
+        ) {
+            const field = param.fields.VALUE;
+            if (!field) return;
+
+            const paramName = field.value;
+            const paramFrame = util.thread.stackFrames[0];
+            if (!paramFrame.params) return;
+
+            paramFrame.params[paramName] = args.TO;
+        }
     }
 
     return (args, util) {
