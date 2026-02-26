@@ -4300,6 +4300,9 @@ class Runtime extends EventEmitter {
         for (let i = 0; i < this.targets.length; i++) {
             const target = this.targets[i];
             for (const dirtyProccode of dirtyGlobalProcedures) {
+                if (target.blocks.getProcedureDefinition(dirtyProccode)) {
+                    continue;
+                }
                 target.blocks.updateDirtyGlobalProceduresMutations(
                     dirtyProccode,
                     this._dirtyGlobalProceduresMutations[dirtyProccode]
@@ -4353,10 +4356,7 @@ class Runtime extends EventEmitter {
 
                 return target.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
             }
-        }
-        if (!def[0].blocks) {
-            console.error('details for error below', procedureCode, def);
-            throw new Error('Somehow GGPPNIADs target is missing its blocks?');
+            return null;
         }
         return def[0].blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
     }
@@ -4376,10 +4376,7 @@ class Runtime extends EventEmitter {
 
                 return target.blocks.getProcedureParamNamesAndIds(procedureCode);
             }
-        }
-        if (!def[0].blocks) {
-            console.error('details for error below', procedureCode, def);
-            throw new Error('Somehow GGPPNIADs target is missing its blocks?');
+            return null;
         }
         return def[0].blocks.getProcedureParamNamesAndIds(procedureCode);
     }

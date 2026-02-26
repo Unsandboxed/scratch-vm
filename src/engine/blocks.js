@@ -10,6 +10,7 @@ const log = require('../util/log');
 const Variable = require('./variable');
 const getMonitorIdForBlockWithArgs = require('../util/get-monitor-id');
 const uid = require('../util/uid');
+const ScratchBlocksConstants = require('./scratch-blocks-constants');
 
 /**
  * @fileoverview
@@ -1592,12 +1593,18 @@ class Blocks {
         // Update the mutation data.
         if (block.mutation.hat === newMutation.hat) {
             if (!block.next && block.mutation.return !== newMutation.return) {
+                if (Cast.toBooleanSimple(newMutation.hat)) {
+                    newMutation.return = ScratchBlocksConstants.RETURN_TYPE_HAT;
+                }
                 block.mutation.return = newMutation.return;
             }
         } else {
             block.mutation.hat = newMutation.hat;
 
             if (!block.next && (block.mutation.return === '0' || !block.mutation.return)) {
+                if (Cast.toBooleanSimple(newMutation.hat)) {
+                    newMutation.return = ScratchBlocksConstants.RETURN_TYPE_HAT;
+                }
                 block.mutation.return = newMutation.return;
             }
         }
