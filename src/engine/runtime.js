@@ -559,6 +559,11 @@ class Runtime extends EventEmitter {
         this._defaultStoredSettings = this._generateAllProjectOptions();
 
         /**
+         * Map of spoofed param values (all lowercase) to values they should return.
+         */
+        this.spoofedProcedureParamValues = Object.create(null);
+
+        /**
          * TW: We support a "packaged runtime" mode. This can be used when:
          *  - there will never be an editor attached such as scratch-gui or scratch-blocks
          *  - the project will never be exported with saveProjectSb3()
@@ -643,7 +648,8 @@ class Runtime extends EventEmitter {
          */
         this.temporaryStorage = {};
         this.on(Runtime.PROJECT_START, () => {
-            this._doRefreshGlobalProcedures();
+            this.requestGlobalProceduresMutationsRefresh();
+            this.requestGlobalProceduresRefresh();
             this.temporaryStorage = {};
         });
         this.on(Runtime.PROJECT_STOP_ALL, () => {

@@ -370,12 +370,12 @@ class Blocks {
      * Get all the mutation XMLs for all local procedures.
      */
     getLocalProcedureMutationXMLs () {
-        let mutations = [];
+        const mutations = [];
         for (const id in this._blocks) {
             const block = this._blocks[id];
 
             if (block.opcode === 'procedures_prototype') {
-                const global = JSON.parse(block.mutation.global);
+                const global = Cast.toBooleanSimple(block.mutation.global);
                 if (global) continue;
 
                 const mutation = this.mutationToXML(block.mutation);

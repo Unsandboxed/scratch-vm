@@ -5,7 +5,8 @@ module.exports = function (compilerData, {
     Frame,
     InputType,
     sanitize,
-    Cast
+    Cast,
+    runtime
 }) {
     /* eslint-disable no-invalid-this,prefer-arrow-callback,arrow-parens */
     // @ts-ignore
@@ -135,8 +136,11 @@ module.exports = function (compilerData, {
         const index = stg.script.arguments.lastIndexOf(name);
         if (index === -1) {
             // Legacy support
-            if (name.toLowerCase() === 'last key pressed') {
+            const param = name.toLowerCase();
+            if (param === 'last key pressed') {
                 return new IntermediateInput('tw.getLastKeyPressed', this.type);
+            } else if (Object.prototype.hasOwnProperty.call(runtime.spoofedProcedureParamValues, param)) {
+                return stg.createConstantInput(runtime.spoofedProcedureParamValues[param](1), true);
             }
             return new IntermediateInput('procedures.paramater', this.type, {name});
         }
@@ -160,8 +164,11 @@ module.exports = function (compilerData, {
         const name = block.fields.VALUE.value;
         const index = stg.script.arguments.lastIndexOf(name);
         if (index === -1) {
-            if (name.toLowerCase() === 'is compiled?' || name.toLowerCase() === 'is unsandboxed?') {
+            const param = name.toLowerCase();
+            if (param === 'is compiled?' || param === 'is unsandboxed?') {
                 return stg.createConstantInput(true).toType(InputType.BOOLEAN);
+            } else if (Object.prototype.hasOwnProperty.call(runtime.spoofedProcedureParamValues, param)) {
+                return stg.createConstantInput(runtime.spoofedProcedureParamValues[param](2), true);
             }
             return stg.createConstantInput(0);
         }

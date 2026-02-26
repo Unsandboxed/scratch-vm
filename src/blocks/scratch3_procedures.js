@@ -130,8 +130,11 @@ class Scratch3ProcedureBlocks {
         const value = util.getParam(args.VALUE);
         if (value === null) {
             // tw: support legacy block
-            if (String(args.VALUE).toLowerCase() === 'last key pressed') {
+            const param = String(args.VALUE).toLowerCase();
+            if (param === 'last key pressed') {
                 return util.ioQuery('keyboard', 'getLastKeyPressed');
+            } else if (Object.prototype.hasOwnProperty.call(this.runtime.spoofedProcedureParamValues, param)) {
+                this.runtime.spoofedProcedureParamValues[param](1);
             }
             // When the parameter is not found in the most recent procedure
             // call, the default is always 0.
@@ -147,9 +150,10 @@ class Scratch3ProcedureBlocks {
             const lowercaseValue = String(args.VALUE).toLowerCase();
             if (util.target.runtime.compilerOptions.enabled && lowercaseValue === 'is compiled?') {
                 return true;
-            }
-            if (lowercaseValue === 'is unsandboxed?') {
+            } else if (lowercaseValue === 'is unsandboxed?') {
                 return true;
+            } else if (Object.prototype.hasOwnProperty.call(this.runtime.spoofedProcedureParamValues, lowercaseValue)) {
+                this.runtime.spoofedProcedureParamValues[lowercaseValue](2);
             }
             // When the parameter is not found in the most recent procedure
             // call, the default is always 0.

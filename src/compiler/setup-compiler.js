@@ -78,6 +78,7 @@ const SetupCompiler = function (runtime) {
         log: null
     });
     // CORE
+    exports.runtime = runtime;
     require('./setup-compiler/motion')(compilerData, exports);
     require('./setup-compiler/looks')(compilerData, exports);
     require('./setup-compiler/sound')(compilerData, exports);
