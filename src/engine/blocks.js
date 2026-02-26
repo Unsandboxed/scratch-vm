@@ -795,7 +795,7 @@ class Blocks {
                     Cast.toBooleanSimple(adapter.global)
                 ) this.runtime.requestGlobalProceduresRefresh();
                 if (block.mutation.proccode !== adapter.proccode) {
-                    this.runtime.requestGlobalProcedureMutationUpdate();
+                    this.runtime.requestGlobalProceduresMutationsRefresh();
                     this.runtime.requestGlobalProceduresRefresh();
                 }
                 if (
