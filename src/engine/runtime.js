@@ -378,6 +378,14 @@ class Runtime extends EventEmitter {
         this._dirtyGlobalProcedures = Object.create(null);
 
         /**
+         * Map of global procedure proccodes to their new mutations. (used if a global procedure mutation is updated)
+         *
+         * @type {Record<string, object>}
+         * @protected
+         */
+        this._dirtyGlobalProceduresMutations = Object.create(null);
+
+        /**
          * Map to look up all monitor block information by opcode.
          * @type {object}
          * @private
@@ -3046,6 +3054,10 @@ class Runtime extends EventEmitter {
      * inactive threads after each iteration.
      */
     _step () {
+        if (this._refreshGlobalProceduresMutations) {
+            this._refreshGlobalProceduresMutations = false;
+            this._updateGlobalProceduresMutations();
+        }
         if (this._refreshGlobalProcedures) {
             this._refreshGlobalProcedures = false;
             this._updateGlobalProcedures();
@@ -4174,6 +4186,10 @@ class Runtime extends EventEmitter {
         this._dirtyGlobalProcedures[oldProccode] = newProccode;
     }
 
+    markDirtyGlobalProcedureMutation (dirtyProccode, newMutation) {
+        this._dirtyGlobalProceduresMutations[dirtyProccode] = newMutation;
+    }
+
     /**
      * Refreshes the global procedures for the runtime. (used by the sequencer and scratch-blocks)
      * @param {?Target|Target[]} targets Optional target(s) to refresh the global's of
@@ -4278,11 +4294,33 @@ class Runtime extends EventEmitter {
         return res;
     }
 
+    _updateGlobalProceduresMutations () {
+        const dirtyGlobalProcedures = Object.keys(this._dirtyGlobalProceduresMutations);
+        if (dirtyGlobalProcedures.length === 0) return;
+        for (let i = 0; i < this.targets.length; i++) {
+            const target = this.targets[i];
+            for (const dirtyProccode of dirtyGlobalProcedures) {
+                target.blocks.updateDirtyGlobalProceduresMutations(
+                    dirtyProccode,
+                    this._dirtyGlobalProceduresMutations[dirtyProccode]
+                );
+            }
+        }
+        this._dirtyGlobalProceduresMutations = {};
+    }
+
     /**
      * Requests the global procedures to be refreshed.
      */
     requestGlobalProceduresRefresh () {
         this._refreshGlobalProcedures = true;
+    }
+
+    /**
+     * Requests the global procedures mutations to be refreshed.
+     */
+    requestGlobalProceduresMutationsRefresh () {
+        this._refreshGlobalProceduresMutations = true;
     }
 
     // Implement global methods for the procedure utilitys

@@ -794,8 +794,16 @@ class Blocks {
                     Cast.toBooleanSimple(adapter.global)
                 ) this.runtime.requestGlobalProceduresRefresh();
                 if (block.mutation.proccode !== adapter.proccode) {
-                    this.runtime.markDirtyGlobalProcedure(block.mutation.proccode, adapter.proccode);
+                    this.runtime.requestGlobalProcedureMutationUpdate();
                     this.runtime.requestGlobalProceduresRefresh();
+                }
+                if (
+                    (block.mutation.return !== adapter.return) ||
+                    (block.mutation.hat !== adapter.hat) ||
+                    (block.mutation.hatalwaysactivated !== adapter.hatalwaysactivated)
+                ) {
+                    this.runtime.markDirtyGlobalProcedureMutation(block.mutation.proccode, adapter);
+                    this.runtime.requestGlobalProceduresMutationsRefresh();
                 }
             }
             block.mutation = adapter;
@@ -1473,7 +1481,7 @@ class Blocks {
     /**
      * Remakes a procedure based towards a new proccode.
      */
-    _updateDirtyCaller(block, newProccode, pniad) {
+    _updateDirtyCaller (block, newProccode, pniad) {
         const inputTypes = newProccode.split(/%(?=[nsb])/g).flatMap((v, i) => {
             if (i === 0) {
                 return [];
@@ -1574,17 +1582,34 @@ class Blocks {
             }
         }
 
-        // Update the mutation data.
         block.mutation.proccode = newProccode;
         block.mutation.argumentnames = JSON.stringify(paramNames);
         block.mutation.argumentids = JSON.stringify(paramIds);
         block.mutation.argumentdefaults = JSON.stringify(paramDefaults);
     }
 
+    _updateDirtyCallerMutation (block, newMutation) {
+        // Update the mutation data.
+        if (block.mutation.hat === newMutation.hat) {
+            if (!block.next && block.mutation.return !== newMutation.return) {
+                block.mutation.return = newMutation.return;
+            }
+        } else {
+            block.mutation.hat = newMutation.hat;
+
+            if (!block.next && (block.mutation.return === '0' || !block.mutation.return)) {
+                block.mutation.return = newMutation.return;
+            }
+        }
+        if (block.mutation.hatalwaysactivated !== newMutation.hatalwaysactivated) {
+            block.mutation.hatalwaysactivated = newMutation.hatalwaysactivated;
+        }
+    }
+
     /**
      * Updates dirty global procedures in this block container.
      */
-    updateDirtyGlobalProcedures(dirtyProccode, newProccode, pniad) {
+    updateDirtyGlobalProcedures (dirtyProccode, newProccode, pniad) {
         const dirtyCallers = Object.values(this._blocks).filter(block => (
             block.opcode === 'procedures_call' && (
                 block.mutation && block.mutation.proccode === dirtyProccode
@@ -1595,6 +1620,26 @@ class Blocks {
 
         for (const dirtyCaller of dirtyCallers) {
             this._updateDirtyCaller(dirtyCaller, newProccode, pniad);
+        }
+
+        this.resetCache();
+        this.emitProjectChanged();
+    }
+
+    /**
+     * Updates dirty global procedure mutations in this block container.
+     */
+    updateDirtyGlobalProceduresMutations (dirtyProccode, newMutation) {
+        const dirtyCallers = Object.values(this._blocks).filter(block => (
+            block.opcode === 'procedures_call' && (
+                block.mutation && block.mutation.proccode === dirtyProccode
+            )
+        ));
+
+        if (dirtyCallers.length === 0) return;
+
+        for (const dirtyCaller of dirtyCallers) {
+            this._updateDirtyCallerMutation(dirtyCaller, newMutation);
         }
 
         this.resetCache();
