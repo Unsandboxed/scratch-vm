@@ -4168,6 +4168,24 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * ScratchBlocks hook callback to tell it if it can delete a specific procedure.
+     *
+     * This is used to make sure global procedures that are still in use cannot be deleted.
+     */
+    sbCanDeleteDefinitionCallback_ (procCode, skipGlobalExistsCheck = false) {
+        if (!skipGlobalExistsCheck && !this._globalProcedures[procCode]) {
+            return true;
+        }
+
+        for (let i = 0; i < this.targets.length; i++) {
+            if (this.targets[i].blocks.isProcedureInUse(procCode)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Gets the global procedures for the selected target.
      * @param {string} target The target (by id) to check.
      * @returns {string[]}

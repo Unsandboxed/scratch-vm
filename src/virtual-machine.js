@@ -1960,6 +1960,13 @@ class VirtualMachine extends EventEmitter {
     configureScratchLinkSocketFactory (factory) {
         this.runtime.configureScratchLinkSocketFactory(factory);
     }
+
+    sbCanDeleteDefinitionCallback_ (procCode, skipGlobalExistsCheck) {
+        if (this.runtime) {
+            return this.runtime.sbCanDeleteDefinitionCallback_(procCode, skipGlobalExistsCheck);
+        }
+        return true;
+    }
 }
 
 module.exports = VirtualMachine;

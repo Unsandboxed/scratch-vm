@@ -1479,6 +1479,18 @@ class Blocks {
         if (this._blocks[topBlockId]) this._blocks[topBlockId].topLevel = false;
     }
 
+    getAllProcedureCallersByProccode (procCode) {
+        return Object.values(this._blocks).filter(block => (
+            block.opcode === 'procedures_call' && (
+                block.mutation && block.mutation.proccode === procCode
+            )
+        ));
+    }
+
+    isProcedureInUse (procCode) {
+        return this.getAllProcedureCallersByProccode(procCode).length > 0;
+    }
+
     /**
      * Remakes a procedure based towards a new proccode.
      */
@@ -1617,11 +1629,7 @@ class Blocks {
      * Updates dirty global procedures in this block container.
      */
     updateDirtyGlobalProcedures (dirtyProccode, newProccode, pniad) {
-        const dirtyCallers = Object.values(this._blocks).filter(block => (
-            block.opcode === 'procedures_call' && (
-                block.mutation && block.mutation.proccode === dirtyProccode
-            )
-        ));
+        const dirtyCallers = this.getAllProcedureCallersByProccode(dirtyProccode);
 
         if (dirtyCallers.length === 0) return;
 
@@ -1637,11 +1645,7 @@ class Blocks {
      * Updates dirty global procedure mutations in this block container.
      */
     updateDirtyGlobalProceduresMutations (dirtyProccode, newMutation) {
-        const dirtyCallers = Object.values(this._blocks).filter(block => (
-            block.opcode === 'procedures_call' && (
-                block.mutation && block.mutation.proccode === dirtyProccode
-            )
-        ));
+        const dirtyCallers = this.getAllProcedureCallersByProccode(dirtyProccode);
 
         if (dirtyCallers.length === 0) return;
 
