@@ -17,6 +17,7 @@ class Scratch3ProcedureBlocks {
         return {
             procedures_definition: this.definition,
             procedures_call: this.call,
+            procedures_set_parameter: this.setParameter,
             procedures_return: this.return,
             argument_statement: this.argumentStatement,
             argument_reporter_string_number: this.argumentReporterStringNumber,
@@ -115,6 +116,32 @@ class Scratch3ProcedureBlocks {
         }
 
         util.startProcedure(procedureCode);
+    }
+
+    setParameter (args, util) {
+        const blockId = util.thread.peekStack();
+        const block = util.target.blocks.getBlock(blockId);
+        if (!block) return;
+
+        const paramInput = block.inputs.PARAM;
+        if (!paramInput) return;
+
+        const param = util.target.blocks.getBlock(paramInput.block);
+        if (!param) return;
+
+        if (
+            param.opcode !== 'argument_reporter_string_number' &&
+            param.opcode !== 'argument_reporter_boolean'
+        ) return;
+
+        const field = param.fields.VALUE;
+        if (!field) return;
+
+        const paramName = field.value;
+        const paramFrame = util.thread.stackFrames[0];
+        if (!paramFrame.params) return;
+
+        paramFrame.params[paramName] = args.VALUE;
     }
 
     return (args, util) {
