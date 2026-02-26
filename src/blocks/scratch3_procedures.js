@@ -134,7 +134,7 @@ class Scratch3ProcedureBlocks {
             if (param === 'last key pressed') {
                 return util.ioQuery('keyboard', 'getLastKeyPressed');
             } else if (Object.prototype.hasOwnProperty.call(this.runtime.spoofedProcedureParamValues, param)) {
-                this.runtime.spoofedProcedureParamValues[param](1);
+                return this.runtime.spoofedProcedureParamValues[param](1);
             }
             // When the parameter is not found in the most recent procedure
             // call, the default is always 0.
@@ -153,7 +153,7 @@ class Scratch3ProcedureBlocks {
             } else if (lowercaseValue === 'is unsandboxed?') {
                 return true;
             } else if (Object.prototype.hasOwnProperty.call(this.runtime.spoofedProcedureParamValues, lowercaseValue)) {
-                this.runtime.spoofedProcedureParamValues[lowercaseValue](2);
+                return this.runtime.spoofedProcedureParamValues[lowercaseValue](2);
             }
             // When the parameter is not found in the most recent procedure
             // call, the default is always 0.
