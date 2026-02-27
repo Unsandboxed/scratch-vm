@@ -656,6 +656,15 @@ class Runtime extends EventEmitter {
             this.temporaryStorage = {};
         });
 
+        this.on(Runtime.PROJECT_CHANGED, () => {
+            this.requestGlobalProceduresMutationsRefresh();
+            this.requestGlobalProceduresRefresh();
+        });
+        this.on(Runtime.PROJECT_LOADED, () => {
+            this.requestGlobalProceduresMutationsRefresh();
+            this.requestGlobalProceduresRefresh();
+        });
+
         /**
          * Export some internal values for extensions.
          */
@@ -4225,6 +4234,9 @@ class Runtime extends EventEmitter {
         else targets = [].concat(targets);
         targets = new Set(targets.map(t => t.id));
 
+        const deadTargets = (new Set(Object.values(this._globalProcedures)))
+            .difference(new Set(this.targets.map(t => t.id)));
+
         // keep track of what procedures used to exist and exist now
         // (this is used for cleanup)
         const Pold = new Set(Object.keys(this._globalProcedures));
@@ -4264,6 +4276,14 @@ class Runtime extends EventEmitter {
         let res = false;
 
         const changed = Array.from(Pnew.union(Premoved));
+
+        if (deadTargets.size > 0) {
+            changed.push(...Object.keys(this._globalProcedures).flatMap(proccode => {
+                if (!deadTargets.has(this._globalProcedures[proccode])) return [];
+                return [proccode];
+            }));
+        }
+
         if (changed.length > 0) {
             // if any procedures are missing or new then go through them
             for (let i = 0; i < changed.length; i++) {
@@ -4274,6 +4294,7 @@ class Runtime extends EventEmitter {
                     continue;
                 }
                 // otherwise delete it (this can happen for a variety of reasons)
+                this.emit('GLOBAL_PROCEDURE_REMOVED', proccode);
                 delete this._globalProcedures[proccode];
             }
 
@@ -4313,6 +4334,8 @@ class Runtime extends EventEmitter {
                 }
             }
             this._dirtyGlobalProcedures = {};
+
+            res = true;
         }
 
         return res;
@@ -4339,15 +4362,23 @@ class Runtime extends EventEmitter {
     /**
      * Requests the global procedures to be refreshed.
      */
-    requestGlobalProceduresRefresh () {
+    requestGlobalProceduresRefresh (force) {
         this._refreshGlobalProcedures = true;
+
+        if (force) {
+            this._updateGlobalProcedures();
+        }
     }
 
     /**
      * Requests the global procedures mutations to be refreshed.
      */
-    requestGlobalProceduresMutationsRefresh () {
+    requestGlobalProceduresMutationsRefresh (force) {
         this._refreshGlobalProceduresMutations = true;
+
+        if (force) {
+            this._updateGlobalProceduresMutations();
+        }
     }
 
     // Implement global methods for the procedure utilitys

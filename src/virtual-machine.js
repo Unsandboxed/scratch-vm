@@ -869,6 +869,8 @@ class VirtualMachine extends EventEmitter {
 
             // Update the VM user's knowledge of targets and blocks on the workspace.
             this.emitTargetsUpdate(false /* Don't emit project change */);
+            this.runtime.requestGlobalProceduresMutationsRefresh(true);
+            this.runtime.requestGlobalProceduresRefresh(true);
             this.emitWorkspaceUpdate();
             this.runtime.setEditingTarget(this.editingTarget);
             this.runtime.ioDevices.cloud.setStage(this.runtime.getTargetForStage());
@@ -1404,6 +1406,8 @@ class VirtualMachine extends EventEmitter {
                 const clone = sprite.clones[i];
                 this.runtime.stopForTarget(sprite.clones[i]);
                 this.runtime.disposeTarget(sprite.clones[i]);
+                this.runtime.requestGlobalProceduresMutationsRefresh(true);
+                this.runtime.requestGlobalProceduresRefresh(true);
                 // Ensure editing target is switched if we are deleting it.
                 if (clone === currentEditingTarget) {
                     const nextTargetIndex = Math.min(this.runtime.targets.length - 1, targetIndexBeforeDelete);

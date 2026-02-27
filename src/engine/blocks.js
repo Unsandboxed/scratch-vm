@@ -1495,6 +1495,17 @@ class Blocks {
      * Remakes a procedure based towards a new proccode.
      */
     _updateDirtyCaller (block, newProccode, pniad) {
+        // If pniad is null then the procedure could not be found,
+        // which usually means it was deleted.
+        if (pniad === null) {
+            if (typeof block.mutation.global === 'string') {
+                block.mutation.global = 'false';
+            } else {
+                block.mutation.global = false;
+            }
+            return;
+        }
+
         const inputTypes = newProccode.split(/%(?=[nsb])/g).flatMap((v, i) => {
             if (i === 0) {
                 return [];
