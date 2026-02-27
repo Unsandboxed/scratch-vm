@@ -77,6 +77,11 @@ class Resolvers {
     };
 
     xyd (config, target) {
+        if (typeof config === 'string') {
+            target = config;
+            config = {};
+        }
+
         if (config.mouse && target === '_mouse_') {
             return {
                 IS_MOUSE: true,
@@ -128,6 +133,11 @@ class Resolvers {
     }
 
     target (config, target) {
+        if (typeof config === 'string') {
+            target = config;
+            config = {};
+        }
+
         if (config.myself && target === '_myself_') {
             return this.vm.editingTarget || {FAILED: true};
         } else if (config.stage && target === '_stage_') {
@@ -151,6 +161,7 @@ class Resolvers {
         if (!config) {
             return this.runtime.targets.slice(0, Infinity);
         }
+
         return this.runtime.targets.filter(target => {
             if (config.clones === false && !target.isOriginal) {
                 return false;
