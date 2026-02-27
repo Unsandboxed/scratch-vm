@@ -29,6 +29,10 @@ class BlockUtility {
         };
     }
 
+    get defTarget_ () {
+        return this.thread.defTarget_;
+    }
+
     /**
      * The target the primitive is working on.
      * @type {Target}
@@ -67,6 +71,14 @@ class BlockUtility {
             frame.executionContext = {};
         }
         return frame.executionContext;
+    }
+
+    lookupOrCreateVariable (id, name) {
+        const defTargetSf = this.thread.peekStackFrame();
+        if (defTargetSf && defTargetSf.targetContext) {
+            return defTargetSf.targetContext.lookupOrCreateVariable(id, name);
+        }
+        return this.target.lookupOrCreateVariable(id, name);
     }
 
     /**

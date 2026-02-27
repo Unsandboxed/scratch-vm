@@ -380,7 +380,7 @@ class JSGenerator {
 
     referenceVariable (variable) {
         if (variable.scope === 'target') {
-            return this.evaluateOnce(`target.variables["${sanitize(variable.id)}"]`);
+            return this.evaluateOnce(`deftarget.variables["${sanitize(variable.id)}"]`);
         }
         return this.evaluateOnce(`stage.variables["${sanitize(variable.id)}"]`);
     }
@@ -559,6 +559,11 @@ class JSGenerator {
         script += `const target = ${this.isProcedure ? `${
             this.target.id === this.script.targetId ? 'thread.target' : `runtime.getTargetById("${
                 DBG_EXECUTE_IN_DEFTARGET ? this.script.targetId : this.target.id
+            }")`
+        }` : 'thread.target'}; `;
+        script += `const deftarget = ${this.isProcedure ? `${
+            this.target.id === this.script.targetId ? 'thread.target' : `runtime.getTargetById("${
+                DBG_EXECUTE_IN_DEFTARGET ? this.target.id : this.script.targetId
             }")`
         }` : 'thread.target'}; `;
         script += 'const stage = runtime.getTargetForStage();\n';

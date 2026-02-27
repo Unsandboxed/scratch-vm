@@ -480,7 +480,7 @@ class ScriptTreeGenerator {
 
         // Look for by ID in target...
         if (Object.prototype.hasOwnProperty.call(target.variables, id)) {
-            const currVar = target.variables[String(id)];
+            const currVar = this.globalTarget.variables[String(id)];
             return {
                 scope: 'target',
                 id: currVar.id,

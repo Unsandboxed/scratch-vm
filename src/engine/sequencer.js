@@ -391,9 +391,9 @@ class Sequencer {
                 // it would've been skipped in the search.
 
                 // const global = Cast.toBooleanSimple(innerBlock.mutation.global);
-                
+
                 // console.log(global, target);
-                // if (!!target && !global) { 
+                // if (!!target && !global) {
                 //     return;
                 // }
             }
