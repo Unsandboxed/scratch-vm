@@ -26,6 +26,11 @@ module.exports = function (compilerData, {
     }, null, {
         input: true
     });
+    compilerData.registerBlock('checkbox', function (stg) {
+        return stg.createConstantInput(true, false);
+    }, null, {
+        input: true
+    });
     compilerData.registerBlock('tw_getLastKeyPressed', function () {
         return new IntermediateInput(this.ir_opcode, this.type);
     }, `runtime.ioDevices.keyboard.getLastKeyPressed()`, {
