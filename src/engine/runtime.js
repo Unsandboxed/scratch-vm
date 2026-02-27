@@ -254,8 +254,14 @@ const RuntimeInternals = {
 class Runtime extends EventEmitter {
     static exports = RuntimeInternals;
 
-    constructor () {
+    constructor (vm) {
         super();
+
+        /**
+         * The VM instance attached to this runtime.
+         * @type {?VirtualMachine}
+         */
+        this.vm = vm;
 
         /**
          * Target management and storage.

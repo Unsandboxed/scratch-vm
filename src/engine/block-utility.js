@@ -30,6 +30,13 @@ class BlockUtility {
     }
 
     /**
+     * @returns {Resolvers}
+     */
+    get resolves () {
+        return this.sequencer.runtime.vm.resolvesTool;
+    }
+
+    /**
      * The target the primitive is working on.
      * @type {Target}
      */
