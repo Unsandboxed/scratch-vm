@@ -1,4 +1,6 @@
-const circularReplacer = () => {
+const E = {};
+
+E.circularReplacer = () => {
     const seen = new WeakSet();
     return (_, value) => {
         if (typeof value === 'object' && value !== null) {
@@ -16,9 +18,9 @@ const circularReplacer = () => {
  * @param {unknown} input Any value
  * @returns {string} A stringified version of the input.
  */
-const safeStringify = input => {
+E.safeStringify = input => {
     if (typeof input === 'object' && input !== null) {
-        return JSON.stringify(input, circularReplacer());
+        return JSON.stringify(input, E.circularReplacer());
     }
     // -0 stringifies as "0" by default.
     if (Object.is(input, -0)) {
@@ -27,4 +29,5 @@ const safeStringify = input => {
     return `${input}`;
 };
 
-module.exports = safeStringify;
+E.safeStringify.exports = E;
+module.exports = E.safeStringify;

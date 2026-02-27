@@ -2,6 +2,8 @@ const atob = require('atob');
 const btoa = require('btoa');
 
 class Base64Util {
+    static _atob = atob;
+    static _btoa = btoa;
 
     /**
      * Convert a base64 encoded string to a Uint8Array.

@@ -10,104 +10,104 @@ const log = require('../../util/log');
 const {fetchWithTimeout} = require('../../util/fetch-with-timeout');
 
 /**
- * Icon svg to be displayed in the blocks category menu, encoded as a data URI.
- * @type {string}
- */
-// eslint-disable-next-line max-len
-const menuIconURI = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDIwIDIwIj48dGl0bGU+RXh0ZW5zaW9ucy9Tb2Z0d2FyZS9UZXh0LXRvLVNwZWVjaC1NZW51PC90aXRsZT48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9Im5vbnplcm8iPjxwYXRoIGZpbGw9IiM0ZDRkNGQiIHN0cm9rZT0iIzAwMCIgc3Ryb2tlLW9wYWNpdHk9Ii4xNSIgc3Ryb2tlLXdpZHRoPSIuNSIgZD0iTTcuNzUgMTAuODM1YzAtLjUwOC0uNzQ3LS43OTMtMS4xOTQtLjM5bC0xLjM1IDEuMDhjLS41MS40MDgtMS4xNjkuNjQtMS44NTYuNjRoLS4yYy0uNTE3IDAtLjkuMzQ2LS45Ljc4N3YyLjExN2MwIC40NDIuMzgzLjc4Ny45Ljc4N2guMmMuNzI5IDAgMS4zNzcuMjEgMS45MS42NDNsMS4zIDEuMDhjLjQ1My4zNzYgMS4xOS4wOTUgMS4xOS0uNDM3eiIvPjxwYXRoIGZpbGw9IiMwZWJkOGMiIGQ9Ik0xMi43MDUgMTBjLS45MTQgMS4xMzEtMi4zOTggMS43MTQtMi44NzIgMS43MTQgMCAwLS4zMzMgMC0uMzMzLS4zMzMgMC0uMjk2LjU2Mi0uNDguNjktMS44MTNBNCA0IDAgMCAxIDEyIDJoMmE0IDQgMCAxIDEgMCA4eiIvPjwvZz48L3N2Zz4=';
-
-/**
- * Icon svg to be displayed at the left edge of each extension block, encoded as a data URI.
- * @type {string}
- */
-// eslint-disable-next-line max-len
-const blockIconURI = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48dGl0bGU+RXh0ZW5zaW9ucy9Tb2Z0d2FyZS9UZXh0LXRvLVNwZWVjaC1CbG9jazwvdGl0bGU+PGcgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJub256ZXJvIiBzdHJva2U9IiMwMDAiIHN0cm9rZS1vcGFjaXR5PSIuMTUiPjxwYXRoIGZpbGw9IiM0ZDRkNGQiIGQ9Ik0xNS41IDIxLjY3YzAtMS4wMTYtMS40OTQtMS41ODYtMi4zODctLjc4MmwtMi43IDIuMTYzQTUuOTYgNS45NiAwIDAgMSA2LjcgMjQuMzNoLS40Yy0xLjAzNSAwLTEuOC42OS0xLjggMS41NzN2NC4yMzVjMCAuODgzLjc2NSAxLjU3MiAxLjggMS41NzJoLjRjMS40NTggMCAyLjc1NC40MjMgMy44MiAxLjI4N2wyLjU5OCAyLjE2MWMuOTA4Ljc1IDIuMzgyLjE4OCAyLjM4Mi0uODc2eiIvPjxwYXRoIGZpbGw9IiNmZmYiIGQ9Ik0yNS42NDQgMjAuNWMtMS42NjcgMS45MzctNC41MzkgMy40MjktNS45NzcgMy40MjlhMS4yNSAxLjI1IDAgMCAxLS41NTctLjEzN2MtLjM3Mi0uMTg2LS42MS0uNTQyLS42MS0xLjAzcTAtLjE1Ny4wNS0uMzA4Yy4wNzYtLjIzNi42MjQtLjk4Ni43MjctMS4xNzMuMjctLjQ4NC40NjItMS4wNzUuNTY2LTEuODY1QTguNSA4LjUgMCAwIDEgMjQgMy41aDRhOC41IDguNSAwIDEgMSAwIDE3eiIvPjwvZz48L3N2Zz4=';
-
-/**
- * The url of the synthesis server.
- * @type {string}
- */
-const SERVER_HOST = 'https://synthesis-service.scratch.mit.edu';
-
-/**
- * How long to wait in ms before timing out requests to synthesis server.
- * @type {int}
- */
-const SERVER_TIMEOUT = 10000; // 10 seconds
-
-/**
- * Volume for playback of speech sounds, as a percentage.
- * @type {number}
- */
-const SPEECH_VOLUME = 250;
-
-/**
- * An id for one of the voices.
- */
-const ALTO_ID = 'ALTO';
-
-/**
- * An id for one of the voices.
- */
-const TENOR_ID = 'TENOR';
-
-/**
- * An id for one of the voices.
- */
-const SQUEAK_ID = 'SQUEAK';
-
-/**
- * An id for one of the voices.
- */
-const GIANT_ID = 'GIANT';
-
-/**
- * An id for one of the voices.
- */
-const KITTEN_ID = 'KITTEN';
-
-/**
- * Playback rate for the tenor voice, for cases where we have only a female gender voice.
- */
-const FEMALE_TENOR_RATE = 0.89; // -2 semitones
-
-/**
- * Playback rate for the giant voice, for cases where we have only a female gender voice.
- */
-const FEMALE_GIANT_RATE = 0.79; // -4 semitones
-
-/**
- * Language ids. The value for each language id is a valid Scratch locale.
- */
-const ARABIC_ID = 'ar';
-const CHINESE_ID = 'zh-cn';
-const DANISH_ID = 'da';
-const DUTCH_ID = 'nl';
-const ENGLISH_ID = 'en';
-const FRENCH_ID = 'fr';
-const GERMAN_ID = 'de';
-const HINDI_ID = 'hi';
-const ICELANDIC_ID = 'is';
-const ITALIAN_ID = 'it';
-const JAPANESE_ID = 'ja';
-const KOREAN_ID = 'ko';
-const NORWEGIAN_ID = 'nb';
-const POLISH_ID = 'pl';
-const PORTUGUESE_BR_ID = 'pt-br';
-const PORTUGUESE_ID = 'pt';
-const ROMANIAN_ID = 'ro';
-const RUSSIAN_ID = 'ru';
-const SPANISH_ID = 'es';
-const SPANISH_419_ID = 'es-419';
-const SWEDISH_ID = 'sv';
-const TURKISH_ID = 'tr';
-const WELSH_ID = 'cy';
-
-/**
  * Class for the text2speech blocks.
  * @constructor
  */
 class Scratch3Text2SpeechBlocks {
+    /**
+     * Icon svg to be displayed in the blocks category menu, encoded as a data URI.
+     * @type {string}
+     */
+    // eslint-disable-next-line max-len
+    static menuIconURI = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDIwIDIwIj48dGl0bGU+RXh0ZW5zaW9ucy9Tb2Z0d2FyZS9UZXh0LXRvLVNwZWVjaC1NZW51PC90aXRsZT48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9Im5vbnplcm8iPjxwYXRoIGZpbGw9IiM0ZDRkNGQiIHN0cm9rZT0iIzAwMCIgc3Ryb2tlLW9wYWNpdHk9Ii4xNSIgc3Ryb2tlLXdpZHRoPSIuNSIgZD0iTTcuNzUgMTAuODM1YzAtLjUwOC0uNzQ3LS43OTMtMS4xOTQtLjM5bC0xLjM1IDEuMDhjLS41MS40MDgtMS4xNjkuNjQtMS44NTYuNjRoLS4yYy0uNTE3IDAtLjkuMzQ2LS45Ljc4N3YyLjExN2MwIC40NDIuMzgzLjc4Ny45Ljc4N2guMmMuNzI5IDAgMS4zNzcuMjEgMS45MS42NDNsMS4zIDEuMDhjLjQ1My4zNzYgMS4xOS4wOTUgMS4xOS0uNDM3eiIvPjxwYXRoIGZpbGw9IiMwZWJkOGMiIGQ9Ik0xMi43MDUgMTBjLS45MTQgMS4xMzEtMi4zOTggMS43MTQtMi44NzIgMS43MTQgMCAwLS4zMzMgMC0uMzMzLS4zMzMgMC0uMjk2LjU2Mi0uNDguNjktMS44MTNBNCA0IDAgMCAxIDEyIDJoMmE0IDQgMCAxIDEgMCA4eiIvPjwvZz48L3N2Zz4=';
+
+    /**
+     * Icon svg to be displayed at the left edge of each extension block, encoded as a data URI.
+     * @type {string}
+     */
+    // eslint-disable-next-line max-len
+    static blockIconURI = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48dGl0bGU+RXh0ZW5zaW9ucy9Tb2Z0d2FyZS9UZXh0LXRvLVNwZWVjaC1CbG9jazwvdGl0bGU+PGcgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJub256ZXJvIiBzdHJva2U9IiMwMDAiIHN0cm9rZS1vcGFjaXR5PSIuMTUiPjxwYXRoIGZpbGw9IiM0ZDRkNGQiIGQ9Ik0xNS41IDIxLjY3YzAtMS4wMTYtMS40OTQtMS41ODYtMi4zODctLjc4MmwtMi43IDIuMTYzQTUuOTYgNS45NiAwIDAgMSA2LjcgMjQuMzNoLS40Yy0xLjAzNSAwLTEuOC42OS0xLjggMS41NzN2NC4yMzVjMCAuODgzLjc2NSAxLjU3MiAxLjggMS41NzJoLjRjMS40NTggMCAyLjc1NC40MjMgMy44MiAxLjI4N2wyLjU5OCAyLjE2MWMuOTA4Ljc1IDIuMzgyLjE4OCAyLjM4Mi0uODc2eiIvPjxwYXRoIGZpbGw9IiNmZmYiIGQ9Ik0yNS42NDQgMjAuNWMtMS42NjcgMS45MzctNC41MzkgMy40MjktNS45NzcgMy40MjlhMS4yNSAxLjI1IDAgMCAxLS41NTctLjEzN2MtLjM3Mi0uMTg2LS42MS0uNTQyLS42MS0xLjAzcTAtLjE1Ny4wNS0uMzA4Yy4wNzYtLjIzNi42MjQtLjk4Ni43MjctMS4xNzMuMjctLjQ4NC40NjItMS4wNzUuNTY2LTEuODY1QTguNSA4LjUgMCAwIDEgMjQgMy41aDRhOC41IDguNSAwIDEgMSAwIDE3eiIvPjwvZz48L3N2Zz4=';
+
+    /**
+     * The url of the synthesis server.
+     * @type {string}
+     */
+    static SERVER_HOST = 'https://synthesis-service.scratch.mit.edu';
+
+    /**
+     * How long to wait in ms before timing out requests to synthesis server.
+     * @type {int}
+     */
+    static SERVER_TIMEOUT = 10000; // 10 seconds
+
+    /**
+     * Volume for playback of speech sounds, as a percentage.
+     * @type {number}
+     */
+    static SPEECH_VOLUME = 250;
+
+    /**
+     * An id for one of the voices.
+     */
+    static ALTO_ID = 'ALTO';
+
+    /**
+     * An id for one of the voices.
+     */
+    static TENOR_ID = 'TENOR';
+
+    /**
+     * An id for one of the voices.
+     */
+    static SQUEAK_ID = 'SQUEAK';
+
+    /**
+     * An id for one of the voices.
+     */
+    static GIANT_ID = 'GIANT';
+
+    /**
+     * An id for one of the voices.
+     */
+    static KITTEN_ID = 'KITTEN';
+
+    /**
+     * Playback rate for the tenor voice, for cases where we have only a female gender voice.
+     */
+    static FEMALE_TENOR_RATE = 0.89; // -2 semitones
+
+    /**
+     * Playback rate for the giant voice, for cases where we have only a female gender voice.
+     */
+    static FEMALE_GIANT_RATE = 0.79; // -4 semitones
+
+    /**
+     * Language ids. The value for each language id is a valid Scratch locale.
+     */
+    static ARABIC_ID = 'ar';
+    static CHINESE_ID = 'zh-cn';
+    static DANISH_ID = 'da';
+    static DUTCH_ID = 'nl';
+    static ENGLISH_ID = 'en';
+    static FRENCH_ID = 'fr';
+    static GERMAN_ID = 'de';
+    static HINDI_ID = 'hi';
+    static ICELANDIC_ID = 'is';
+    static ITALIAN_ID = 'it';
+    static JAPANESE_ID = 'ja';
+    static KOREAN_ID = 'ko';
+    static NORWEGIAN_ID = 'nb';
+    static POLISH_ID = 'pl';
+    static PORTUGUESE_BR_ID = 'pt-br';
+    static PORTUGUESE_ID = 'pt';
+    static ROMANIAN_ID = 'ro';
+    static RUSSIAN_ID = 'ru';
+    static SPANISH_ID = 'es';
+    static SPANISH_419_ID = 'es-419';
+    static SWEDISH_ID = 'sv';
+    static TURKISH_ID = 'tr';
+    static WELSH_ID = 'cy';
+
     constructor (runtime) {
         /**
          * The runtime instantiating this block package.
@@ -143,7 +143,7 @@ class Scratch3Text2SpeechBlocks {
      */
     get VOICE_INFO () {
         return {
-            [ALTO_ID]: {
+            [Scratch3Text2SpeechBlocks.ALTO_ID]: {
                 name: formatMessage({
                     id: 'text2speech.alto',
                     default: 'alto',
@@ -152,7 +152,7 @@ class Scratch3Text2SpeechBlocks {
                 gender: 'female',
                 playbackRate: 1
             },
-            [TENOR_ID]: {
+            [Scratch3Text2SpeechBlocks.TENOR_ID]: {
                 name: formatMessage({
                     id: 'text2speech.tenor',
                     default: 'tenor',
@@ -161,7 +161,7 @@ class Scratch3Text2SpeechBlocks {
                 gender: 'male',
                 playbackRate: 1
             },
-            [SQUEAK_ID]: {
+            [Scratch3Text2SpeechBlocks.SQUEAK_ID]: {
                 name: formatMessage({
                     id: 'text2speech.squeak',
                     default: 'squeak',
@@ -170,7 +170,7 @@ class Scratch3Text2SpeechBlocks {
                 gender: 'female',
                 playbackRate: 1.19 // +3 semitones
             },
-            [GIANT_ID]: {
+            [Scratch3Text2SpeechBlocks.GIANT_ID]: {
                 name: formatMessage({
                     id: 'text2speech.giant',
                     default: 'giant',
@@ -179,7 +179,7 @@ class Scratch3Text2SpeechBlocks {
                 gender: 'male',
                 playbackRate: 0.84 // -3 semitones
             },
-            [KITTEN_ID]: {
+            [Scratch3Text2SpeechBlocks.KITTEN_ID]: {
                 name: formatMessage({
                     id: 'text2speech.kitten',
                     default: 'kitten',
@@ -213,125 +213,125 @@ class Scratch3Text2SpeechBlocks {
      */
     get LANGUAGE_INFO () {
         return {
-            [ARABIC_ID]: {
+            [Scratch3Text2SpeechBlocks.ARABIC_ID]: {
                 name: 'Arabic',
                 locales: ['ar'],
                 speechSynthLocale: 'arb',
                 singleGender: true
             },
-            [CHINESE_ID]: {
+            [Scratch3Text2SpeechBlocks.CHINESE_ID]: {
                 name: 'Chinese (Mandarin)',
                 locales: ['zh-cn', 'zh-tw'],
                 speechSynthLocale: 'cmn-CN',
                 singleGender: true
             },
-            [DANISH_ID]: {
+            [Scratch3Text2SpeechBlocks.DANISH_ID]: {
                 name: 'Danish',
                 locales: ['da'],
                 speechSynthLocale: 'da-DK'
             },
-            [DUTCH_ID]: {
+            [Scratch3Text2SpeechBlocks.DUTCH_ID]: {
                 name: 'Dutch',
                 locales: ['nl'],
                 speechSynthLocale: 'nl-NL'
             },
-            [ENGLISH_ID]: {
+            [Scratch3Text2SpeechBlocks.ENGLISH_ID]: {
                 name: 'English',
                 locales: ['en'],
                 speechSynthLocale: 'en-US'
             },
-            [FRENCH_ID]: {
+            [Scratch3Text2SpeechBlocks.FRENCH_ID]: {
                 name: 'French',
                 locales: ['fr'],
                 speechSynthLocale: 'fr-FR'
             },
-            [GERMAN_ID]: {
+            [Scratch3Text2SpeechBlocks.GERMAN_ID]: {
                 name: 'German',
                 locales: ['de'],
                 speechSynthLocale: 'de-DE'
             },
-            [HINDI_ID]: {
+            [Scratch3Text2SpeechBlocks.HINDI_ID]: {
                 name: 'Hindi',
                 locales: ['hi'],
                 speechSynthLocale: 'hi-IN',
                 singleGender: true
             },
-            [ICELANDIC_ID]: {
+            [Scratch3Text2SpeechBlocks.ICELANDIC_ID]: {
                 name: 'Icelandic',
                 locales: ['is'],
                 speechSynthLocale: 'is-IS'
             },
-            [ITALIAN_ID]: {
+            [Scratch3Text2SpeechBlocks.ITALIAN_ID]: {
                 name: 'Italian',
                 locales: ['it'],
                 speechSynthLocale: 'it-IT'
             },
-            [JAPANESE_ID]: {
+            [Scratch3Text2SpeechBlocks.JAPANESE_ID]: {
                 name: 'Japanese',
                 locales: ['ja', 'ja-hira'],
                 speechSynthLocale: 'ja-JP'
             },
-            [KOREAN_ID]: {
+            [Scratch3Text2SpeechBlocks.KOREAN_ID]: {
                 name: 'Korean',
                 locales: ['ko'],
                 speechSynthLocale: 'ko-KR',
                 singleGender: true
             },
-            [NORWEGIAN_ID]: {
+            [Scratch3Text2SpeechBlocks.NORWEGIAN_ID]: {
                 name: 'Norwegian',
                 locales: ['nb', 'nn'],
                 speechSynthLocale: 'nb-NO',
                 singleGender: true
             },
-            [POLISH_ID]: {
+            [Scratch3Text2SpeechBlocks.POLISH_ID]: {
                 name: 'Polish',
                 locales: ['pl'],
                 speechSynthLocale: 'pl-PL'
             },
-            [PORTUGUESE_BR_ID]: {
+            [Scratch3Text2SpeechBlocks.PORTUGUESE_BR_ID]: {
                 name: 'Portuguese (Brazilian)',
                 locales: ['pt-br'],
                 speechSynthLocale: 'pt-BR'
             },
-            [PORTUGUESE_ID]: {
+            [Scratch3Text2SpeechBlocks.PORTUGUESE_ID]: {
                 name: 'Portuguese (European)',
                 locales: ['pt'],
                 speechSynthLocale: 'pt-PT'
             },
-            [ROMANIAN_ID]: {
+            [Scratch3Text2SpeechBlocks.ROMANIAN_ID]: {
                 name: 'Romanian',
                 locales: ['ro'],
                 speechSynthLocale: 'ro-RO',
                 singleGender: true
             },
-            [RUSSIAN_ID]: {
+            [Scratch3Text2SpeechBlocks.RUSSIAN_ID]: {
                 name: 'Russian',
                 locales: ['ru'],
                 speechSynthLocale: 'ru-RU'
             },
-            [SPANISH_ID]: {
+            [Scratch3Text2SpeechBlocks.SPANISH_ID]: {
                 name: 'Spanish (European)',
                 locales: ['es'],
                 speechSynthLocale: 'es-ES'
             },
-            [SPANISH_419_ID]: {
+            [Scratch3Text2SpeechBlocks.SPANISH_419_ID]: {
                 name: 'Spanish (Latin American)',
                 locales: ['es-419'],
                 speechSynthLocale: 'es-US'
             },
-            [SWEDISH_ID]: {
+            [Scratch3Text2SpeechBlocks.SWEDISH_ID]: {
                 name: 'Swedish',
                 locales: ['sv'],
                 speechSynthLocale: 'sv-SE',
                 singleGender: true
             },
-            [TURKISH_ID]: {
+            [Scratch3Text2SpeechBlocks.TURKISH_ID]: {
                 name: 'Turkish',
                 locales: ['tr'],
                 speechSynthLocale: 'tr-TR',
                 singleGender: true
             },
-            [WELSH_ID]: {
+            [Scratch3Text2SpeechBlocks.WELSH_ID]: {
                 name: 'Welsh',
                 locales: ['cy'],
                 speechSynthLocale: 'cy-GB',
@@ -354,7 +354,7 @@ class Scratch3Text2SpeechBlocks {
      */
     static get DEFAULT_TEXT2SPEECH_STATE () {
         return {
-            voiceId: ALTO_ID
+            voiceId: Scratch3Text2SpeechBlocks.ALTO_ID
         };
     }
 
@@ -363,7 +363,7 @@ class Scratch3Text2SpeechBlocks {
      * @type {string}
      */
     get DEFAULT_LANGUAGE () {
-        return ENGLISH_ID;
+        return Scratch3Text2SpeechBlocks.ENGLISH_ID;
     }
 
     /**
@@ -418,8 +418,8 @@ class Scratch3Text2SpeechBlocks {
                 default: 'Text to Speech',
                 description: 'Name of the Text to Speech extension.'
             }),
-            blockIconURI: blockIconURI,
-            menuIconURI: menuIconURI,
+            blockIconURI: Scratch3Text2SpeechBlocks.blockIconURI,
+            menuIconURI: Scratch3Text2SpeechBlocks.menuIconURI,
             blocks: [
                 {
                     opcode: 'speakAndWait',
@@ -448,7 +448,7 @@ class Scratch3Text2SpeechBlocks {
                         VOICE: {
                             type: ArgumentType.STRING,
                             menu: 'voices',
-                            defaultValue: ALTO_ID
+                            defaultValue: Scratch3Text2SpeechBlocks.ALTO_ID
                         }
                     }
                 },
@@ -702,27 +702,27 @@ class Scratch3Text2SpeechBlocks {
         // and set special playback rates for the tenor and giant voices.
         if (this.LANGUAGE_INFO[this.getCurrentLanguage()].singleGender) {
             gender = 'female';
-            if (state.voiceId === TENOR_ID) {
-                playbackRate = FEMALE_TENOR_RATE;
+            if (state.voiceId === Scratch3Text2SpeechBlocks.TENOR_ID) {
+                playbackRate = Scratch3Text2SpeechBlocks.FEMALE_TENOR_RATE;
             }
-            if (state.voiceId === GIANT_ID) {
-                playbackRate = FEMALE_GIANT_RATE;
+            if (state.voiceId === Scratch3Text2SpeechBlocks.GIANT_ID) {
+                playbackRate = Scratch3Text2SpeechBlocks.FEMALE_GIANT_RATE;
             }
         }
 
-        if (state.voiceId === KITTEN_ID) {
+        if (state.voiceId === Scratch3Text2SpeechBlocks.KITTEN_ID) {
             words = words.replace(/\S+/g, 'meow');
             locale = this.LANGUAGE_INFO[this.DEFAULT_LANGUAGE].speechSynthLocale;
         }
 
         // Build up URL
-        let path = `${SERVER_HOST}/synth`;
+        let path = `${Scratch3Text2SpeechBlocks.SERVER_HOST}/synth`;
         path += `?locale=${locale}`;
         path += `&gender=${gender}`;
         path += `&text=${encodeURIComponent(words.substring(0, 128))}`;
 
         // Perform HTTP request to get audio file
-        return fetchWithTimeout(path, {}, SERVER_TIMEOUT)
+        return fetchWithTimeout(path, {}, Scratch3Text2SpeechBlocks.SERVER_TIMEOUT)
             .then(res => {
                 if (res.status !== 200) {
                     throw new Error(`HTTP ${res.status} error reaching translation service`);
@@ -747,7 +747,7 @@ class Scratch3Text2SpeechBlocks {
                 // Increase the volume
                 const engine = this.runtime.audioEngine;
                 const chain = engine.createEffectChain();
-                chain.set('volume', SPEECH_VOLUME);
+                chain.set('volume', Scratch3Text2SpeechBlocks.SPEECH_VOLUME);
                 soundPlayer.connect(chain);
 
                 soundPlayer.play();

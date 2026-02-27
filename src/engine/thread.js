@@ -15,6 +15,8 @@ const _stackFrameFreeList = [];
  * @private
  */
 class _StackFrame {
+    static _stackFrameFreeList = _stackFrameFreeList;
+
     constructor (warpMode) {
         /**
          * Whether this level of the stack is a loop.

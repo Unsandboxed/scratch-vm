@@ -15,320 +15,322 @@ const log = require('../../util/log');
  */
 
 /**
- * Icon svg to be displayed at the left edge of each extension block, encoded as a data URI.
- * @type {string}
- */
-// eslint-disable-next-line max-len
-const iconURI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAMAAAC5zwKfAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAACpQTFRF////6+zskJmy3+Hk6N/b+YZO/2Ya6dfO9/j5vsPSlZ62////fIel5ufo1AuBvgAAAAF0Uk5TAEDm2GYAAADNSURBVHja7dfRDoMgDIXhuQmbpbz/645JsspKOiM1u9j5E7gw8YtCSPSCEEII/VlE/aEjskeJ2LEXya6tYDLK79KOfgWm5AhOOU91HgftbJCoN46C+yJvkJ3XEKAJ6ujhBYo4BOaPblcRh0ERvUARh8A5xBhmQ2TW51uffQFDLIXciM0p1meaWCdgXLv3xfZ2eebvYO5VCWGMVVWvbIML89KA9cpmVptig1xqwHplMwso+YJuryy5bIpjZ4HZrZNA19w/OPE3gBBCCB3vCQkmeCf31OYLAAAAAElFTkSuQmCC';
-
-/**
- * Boost BLE UUIDs.
- * @enum {string}
- */
-const BoostBLE = {
-    service: '00001623-1212-efde-1623-785feabcd123',
-    characteristic: '00001624-1212-efde-1623-785feabcd123',
-    sendInterval: 100,
-    sendRateMax: 20
-};
-
-/**
- * Boost Motor Max Power Add. Defines how much more power than the target speed
- * the motors may supply to reach the target speed faster.
- * Lower number == softer, slower reached target speed.
- * Higher number == harder, faster reached target speed.
- * @constant {number}
- */
-const BoostMotorMaxPowerAdd = 10;
-
-/**
- * A time interval to wait (in milliseconds) in between battery check calls.
- * @type {number}
- */
-const BoostPingInterval = 5000;
-
-/**
- * The number of continuous samples the color-sensor will evaluate color from.
- * @type {number}
- */
-const BoostColorSampleSize = 5;
-
-/**
- * Enum for Boost sensor and actuator types.
- * @readonly
- * @enum {number}
- */
-const BoostIO = {
-    MOTOR_WEDO: 0x01,
-    MOTOR_SYSTEM: 0x02,
-    BUTTON: 0x05,
-    LIGHT: 0x08,
-    VOLTAGE: 0x14,
-    CURRENT: 0x15,
-    PIEZO: 0x16,
-    LED: 0x17,
-    TILT_EXTERNAL: 0x22,
-    MOTION_SENSOR: 0x23,
-    COLOR: 0x25,
-    MOTOREXT: 0x26,
-    MOTORINT: 0x27,
-    TILT: 0x28
-};
-
-/**
- * Enum for ids for various output command feedback types on the Boost.
- * @readonly
- * @enum {number}
- */
-const BoostPortFeedback = {
-    IN_PROGRESS: 0x01,
-    COMPLETED: 0x02,
-    DISCARDED: 0x04,
-    IDLE: 0x08,
-    BUSY_OR_FULL: 0x10
-};
-
-/**
- * Enum for physical Boost Ports
- * @readonly
- * @enum {number}
- */
-
-const BoostPort10000223OrOlder = {
-    A: 55,
-    B: 56,
-    C: 1,
-    D: 2
-};
-
-const BoostPort10000224OrNewer = {
-    A: 0,
-    B: 1,
-    C: 2,
-    D: 3
-};
-
-// Set default port mapping to support the newer firmware
-let BoostPort = BoostPort10000224OrNewer;
-
-/**
- * Ids for each color sensor value used by the extension.
- * @readonly
- * @enum {string}
- */
-const BoostColor = {
-    ANY: 'any',
-    NONE: 'none',
-    RED: 'red',
-    BLUE: 'blue',
-    GREEN: 'green',
-    YELLOW: 'yellow',
-    WHITE: 'white',
-    BLACK: 'black'
-};
-
-/**
- * Enum for indices for each color sensed by the Boost vision sensor.
- * @readonly
- * @enum {number}
- */
-const BoostColorIndex = {
-    [BoostColor.NONE]: 255,
-    [BoostColor.RED]: 9,
-    [BoostColor.BLUE]: 3,
-    [BoostColor.GREEN]: 5,
-    [BoostColor.YELLOW]: 7,
-    [BoostColor.WHITE]: 10,
-    [BoostColor.BLACK]: 0
-};
-
-/**
- * Enum for Message Types
- * @readonly
- * @enum {number}
- */
-const BoostMessage = {
-    HUB_PROPERTIES: 0x01,
-    HUB_ACTIONS: 0x02,
-    HUB_ALERTS: 0x03,
-    HUB_ATTACHED_IO: 0x04,
-    ERROR: 0x05,
-    PORT_INPUT_FORMAT_SETUP_SINGLE: 0x41,
-    PORT_INPUT_FORMAT_SETUP_COMBINED: 0x42,
-    PORT_INFORMATION: 0x43,
-    PORT_MODEINFORMATION: 0x44,
-    PORT_VALUE: 0x45,
-    PORT_VALUE_COMBINED: 0x46,
-    PORT_INPUT_FORMAT: 0x47,
-    PORT_INPUT_FORMAT_COMBINED: 0x48,
-    OUTPUT: 0x81,
-    PORT_FEEDBACK: 0x82
-};
-
-/**
- * Enum for Hub Property Types
- * @readonly
- * @enum {number}
- */
-
-const BoostHubProperty = {
-    ADVERTISEMENT_NAME: 0x01,
-    BUTTON: 0x02,
-    FW_VERSION: 0x03,
-    HW_VERSION: 0x04,
-    RSSI: 0x05,
-    BATTERY_VOLTAGE: 0x06,
-    BATTERY_TYPE: 0x07,
-    MANUFACTURER_NAME: 0x08,
-    RADIO_FW_VERSION: 0x09,
-    LEGO_WP_VERSION: 0x0A,
-    SYSTEM_TYPE_ID: 0x0B,
-    HW_NETWORK_ID: 0x0C,
-    PRIMARY_MAC: 0x0D,
-    SECONDARY_MAC: 0x0E,
-    HW_NETWORK_FAMILY: 0x0F
-};
-
-/**
- * Enum for Hub Property Operations
- * @readonly
- * @enum {number}
- */
-
-const BoostHubPropertyOperation = {
-    SET: 0x01,
-    ENABLE_UPDATES: 0x02,
-    DISABLE_UPDATES: 0x03,
-    RESET: 0x04,
-    REQUEST_UPDATE: 0x05,
-    UPDATE: 0x06
-};
-
-/**
- * Enum for Motor Subcommands (for 0x81)
- * @readonly
- * @enum {number}
- */
-const BoostOutputSubCommand = {
-    START_POWER: 0x01,
-    START_POWER_PAIR: 0x02,
-    SET_ACC_TIME: 0x05,
-    SET_DEC_TIME: 0x06,
-    START_SPEED: 0x07,
-    START_SPEED_PAIR: 0x08,
-    START_SPEED_FOR_TIME: 0x09,
-    START_SPEED_FOR_TIME_PAIR: 0x0A,
-    START_SPEED_FOR_DEGREES: 0x0B,
-    START_SPEED_FOR_DEGREES_PAIR: 0x0C,
-    GO_TO_ABS_POSITION: 0x0D,
-    GO_TO_ABS_POSITION_PAIR: 0x0E,
-    PRESET_ENCODER: 0x14,
-    WRITE_DIRECT_MODE_DATA: 0x51
-};
-
-/**
- * Enum for Startup/Completion information for an output command.
- * Startup and completion bytes must be OR'ed to be combined to a single byte.
- * @readonly
- * @enum {number}
- */
-const BoostOutputExecution = {
-    // Startup information
-    BUFFER_IF_NECESSARY: 0x00,
-    EXECUTE_IMMEDIATELY: 0x10,
-    // Completion information
-    NO_ACTION: 0x00,
-    COMMAND_FEEDBACK: 0x01
-};
-
-/**
- * Enum for Boost Motor end states
- * @readonly
- * @enum {number}
- */
-const BoostMotorEndState = {
-    FLOAT: 0,
-    HOLD: 126,
-    BRAKE: 127
-};
-
-/**
- * Enum for Boost Motor acceleration/deceleration profiles
- * @readyonly
- * @enum {number}
- */
-const BoostMotorProfile = {
-    DO_NOT_USE: 0x00,
-    ACCELERATION: 0x01,
-    DECELERATION: 0x02
-};
-
-/**
- * Enum for when Boost IO's are attached/detached
- * @readonly
- * @enum {number}
- */
-const BoostIOEvent = {
-    ATTACHED: 0x01,
-    DETACHED: 0x00,
-    ATTACHED_VIRTUAL: 0x02
-};
-
-/**
- * Enum for selected sensor modes.
- * @enum {number}
- */
-const BoostMode = {
-    TILT: 0, // angle (pitch/yaw)
-    LED: 1, // Set LED to accept RGB values
-    COLOR: 0, // Read indexed colors from Vision Sensor
-    MOTOR_SENSOR: 2, // Set motors to report their position
-    UNKNOWN: 0 // Anything else will use the default mode (mode 0)
-};
-
-/**
- * Enum for Boost motor states.
- * @param {number}
- */
-const BoostMotorState = {
-    OFF: 0,
-    ON_FOREVER: 1,
-    ON_FOR_TIME: 2,
-    ON_FOR_ROTATION: 3
-};
-
-/**
- * Helper function for converting a JavaScript number to an INT32-number
- * @param {number} number - a number
- * @return {array} - a 4-byte array of Int8-values representing an INT32-number
- */
-const numberToInt32Array = function (number) {
-    const buffer = new ArrayBuffer(4);
-    const dataview = new DataView(buffer);
-    dataview.setInt32(0, number);
-    return [
-        dataview.getInt8(3),
-        dataview.getInt8(2),
-        dataview.getInt8(1),
-        dataview.getInt8(0)
-    ];
-};
-
-/**
- * Helper function for converting a regular array to a Little Endian INT32-value
- * @param {Array} array - an array containing UInt8-values
- * @return {number} - a number
- */
-const int32ArrayToNumber = function (array) {
-    const i = Uint8Array.from(array);
-    const d = new DataView(i.buffer);
-    return d.getInt32(0, true);
-};
-
-/**
  * Manage power, direction, position, and timers for one Boost motor.
  */
 class BoostMotor {
+
+    /**
+     * Icon svg to be displayed at the left edge of each extension block, encoded as a data URI.
+     * @type {string}
+     */
+    // eslint-disable-next-line max-len
+    static iconURI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAMAAAC5zwKfAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAACpQTFRF////6+zskJmy3+Hk6N/b+YZO/2Ya6dfO9/j5vsPSlZ62////fIel5ufo1AuBvgAAAAF0Uk5TAEDm2GYAAADNSURBVHja7dfRDoMgDIXhuQmbpbz/645JsspKOiM1u9j5E7gw8YtCSPSCEEII/VlE/aEjskeJ2LEXya6tYDLK79KOfgWm5AhOOU91HgftbJCoN46C+yJvkJ3XEKAJ6ujhBYo4BOaPblcRh0ERvUARh8A5xBhmQ2TW51uffQFDLIXciM0p1meaWCdgXLv3xfZ2eebvYO5VCWGMVVWvbIML89KA9cpmVptig1xqwHplMwso+YJuryy5bIpjZ4HZrZNA19w/OPE3gBBCCB3vCQkmeCf31OYLAAAAAElFTkSuQmCC';
+
+    /**
+     * Boost BLE UUIDs.
+     * @enum {string}
+     */
+    static BoostBLE = {
+        service: '00001623-1212-efde-1623-785feabcd123',
+        characteristic: '00001624-1212-efde-1623-785feabcd123',
+        sendInterval: 100,
+        sendRateMax: 20
+    };
+
+    /**
+     * Boost Motor Max Power Add. Defines how much more power than the target speed
+     * the motors may supply to reach the target speed faster.
+     * Lower number == softer, slower reached target speed.
+     * Higher number == harder, faster reached target speed.
+     * @constant {number}
+     */
+    static BoostMotorMaxPowerAdd = 10;
+
+    /**
+     * A time interval to wait (in milliseconds) in between battery check calls.
+     * @type {number}
+     */
+    static BoostPingInterval = 5000;
+
+    /**
+     * The number of continuous samples the color-sensor will evaluate color from.
+     * @type {number}
+     */
+    static BoostColorSampleSize = 5;
+
+    /**
+     * Enum for Boost sensor and actuator types.
+     * @readonly
+     * @enum {number}
+     */
+    static BoostIO = {
+        MOTOR_WEDO: 0x01,
+        MOTOR_SYSTEM: 0x02,
+        BUTTON: 0x05,
+        LIGHT: 0x08,
+        VOLTAGE: 0x14,
+        CURRENT: 0x15,
+        PIEZO: 0x16,
+        LED: 0x17,
+        TILT_EXTERNAL: 0x22,
+        MOTION_SENSOR: 0x23,
+        COLOR: 0x25,
+        MOTOREXT: 0x26,
+        MOTORINT: 0x27,
+        TILT: 0x28
+    };
+
+    /**
+     * Enum for ids for various output command feedback types on the Boost.
+     * @readonly
+     * @enum {number}
+     */
+    static BoostPortFeedback = {
+        IN_PROGRESS: 0x01,
+        COMPLETED: 0x02,
+        DISCARDED: 0x04,
+        IDLE: 0x08,
+        BUSY_OR_FULL: 0x10
+    };
+
+    /**
+     * Enum for physical Boost Ports
+     * @readonly
+     * @enum {number}
+     */
+
+    static BoostPort10000223OrOlder = {
+        A: 55,
+        B: 56,
+        C: 1,
+        D: 2
+    };
+
+    static BoostPort10000224OrNewer = {
+        A: 0,
+        B: 1,
+        C: 2,
+        D: 3
+    };
+
+    // Set default port mapping to support the newer firmware
+    static BoostPort = BoostMotor.BoostPort10000224OrNewer;
+
+    /**
+     * Ids for each color sensor value used by the extension.
+     * @readonly
+     * @enum {string}
+     */
+    static BoostColor = {
+        ANY: 'any',
+        NONE: 'none',
+        RED: 'red',
+        BLUE: 'blue',
+        GREEN: 'green',
+        YELLOW: 'yellow',
+        WHITE: 'white',
+        BLACK: 'black'
+    };
+
+    /**
+     * Enum for indices for each color sensed by the Boost vision sensor.
+     * @readonly
+     * @enum {number}
+     */
+    static BoostColorIndex = {
+        [BoostMotor.BoostColor.NONE]: 255,
+        [BoostMotor.BoostColor.RED]: 9,
+        [BoostMotor.BoostColor.BLUE]: 3,
+        [BoostMotor.BoostColor.GREEN]: 5,
+        [BoostMotor.BoostColor.YELLOW]: 7,
+        [BoostMotor.BoostColor.WHITE]: 10,
+        [BoostMotor.BoostColor.BLACK]: 0
+    };
+
+    /**
+     * Enum for Message Types
+     * @readonly
+     * @enum {number}
+     */
+    static BoostMessage = {
+        HUB_PROPERTIES: 0x01,
+        HUB_ACTIONS: 0x02,
+        HUB_ALERTS: 0x03,
+        HUB_ATTACHED_IO: 0x04,
+        ERROR: 0x05,
+        PORT_INPUT_FORMAT_SETUP_SINGLE: 0x41,
+        PORT_INPUT_FORMAT_SETUP_COMBINED: 0x42,
+        PORT_INFORMATION: 0x43,
+        PORT_MODEINFORMATION: 0x44,
+        PORT_VALUE: 0x45,
+        PORT_VALUE_COMBINED: 0x46,
+        PORT_INPUT_FORMAT: 0x47,
+        PORT_INPUT_FORMAT_COMBINED: 0x48,
+        OUTPUT: 0x81,
+        PORT_FEEDBACK: 0x82
+    };
+
+    /**
+     * Enum for Hub Property Types
+     * @readonly
+     * @enum {number}
+     */
+
+    static BoostHubProperty = {
+        ADVERTISEMENT_NAME: 0x01,
+        BUTTON: 0x02,
+        FW_VERSION: 0x03,
+        HW_VERSION: 0x04,
+        RSSI: 0x05,
+        BATTERY_VOLTAGE: 0x06,
+        BATTERY_TYPE: 0x07,
+        MANUFACTURER_NAME: 0x08,
+        RADIO_FW_VERSION: 0x09,
+        LEGO_WP_VERSION: 0x0A,
+        SYSTEM_TYPE_ID: 0x0B,
+        HW_NETWORK_ID: 0x0C,
+        PRIMARY_MAC: 0x0D,
+        SECONDARY_MAC: 0x0E,
+        HW_NETWORK_FAMILY: 0x0F
+    };
+
+    /**
+     * Enum for Hub Property Operations
+     * @readonly
+     * @enum {number}
+     */
+
+    static BoostHubPropertyOperation = {
+        SET: 0x01,
+        ENABLE_UPDATES: 0x02,
+        DISABLE_UPDATES: 0x03,
+        RESET: 0x04,
+        REQUEST_UPDATE: 0x05,
+        UPDATE: 0x06
+    };
+
+    /**
+     * Enum for Motor Subcommands (for 0x81)
+     * @readonly
+     * @enum {number}
+     */
+    static BoostOutputSubCommand = {
+        START_POWER: 0x01,
+        START_POWER_PAIR: 0x02,
+        SET_ACC_TIME: 0x05,
+        SET_DEC_TIME: 0x06,
+        START_SPEED: 0x07,
+        START_SPEED_PAIR: 0x08,
+        START_SPEED_FOR_TIME: 0x09,
+        START_SPEED_FOR_TIME_PAIR: 0x0A,
+        START_SPEED_FOR_DEGREES: 0x0B,
+        START_SPEED_FOR_DEGREES_PAIR: 0x0C,
+        GO_TO_ABS_POSITION: 0x0D,
+        GO_TO_ABS_POSITION_PAIR: 0x0E,
+        PRESET_ENCODER: 0x14,
+        WRITE_DIRECT_MODE_DATA: 0x51
+    };
+
+    /**
+     * Enum for Startup/Completion information for an output command.
+     * Startup and completion bytes must be OR'ed to be combined to a single byte.
+     * @readonly
+     * @enum {number}
+     */
+    static BoostOutputExecution = {
+        // Startup information
+        BUFFER_IF_NECESSARY: 0x00,
+        EXECUTE_IMMEDIATELY: 0x10,
+        // Completion information
+        NO_ACTION: 0x00,
+        COMMAND_FEEDBACK: 0x01
+    };
+
+    /**
+     * Enum for Boost Motor end states
+     * @readonly
+     * @enum {number}
+     */
+    static BoostMotorEndState = {
+        FLOAT: 0,
+        HOLD: 126,
+        BRAKE: 127
+    };
+
+    /**
+     * Enum for Boost Motor acceleration/deceleration profiles
+     * @readyonly
+     * @enum {number}
+     */
+    static BoostMotorProfile = {
+        DO_NOT_USE: 0x00,
+        ACCELERATION: 0x01,
+        DECELERATION: 0x02
+    };
+
+    /**
+     * Enum for when Boost IO's are attached/detached
+     * @readonly
+     * @enum {number}
+     */
+    static BoostIOEvent = {
+        ATTACHED: 0x01,
+        DETACHED: 0x00,
+        ATTACHED_VIRTUAL: 0x02
+    };
+
+    /**
+     * Enum for selected sensor modes.
+     * @enum {number}
+     */
+    static BoostMode = {
+        TILT: 0, // angle (pitch/yaw)
+        LED: 1, // Set LED to accept RGB values
+        COLOR: 0, // Read indexed colors from Vision Sensor
+        MOTOR_SENSOR: 2, // Set motors to report their position
+        UNKNOWN: 0 // Anything else will use the default mode (mode 0)
+    };
+
+    /**
+     * Enum for Boost motor states.
+     * @param {number}
+     */
+    static BoostMotorState = {
+        OFF: 0,
+        ON_FOREVER: 1,
+        ON_FOR_TIME: 2,
+        ON_FOR_ROTATION: 3
+    };
+
+    /**
+     * Helper function for converting a JavaScript number to an INT32-number
+     * @param {number} number - a number
+     * @return {array} - a 4-byte array of Int8-values representing an INT32-number
+     */
+    static numberToInt32Array = function (number) {
+        const buffer = new ArrayBuffer(4);
+        const dataview = new DataView(buffer);
+        dataview.setInt32(0, number);
+        return [
+            dataview.getInt8(3),
+            dataview.getInt8(2),
+            dataview.getInt8(1),
+            dataview.getInt8(0)
+        ];
+    };
+
+    /**
+     * Helper function for converting a regular array to a Little Endian INT32-value
+     * @param {Array} array - an array containing UInt8-values
+     * @return {number} - a number
+     */
+    static int32ArrayToNumber = function (array) {
+        const i = Uint8Array.from(array);
+        const d = new DataView(i.buffer);
+        return d.getInt32(0, true);
+    };
+
+
     /**
      * Construct a Boost Motor instance.
      * @param {Boost} parent - the Boost peripheral which owns this motor.
@@ -375,7 +377,7 @@ class BoostMotor {
          * @type {boolean}
          * @private
          */
-        this._status = BoostMotorState.OFF;
+        this._status = BoostMotor.BoostMotorState.OFF;
 
         /**
          * If the motor has been turned on or is actively braking for a specific duration, this is the timeout ID for
@@ -529,22 +531,22 @@ class BoostMotor {
     _turnOn () {
         const cmd = this._parent.generateOutputCommand(
             this._index,
-            BoostOutputExecution.EXECUTE_IMMEDIATELY,
-            BoostOutputSubCommand.START_SPEED,
+            BoostMotor.BoostOutputExecution.EXECUTE_IMMEDIATELY,
+            BoostMotor.BoostOutputSubCommand.START_SPEED,
             [
                 this.power * this.direction,
-                MathUtil.clamp(this.power + BoostMotorMaxPowerAdd, 0, 100),
-                BoostMotorProfile.DO_NOT_USE
+                MathUtil.clamp(this.power + BoostMotor.BoostMotorMaxPowerAdd, 0, 100),
+                BoostMotor.BoostMotorProfile.DO_NOT_USE
             ]);
 
-        this._parent.send(BoostBLE.characteristic, cmd);
+        this._parent.send(BoostMotor.BoostBLE.characteristic, cmd);
     }
 
     /**
      * Turn this motor on indefinitely
      */
     turnOnForever () {
-        this.status = BoostMotorState.ON_FOREVER;
+        this.status = BoostMotor.BoostMotorState.ON_FOREVER;
         this._turnOn();
     }
 
@@ -554,7 +556,7 @@ class BoostMotor {
      */
     turnOnFor (milliseconds) {
         milliseconds = Math.max(0, milliseconds);
-        this.status = BoostMotorState.ON_FOR_TIME;
+        this.status = BoostMotor.BoostMotorState.ON_FOR_TIME;
         this._turnOn();
         this._setNewDurationTimeout(this.turnOff, milliseconds);
     }
@@ -569,20 +571,20 @@ class BoostMotor {
 
         const cmd = this._parent.generateOutputCommand(
             this._index,
-            (BoostOutputExecution.EXECUTE_IMMEDIATELY ^ BoostOutputExecution.COMMAND_FEEDBACK),
-            BoostOutputSubCommand.START_SPEED_FOR_DEGREES,
+            (BoostMotor.BoostOutputExecution.EXECUTE_IMMEDIATELY ^ BoostMotor.BoostOutputExecution.COMMAND_FEEDBACK),
+            BoostMotor.BoostOutputSubCommand.START_SPEED_FOR_DEGREES,
             [
-                ...numberToInt32Array(degrees),
+                ...BoostMotor.numberToInt32Array(degrees),
                 this.power * this.direction * direction,
-                MathUtil.clamp(this.power + BoostMotorMaxPowerAdd, 0, 100),
-                BoostMotorEndState.BRAKE,
-                BoostMotorProfile.DO_NOT_USE
+                MathUtil.clamp(this.power + BoostMotor.BoostMotorMaxPowerAdd, 0, 100),
+                BoostMotor.BoostMotorEndState.BRAKE,
+                BoostMotor.BoostMotorProfile.DO_NOT_USE
             ]
         );
 
-        this.status = BoostMotorState.ON_FOR_ROTATION;
+        this.status = BoostMotor.BoostMotorState.ON_FOR_ROTATION;
         this._pendingRotationDestination = this.position + (degrees * this.direction * direction);
-        this._parent.send(BoostBLE.characteristic, cmd);
+        this._parent.send(BoostMotor.BoostBLE.characteristic, cmd);
     }
 
     /**
@@ -592,15 +594,15 @@ class BoostMotor {
     turnOff (useLimiter = true) {
         const cmd = this._parent.generateOutputCommand(
             this._index,
-            BoostOutputExecution.EXECUTE_IMMEDIATELY,
-            BoostOutputSubCommand.START_POWER,
+            BoostMotor.BoostOutputExecution.EXECUTE_IMMEDIATELY,
+            BoostMotor.BoostOutputSubCommand.START_POWER,
             [
-                BoostMotorEndState.FLOAT
+                BoostMotor.BoostMotorEndState.FLOAT
             ]
         );
 
-        this.status = BoostMotorState.OFF;
-        this._parent.send(BoostBLE.characteristic, cmd, useLimiter);
+        this.status = BoostMotor.BoostMotorState.OFF;
+        this._parent.send(BoostMotor.BoostBLE.characteristic, cmd, useLimiter);
     }
 
     /**
@@ -693,8 +695,8 @@ class Boost {
         this._sensors = {
             tiltX: 0,
             tiltY: 0,
-            color: BoostColor.NONE,
-            previousColor: BoostColor.NONE
+            color: BoostMotor.BoostColor.NONE,
+            previousColor: BoostMotor.BoostColor.NONE
         };
 
         /**
@@ -718,7 +720,7 @@ class Boost {
          * @type {RateLimiter}
          * @private
          */
-        this._rateLimiter = new RateLimiter(BoostBLE.sendRateMax);
+        this._rateLimiter = new RateLimiter(BoostMotor.BoostBLE.sendRateMax);
 
         /**
          * An interval id for the battery check interval.
@@ -767,8 +769,9 @@ class Boost {
      * @return {BoostColor} the color id for this index.
      */
     boostColorForIndex (index) {
-        const colorForIndex = Object.keys(BoostColorIndex).find(key => BoostColorIndex[key] === index);
-        return colorForIndex || BoostColor.NONE;
+        const colorForIndex = Object.keys(BoostMotor.BoostColorIndex).find(
+            key => BoostMotor.BoostColorIndex[key] === index);
+        return colorForIndex || BoostMotor.BoostColor.NONE;
     }
 
     /**
@@ -807,14 +810,14 @@ class Boost {
         ];
 
         const cmd = this.generateOutputCommand(
-            this._ports.indexOf(BoostIO.LED),
-            BoostOutputExecution.EXECUTE_IMMEDIATELY ^ BoostOutputExecution.COMMAND_FEEDBACK,
-            BoostOutputSubCommand.WRITE_DIRECT_MODE_DATA,
-            [BoostMode.LED,
+            this._ports.indexOf(BoostMotor.BoostIO.LED),
+            BoostMotor.BoostOutputExecution.EXECUTE_IMMEDIATELY ^ BoostMotor.BoostOutputExecution.COMMAND_FEEDBACK,
+            BoostMotor.BoostOutputSubCommand.WRITE_DIRECT_MODE_DATA,
+            [BoostMotor.BoostMode.LED,
                 ...rgb]
         );
 
-        return this.send(BoostBLE.characteristic, cmd);
+        return this.send(BoostMotor.BoostBLE.characteristic, cmd);
     }
 
     /**
@@ -823,13 +826,13 @@ class Boost {
      */
     setLEDMode () {
         const cmd = this.generateInputCommand(
-            this._ports.indexOf(BoostIO.LED),
-            BoostMode.LED,
+            this._ports.indexOf(BoostMotor.BoostIO.LED),
+            BoostMotor.BoostMode.LED,
             0,
             false
         );
 
-        return this.send(BoostBLE.characteristic, cmd);
+        return this.send(BoostMotor.BoostBLE.characteristic, cmd);
     }
 
     /**
@@ -849,7 +852,7 @@ class Boost {
         }
         this._ble = new BLE(this._runtime, this._extensionId, {
             filters: [{
-                services: [BoostBLE.service],
+                services: [BoostMotor.BoostBLE.service],
                 manufacturerData: {
                     0x0397: {
                         dataPrefix: [0x00, 0x40],
@@ -891,8 +894,8 @@ class Boost {
         this._sensors = {
             tiltX: 0,
             tiltY: 0,
-            color: BoostColor.NONE,
-            previousColor: BoostColor.NONE
+            color: BoostMotor.BoostColor.NONE,
+            previousColor: BoostMotor.BoostColor.NONE
         };
 
         if (this._pingDeviceId) {
@@ -928,7 +931,7 @@ class Boost {
         }
 
         return this._ble.write(
-            BoostBLE.service,
+            BoostMotor.BoostBLE.service,
             uuid,
             Base64Util.uint8ArrayToBase64(message),
             'base64'
@@ -949,7 +952,7 @@ class Boost {
      */
     generateOutputCommand (portID, execution, subCommand, payload) {
         const hubID = 0x00;
-        const command = [hubID, BoostMessage.OUTPUT, portID, execution, subCommand, ...payload];
+        const command = [hubID, BoostMotor.BoostMessage.OUTPUT, portID, execution, subCommand, ...payload];
         command.unshift(command.length + 1); // Prepend payload with length byte;
 
         return command;
@@ -972,10 +975,10 @@ class Boost {
     generateInputCommand (portID, mode, delta, enableNotifications) {
         const command = [
             0x00, // Hub ID
-            BoostMessage.PORT_INPUT_FORMAT_SETUP_SINGLE,
+            BoostMotor.BoostMessage.PORT_INPUT_FORMAT_SETUP_SINGLE,
             portID,
             mode
-        ].concat(numberToInt32Array(delta)).concat([
+        ].concat(BoostMotor.numberToInt32Array(delta)).concat([
             enableNotifications
         ]);
         command.unshift(command.length + 1); // Prepend payload with length byte;
@@ -989,22 +992,22 @@ class Boost {
      */
     _onConnect () {
         this._ble.startNotifications(
-            BoostBLE.service,
-            BoostBLE.characteristic,
+            BoostMotor.BoostBLE.service,
+            BoostMotor.BoostBLE.characteristic,
             this._onMessage
         );
-        this._pingDeviceId = window.setInterval(this._pingDevice, BoostPingInterval);
+        this._pingDeviceId = window.setInterval(this._pingDevice, BoostMotor.BoostPingInterval);
 
         // Send a request for firmware version.
         setTimeout(() => {
             const command = [
                 0x00, // Hub ID
-                BoostMessage.HUB_PROPERTIES,
-                BoostHubProperty.FW_VERSION,
-                BoostHubPropertyOperation.REQUEST_UPDATE
+                BoostMotor.BoostMessage.HUB_PROPERTIES,
+                BoostMotor.BoostHubProperty.FW_VERSION,
+                BoostMotor.BoostHubPropertyOperation.REQUEST_UPDATE
             ];
             command.unshift(command.length + 1);
-            this.send(BoostBLE.characteristic, command, false);
+            this.send(BoostMotor.BoostBLE.characteristic, command, false);
         }, 500);
 
     }
@@ -1030,92 +1033,93 @@ class Boost {
         const portID = data[3];
 
         switch (messageType) {
-        
-        case BoostMessage.HUB_PROPERTIES: {
+
+        case BoostMotor.BoostMessage.HUB_PROPERTIES: {
             const property = data[3];
             switch (property) {
-            case BoostHubProperty.FW_VERSION: {
+            case BoostMotor.BoostHubProperty.FW_VERSION: {
                 // Establish firmware version 1.0.00.0224 as a 32-bit signed integer (little endian)
-                const fwVersion10000224 = int32ArrayToNumber([0x24, 0x02, 0x00, 0x10]);
-                const fwHub = int32ArrayToNumber(data.slice(5, data.length));
+                const fwVersion10000224 = BoostMotor.int32ArrayToNumber([0x24, 0x02, 0x00, 0x10]);
+                const fwHub = BoostMotor.int32ArrayToNumber(data.slice(5, data.length));
                 if (fwHub < fwVersion10000224) {
-                    BoostPort = BoostPort10000223OrOlder;
+                    BoostMotor.BoostPort = BoostMotor.BoostPort10000223OrOlder;
                     log.info('Move Hub firmware older than version 1.0.00.0224 detected. Using old port mapping.');
                 } else {
-                    BoostPort = BoostPort10000224OrNewer;
+                    BoostMotor.BoostPort = BoostMotor.BoostPort10000224OrNewer;
                 }
                 break;
             }
             }
             break;
         }
-        case BoostMessage.HUB_ATTACHED_IO: { // IO Attach/Detach events
+        case BoostMotor.BoostMessage.HUB_ATTACHED_IO: { // IO Attach/Detach events
             const event = data[4];
             const typeId = data[5];
 
             switch (event) {
-            case BoostIOEvent.ATTACHED:
+            case BoostMotor.BoostIOEvent.ATTACHED:
                 this._registerSensorOrMotor(portID, typeId);
                 break;
-            case BoostIOEvent.DETACHED:
+            case BoostMotor.BoostIOEvent.DETACHED:
                 this._clearPort(portID);
                 break;
-            case BoostIOEvent.ATTACHED_VIRTUAL:
+            case BoostMotor.BoostIOEvent.ATTACHED_VIRTUAL:
             default:
             }
             break;
         }
-        case BoostMessage.PORT_VALUE: {
+        case BoostMotor.BoostMessage.PORT_VALUE: {
             const type = this._ports[portID];
 
             switch (type) {
-            case BoostIO.TILT:
+            case BoostMotor.BoostIO.TILT:
                 this._sensors.tiltX = data[4];
                 this._sensors.tiltY = data[5];
                 break;
-            case BoostIO.COLOR:
+            case BoostMotor.BoostIO.COLOR:
                 this._colorSamples.unshift(data[4]);
-                if (this._colorSamples.length > BoostColorSampleSize) {
+                if (this._colorSamples.length > BoostMotor.BoostColorSampleSize) {
                     this._colorSamples.pop();
                     if (this._colorSamples.every((v, i, arr) => v === arr[0])) {
                         this._sensors.previousColor = this._sensors.color;
                         this._sensors.color = this.boostColorForIndex(this._colorSamples[0]);
                     } else {
-                        this._sensors.color = BoostColor.NONE;
+                        this._sensors.color = BoostMotor.BoostColor.NONE;
                     }
                 } else {
-                    this._sensors.color = BoostColor.NONE;
+                    this._sensors.color = BoostMotor.BoostColor.NONE;
                 }
                 break;
-            case BoostIO.MOTOREXT:
-            case BoostIO.MOTORINT:
-                this.motor(portID).position = int32ArrayToNumber(data.slice(4, 8));
+            case BoostMotor.BoostIO.MOTOREXT:
+            case BoostMotor.BoostIO.MOTORINT:
+                this.motor(portID).position = BoostMotor.int32ArrayToNumber(data.slice(4, 8));
                 break;
-            case BoostIO.CURRENT:
-            case BoostIO.VOLTAGE:
-            case BoostIO.LED:
+            case BoostMotor.BoostIO.CURRENT:
+            case BoostMotor.BoostIO.VOLTAGE:
+            case BoostMotor.BoostIO.LED:
                 break;
             default:
                 log.warn(`Unknown sensor value! Type: ${type}`);
             }
             break;
         }
-        case BoostMessage.PORT_FEEDBACK: {
+        case BoostMotor.BoostMessage.PORT_FEEDBACK: {
             const feedback = data[4];
             const motor = this.motor(portID);
             if (motor) {
                 // Makes sure that commands resolve both when they actually complete and when they fail
-                const isBusy = feedback & BoostPortFeedback.IN_PROGRESS;
-                const commandCompleted = feedback & (BoostPortFeedback.COMPLETED ^ BoostPortFeedback.DISCARDED);
+                const isBusy = feedback & BoostMotor.BoostPortFeedback.IN_PROGRESS;
+                const commandCompleted = feedback & (
+                    BoostMotor.BoostPortFeedback.COMPLETED ^ BoostMotor.BoostPortFeedback.DISCARDED);
                 if (!isBusy && commandCompleted) {
-                    if (motor.status === BoostMotorState.ON_FOR_ROTATION) {
-                        motor.status = BoostMotorState.OFF;
+                    if (motor.status === BoostMotor.BoostMotorState.ON_FOR_ROTATION) {
+                        motor.status = BoostMotor.BoostMotorState.OFF;
                     }
                 }
             }
             break;
         }
-        case BoostMessage.ERROR:
+        case BoostMotor.BoostMessage.ERROR:
             log.warn(`Error reported by hub: ${data}`);
             break;
         }
@@ -1129,8 +1133,8 @@ class Boost {
      */
     _pingDevice () {
         this._ble.read(
-            BoostBLE.service,
-            BoostBLE.characteristic,
+            BoostMotor.BoostBLE.service,
+            BoostMotor.BoostBLE.characteristic,
             false
         );
     }
@@ -1148,7 +1152,7 @@ class Boost {
         this._ports[portID] = type;
 
         // Record motor port
-        if (type === BoostIO.MOTORINT || type === BoostIO.MOTOREXT) {
+        if (type === BoostMotor.BoostIO.MOTORINT || type === BoostMotor.BoostIO.MOTOREXT) {
             this._motors[portID] = new BoostMotor(this, portID);
         }
 
@@ -1157,16 +1161,16 @@ class Boost {
         let delta = 1;
 
         switch (type) {
-        case BoostIO.MOTORINT:
-        case BoostIO.MOTOREXT:
-            mode = BoostMode.MOTOR_SENSOR;
+        case BoostMotor.BoostIO.MOTORINT:
+        case BoostMotor.BoostIO.MOTOREXT:
+            mode = BoostMotor.BoostMode.MOTOR_SENSOR;
             break;
-        case BoostIO.COLOR:
-            mode = BoostMode.COLOR;
+        case BoostMotor.BoostIO.COLOR:
+            mode = BoostMotor.BoostMode.COLOR;
             delta = 0;
             break;
-        case BoostIO.LED:
-            mode = BoostMode.LED;
+        case BoostMotor.BoostIO.LED:
+            mode = BoostMotor.BoostMode.LED;
             /**
              * Sets the LED to blue to give an indication on the hub
              * that it has connected successfully.
@@ -1174,11 +1178,11 @@ class Boost {
             this.setLEDMode();
             this.setLED(0x0000FF);
             break;
-        case BoostIO.TILT:
-            mode = BoostMode.TILT;
+        case BoostMotor.BoostIO.TILT:
+            mode = BoostMotor.BoostMode.TILT;
             break;
         default:
-            mode = BoostMode.UNKNOWN;
+            mode = BoostMotor.BoostMode.UNKNOWN;
         }
 
         const cmd = this.generateInputCommand(
@@ -1188,7 +1192,7 @@ class Boost {
             true // Receive feedback
         );
 
-        this.send(BoostBLE.characteristic, cmd);
+        this.send(BoostMotor.BoostBLE.characteristic, cmd);
     }
 
     /**
@@ -1198,11 +1202,11 @@ class Boost {
      */
     _clearPort (portID) {
         const type = this._ports[portID];
-        if (type === BoostIO.TILT) {
+        if (type === BoostMotor.BoostIO.TILT) {
             this._sensors.tiltX = this._sensors.tiltY = 0;
         }
-        if (type === BoostIO.COLOR) {
-            this._sensors.color = BoostColor.NONE;
+        if (type === BoostMotor.BoostIO.COLOR) {
+            this._sensors.color = BoostMotor.BoostColor.NONE;
         }
         this._ports[portID] = 'none';
         this._motors[portID] = null;
@@ -1251,6 +1255,7 @@ const BoostTiltDirection = {
  * Scratch 3.0 blocks to interact with a LEGO Boost peripheral.
  */
 class Scratch3BoostBlocks {
+    static BoostMotor = BoostMotor;
 
     /**
      * @return {string} - the ID of this extension.
@@ -1288,7 +1293,7 @@ class Scratch3BoostBlocks {
         return {
             id: Scratch3BoostBlocks.EXTENSION_ID,
             name: 'BOOST',
-            blockIconURI: iconURI,
+            blockIconURI: BoostMotor.iconURI,
             showStatusButton: true,
             blocks: [
                 {
@@ -1432,7 +1437,7 @@ class Scratch3BoostBlocks {
                         COLOR: {
                             type: ArgumentType.STRING,
                             menu: 'COLOR',
-                            defaultValue: BoostColor.ANY
+                            defaultValue: BoostMotor.BoostColor.ANY
                         }
                     }
                 },
@@ -1448,7 +1453,7 @@ class Scratch3BoostBlocks {
                         COLOR: {
                             type: ArgumentType.STRING,
                             menu: 'COLOR',
-                            defaultValue: BoostColor.ANY
+                            defaultValue: BoostMotor.BoostColor.ANY
                         }
                     }
                 },
@@ -1671,7 +1676,7 @@ class Scratch3BoostBlocks {
                                 default: 'red',
                                 description: 'the color red'
                             }),
-                            value: BoostColor.RED
+                            value: BoostMotor.BoostColor.RED
                         },
                         {
                             text: formatMessage({
@@ -1679,7 +1684,7 @@ class Scratch3BoostBlocks {
                                 default: 'blue',
                                 description: 'the color blue'
                             }),
-                            value: BoostColor.BLUE
+                            value: BoostMotor.BoostColor.BLUE
                         },
                         {
                             text: formatMessage({
@@ -1687,7 +1692,7 @@ class Scratch3BoostBlocks {
                                 default: 'green',
                                 description: 'the color green'
                             }),
-                            value: BoostColor.GREEN
+                            value: BoostMotor.BoostColor.GREEN
                         },
                         {
                             text: formatMessage({
@@ -1695,7 +1700,7 @@ class Scratch3BoostBlocks {
                                 default: 'yellow',
                                 description: 'the color yellow'
                             }),
-                            value: BoostColor.YELLOW
+                            value: BoostMotor.BoostColor.YELLOW
                         },
                         {
                             text: formatMessage({
@@ -1703,7 +1708,7 @@ class Scratch3BoostBlocks {
                                 default: 'white',
                                 desription: 'the color white'
                             }),
-                            value: BoostColor.WHITE
+                            value: BoostMotor.BoostColor.WHITE
                         },
                         {
                             text: formatMessage({
@@ -1711,7 +1716,7 @@ class Scratch3BoostBlocks {
                                 default: 'black',
                                 description: 'the color black'
                             }),
-                            value: BoostColor.BLACK
+                            value: BoostMotor.BoostColor.BLACK
                         },
                         {
                             text: formatMessage({
@@ -1719,7 +1724,7 @@ class Scratch3BoostBlocks {
                                 default: 'any color',
                                 description: 'any color'
                             }),
-                            value: BoostColor.ANY
+                            value: BoostMotor.BoostColor.ANY
                         }
                     ]
                 }
@@ -1807,7 +1812,7 @@ class Scratch3BoostBlocks {
         return new Promise(resolve => {
             window.setTimeout(() => {
                 resolve();
-            }, BoostBLE.sendInterval);
+            }, BoostMotor.BoostBLE.sendInterval);
         });
     }
 
@@ -1827,7 +1832,7 @@ class Scratch3BoostBlocks {
         return new Promise(resolve => {
             window.setTimeout(() => {
                 resolve();
-            }, BoostBLE.sendInterval);
+            }, BoostMotor.BoostBLE.sendInterval);
         });
     }
 
@@ -1845,10 +1850,10 @@ class Scratch3BoostBlocks {
             if (motor) {
                 motor.power = MathUtil.clamp(Cast.toNumber(args.POWER), 0, 100);
                 switch (motor.status) {
-                case BoostMotorState.ON_FOREVER:
+                case BoostMotor.BoostMotorState.ON_FOREVER:
                     motor.turnOnForever();
                     break;
-                case BoostMotorState.ON_FOR_TIME:
+                case BoostMotor.BoostMotorState.ON_FOR_TIME:
                     motor.turnOnFor(motor.pendingDurationTimeoutStartTime +
                         motor.pendingDurationTimeoutDelay - Date.now());
                     break;
@@ -1858,7 +1863,7 @@ class Scratch3BoostBlocks {
         return new Promise(resolve => {
             window.setTimeout(() => {
                 resolve();
-            }, BoostBLE.sendInterval);
+            }, BoostMotor.BoostBLE.sendInterval);
         });
     }
 
@@ -1892,10 +1897,10 @@ class Scratch3BoostBlocks {
                 // keep the motor on if it's running, and update the pending timeout if needed
                 if (motor) {
                     switch (motor.status) {
-                    case BoostMotorState.ON_FOREVER:
+                    case BoostMotor.BoostMotorState.ON_FOREVER:
                         motor.turnOnForever();
                         break;
-                    case BoostMotorState.ON_FOR_TIME:
+                    case BoostMotor.BoostMotorState.ON_FOR_TIME:
                         motor.turnOnFor(motor.pendingDurationTimeoutStartTime +
                             motor.pendingDurationTimeoutDelay - Date.now());
                         break;
@@ -1906,7 +1911,7 @@ class Scratch3BoostBlocks {
         return new Promise(resolve => {
             window.setTimeout(() => {
                 resolve();
-            }, BoostBLE.sendInterval);
+            }, BoostMotor.BoostBLE.sendInterval);
         });
     }
 
@@ -1919,16 +1924,16 @@ class Scratch3BoostBlocks {
         switch (args.MOTOR_REPORTER_ID) {
 
         case BoostMotorLabel.A:
-            portID = BoostPort.A;
+            portID = BoostMotor.BoostPort.A;
             break;
         case BoostMotorLabel.B:
-            portID = BoostPort.B;
+            portID = BoostMotor.BoostPort.B;
             break;
         case BoostMotorLabel.C:
-            portID = BoostPort.C;
+            portID = BoostMotor.BoostPort.C;
             break;
         case BoostMotorLabel.D:
-            portID = BoostPort.D;
+            portID = BoostMotor.BoostPort.D;
             break;
         default:
             log.warn('Asked for a motor position that doesnt exist!');
@@ -1938,7 +1943,7 @@ class Scratch3BoostBlocks {
             let val = this._peripheral.motor(portID).position;
             // Boost motor A position direction is reversed by design
             // so we have to reverse the position here
-            if (portID === BoostPort.A) {
+            if (portID === BoostMotor.BoostPort.A) {
                 val *= -1;
             }
             return MathUtil.wrapClamp(val, 0, 360);
@@ -1956,22 +1961,22 @@ class Scratch3BoostBlocks {
         let motors;
         switch (motorID) {
         case BoostMotorLabel.A:
-            motors = [BoostPort.A];
+            motors = [BoostMotor.BoostPort.A];
             break;
         case BoostMotorLabel.B:
-            motors = [BoostPort.B];
+            motors = [BoostMotor.BoostPort.B];
             break;
         case BoostMotorLabel.C:
-            motors = [BoostPort.C];
+            motors = [BoostMotor.BoostPort.C];
             break;
         case BoostMotorLabel.D:
-            motors = [BoostPort.D];
+            motors = [BoostMotor.BoostPort.D];
             break;
         case BoostMotorLabel.AB:
-            motors = [BoostPort.A, BoostPort.B];
+            motors = [BoostMotor.BoostPort.A, BoostMotor.BoostPort.B];
             break;
         case BoostMotorLabel.ALL:
-            motors = [BoostPort.A, BoostPort.B, BoostPort.C, BoostPort.D];
+            motors = [BoostMotor.BoostPort.A, BoostMotor.BoostPort.B, BoostMotor.BoostPort.C, BoostMotor.BoostPort.D];
             break;
         default:
             log.warn(`Invalid motor ID: ${motorID}`);
@@ -2057,12 +2062,12 @@ class Scratch3BoostBlocks {
      * @return {boolean} - true when the color sensor senses the specified color.
      */
     whenColor (args) {
-        if (args.COLOR === BoostColor.ANY) {
+        if (args.COLOR === BoostMotor.BoostColor.ANY) {
             // For "any" color, return true if the color is not "none", and
             // the color is different from the previous color detected. This
             // allows the hat to trigger when the color changes from one color
             // to another.
-            return this._peripheral.color !== BoostColor.NONE &&
+            return this._peripheral.color !== BoostMotor.BoostColor.NONE &&
                 this._peripheral.color !== this._peripheral.previousColor;
         }
 
@@ -2076,8 +2081,8 @@ class Scratch3BoostBlocks {
      * @return {boolean} - true when the color sensor senses the specified color.
      */
     seeingColor (args) {
-        if (args.COLOR === BoostColor.ANY) {
-            return this._peripheral.color !== BoostColor.NONE;
+        if (args.COLOR === BoostMotor.BoostColor.ANY) {
+            return this._peripheral.color !== BoostMotor.BoostColor.NONE;
         }
 
         return args.COLOR === this._peripheral.color;
@@ -2105,7 +2110,7 @@ class Scratch3BoostBlocks {
         return new Promise(resolve => {
             window.setTimeout(() => {
                 resolve();
-            }, BoostBLE.sendInterval);
+            }, BoostMotor.BoostBLE.sendInterval);
         });
     }
 }

@@ -4,48 +4,47 @@ const BlockType = require('../../extension-support/block-type');
 const formatMessage = require('format-message');
 const log = require('../../util/log');
 const DiffMatchPatch = require('diff-match-patch');
-
-
-/**
- * Url of icon to be displayed at the left edge of each extension block.
- * @type {string}
- */
-// eslint-disable-next-line max-len
-const iconURI = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgZmlsbD0iI2ZmZiIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBkPSJNMTIgMTRjMS42NiAwIDIuOTktMS4zNCAyLjk5LTNMMTUgNWMwLTEuNjYtMS4zNC0zLTMtM1M5IDMuMzQgOSA1djZjMCAxLjY2IDEuMzQgMyAzIDNtNS4zLTNjMCAzLTIuNTQgNS4xLTUuMyA1LjFTNi43IDE0IDYuNyAxMUg1YzAgMy40MSAyLjcyIDYuMjMgNiA2LjcyVjIxaDJ2LTMuMjhjMy4yOC0uNDggNi0zLjMgNi02LjcyeiIvPjxwYXRoIGZpbGw9Im5vbmUiIGQ9Ik0wIDBoMjR2MjRIMHoiLz48L3N2Zz4=';
-
-
-/**
- * Url of icon to be displayed in the toolbox menu for the extension category.
- * @type {string}
- */
-// eslint-disable-next-line max-len
-const menuIconURI = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgZmlsbD0iIzc1NzU3NSIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBkPSJNMTIgMTRjMS42NiAwIDIuOTktMS4zNCAyLjk5LTNMMTUgNWMwLTEuNjYtMS4zNC0zLTMtM1M5IDMuMzQgOSA1djZjMCAxLjY2IDEuMzQgMyAzIDNtNS4zLTNjMCAzLTIuNTQgNS4xLTUuMyA1LjFTNi43IDE0IDYuNyAxMUg1YzAgMy40MSAyLjcyIDYuMjMgNiA2LjcyVjIxaDJ2LTMuMjhjMy4yOC0uNDggNi0zLjMgNi02LjcyeiIvPjxwYXRoIGZpbGw9Im5vbmUiIGQ9Ik0wIDBoMjR2MjRIMHoiLz48L3N2Zz4=';
-
-
-/**
- * The url of the speech server.
- * @type {string}
- */
-const serverURL = 'wss://speech.scratch.mit.edu';
-
-/**
- * The amount of time to wait between when we stop sending speech data to the server and when
- * we expect the transcription result marked with isFinal: true to come back from the server.
- * @type {int}
- */
-const finalResponseTimeoutDurationMs = 3000;
-
-/**
- * The max amount of time the Listen And Wait block will listen for.  It may listen for less time
- * if we get back results that are good and think the user is done talking.
- * Currently set to 10sec. This should not exceed the speech api limit (60sec) without redoing how
- * we stream the microphone data data.
- * @type {int}
- */
-const listenAndWaitBlockTimeoutMs = 10000;
-
-
 class Scratch3Speech2TextBlocks {
+    static diffMatchPatch = DiffMatchPatch;
+
+    /**
+     * Url of icon to be displayed at the left edge of each extension block.
+     * @type {string}
+     */
+    // eslint-disable-next-line max-len
+    static iconURI = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgZmlsbD0iI2ZmZiIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBkPSJNMTIgMTRjMS42NiAwIDIuOTktMS4zNCAyLjk5LTNMMTUgNWMwLTEuNjYtMS4zNC0zLTMtM1M5IDMuMzQgOSA1djZjMCAxLjY2IDEuMzQgMyAzIDNtNS4zLTNjMCAzLTIuNTQgNS4xLTUuMyA1LjFTNi43IDE0IDYuNyAxMUg1YzAgMy40MSAyLjcyIDYuMjMgNiA2LjcyVjIxaDJ2LTMuMjhjMy4yOC0uNDggNi0zLjMgNi02LjcyeiIvPjxwYXRoIGZpbGw9Im5vbmUiIGQ9Ik0wIDBoMjR2MjRIMHoiLz48L3N2Zz4=';
+
+
+    /**
+     * Url of icon to be displayed in the toolbox menu for the extension category.
+     * @type {string}
+     */
+    // eslint-disable-next-line max-len
+    static menuIconURI = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgZmlsbD0iIzc1NzU3NSIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBkPSJNMTIgMTRjMS42NiAwIDIuOTktMS4zNCAyLjk5LTNMMTUgNWMwLTEuNjYtMS4zNC0zLTMtM1M5IDMuMzQgOSA1djZjMCAxLjY2IDEuMzQgMyAzIDNtNS4zLTNjMCAzLTIuNTQgNS4xLTUuMyA1LjFTNi43IDE0IDYuNyAxMUg1YzAgMy40MSAyLjcyIDYuMjMgNiA2LjcyVjIxaDJ2LTMuMjhjMy4yOC0uNDggNi0zLjMgNi02LjcyeiIvPjxwYXRoIGZpbGw9Im5vbmUiIGQ9Ik0wIDBoMjR2MjRIMHoiLz48L3N2Zz4=';
+
+
+    /**
+     * The url of the speech server.
+     * @type {string}
+     */
+    static serverURL = 'wss://speech.scratch.mit.edu';
+
+    /**
+     * The amount of time to wait between when we stop sending speech data to the server and when
+     * we expect the transcription result marked with isFinal: true to come back from the server.
+     * @type {int}
+     */
+    static finalResponseTimeoutDurationMs = 3000;
+
+    /**
+     * The max amount of time the Listen And Wait block will listen for.  It may listen for less time
+     * if we get back results that are good and think the user is done talking.
+     * Currently set to 10sec. This should not exceed the speech api limit (60sec) without redoing how
+     * we stream the microphone data data.
+     * @type {int}
+     */
+    static listenAndWaitBlockTimeoutMs = 10000;
+
     constructor (runtime) {
         /**
          * The runtime instantiating this block package.
@@ -285,7 +284,8 @@ class Scratch3Speech2TextBlocks {
             this._socket.send('stopTranscription');
         }
         // Give it a couple seconds to response before giving up and assuming nothing else will come back.
-        this._speechFinalResponseTimeout = setTimeout(this._resetListening, finalResponseTimeoutDurationMs);
+        this._speechFinalResponseTimeout = setTimeout(this._resetListening,
+            Scratch3Speech2TextBlocks.finalResponseTimeoutDurationMs);
     }
 
     /**
@@ -448,7 +448,8 @@ class Scratch3Speech2TextBlocks {
         this.runtime.emitMicListening(true);
         this._initListening();
         // Force the block to timeout if we don't get any results back/the user didn't say anything.
-        this._speechTimeoutId = setTimeout(this._stopTranscription, listenAndWaitBlockTimeoutMs);
+        this._speechTimeoutId = setTimeout(this._stopTranscription,
+            Scratch3Speech2TextBlocks.listenAndWaitBlockTimeoutMs);
     }
 
     /**
@@ -508,7 +509,7 @@ class Scratch3Speech2TextBlocks {
      * @param {Function} reject - function to call if opening the web socket fails.
      */
     _newSocketCallback (resolve, reject) {
-        this._socket = new WebSocket(serverURL);
+        this._socket = new WebSocket(Scratch3Speech2TextBlocks.serverURL);
         this._socket.addEventListener('open', resolve);
         this._socket.addEventListener('error', reject);
     }
@@ -616,8 +617,8 @@ class Scratch3Speech2TextBlocks {
                 default: 'Speech to Text',
                 description: 'Name of extension that adds speech recognition blocks.'
             }),
-            menuIconURI: menuIconURI,
-            blockIconURI: iconURI,
+            menuIconURI: Scratch3Speech2TextBlocks.menuIconURI,
+            blockIconURI: Scratch3Speech2TextBlocks.iconURI,
             blocks: [
                 {
                     opcode: 'listenAndWait',

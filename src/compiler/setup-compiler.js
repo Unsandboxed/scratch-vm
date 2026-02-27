@@ -10,73 +10,9 @@
  * @param {import("../engine/runtime.js")} runtime The runtime.
  */
 const SetupCompiler = function (runtime) {
-    const log = require('../util/log');
     const compilerData = runtime.compilerData;
-    if (!compilerData) return;
-    const {
-        IntermediateStackBlock,
-        IntermediateInput,
-        IntermediateStack,
-        IntermediateScript,
-        IntermediateRepresentation,
-        InputType,
-        InputOpcode,
-        StackOpcode
-        // @ts-expect-error
-    } = compilerData._internalExports;
-    const {
-        sanitize,
-        Frame,
-        SCALAR_TYPE,
-        LIST_TYPE,
-        environment,
-        Cast,
-        PEN_EXT,
-        PEN_STATE
-    } = require('./shared-exports');
-    const exports = {
-        log,
-        environment,
-        IntermediateStackBlock,
-        IntermediateInput,
-        IntermediateStack,
-        IntermediateScript,
-        IntermediateRepresentation,
-        InputType,
-        InputOpcode,
-        StackOpcode,
-        Frame,
-        SCALAR_TYPE,
-        LIST_TYPE,
-        Cast,
-        sanitize,
-        PEN_EXT,
-        PEN_STATE,
-        isSafeInputForEqualsOptimization: (input, other) => {
-            // Only optimize constants
-            if (input.opcode !== InputOpcode.CONSTANT) return false;
-            // Only optimize when the constant can always be thought of as a number
-            if (input.isAlwaysType(InputType.NUMBER) || input.isAlwaysType(InputType.STRING_NUM)) {
-                if (
-                    other.isSometimesType(InputType.STRING_NAN) ||
-                    other.isSometimesType(InputType.BOOLEAN_INTERPRETABLE)
-                ) {
-                    // Never optimize 0 if the other input can be '' or a boolean.
-                    // eg. if '< 0 = "" >' was optimized it would turn into `0 === +""`,
-                    //  which would be true even though Scratch would return false.
-                    return (+input.inputs.value) !== 0;
-                }
-                return true;
-            }
-            return false;
-        }
-    };
-    compilerData.exports = Object.assign(Object.create(null), exports, {
-        JSGenerator: require('./jsgen.js'),
-        IRGenerator: require('./irgen.js').IRGenerator,
-        ScriptTreeGenerator: require('./irgen.js').ScriptTreeGenerator,
-        log: null
-    });
+    if (!runtime.compilerData) return;
+    const exports = require('./exports.js');
     // CORE
     require('./setup-compiler/motion')(compilerData, exports);
     require('./setup-compiler/looks')(compilerData, exports);

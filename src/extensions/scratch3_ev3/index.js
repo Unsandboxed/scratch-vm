@@ -10,143 +10,142 @@ const RateLimiter = require('../../util/rateLimiter.js');
 const log = require('../../util/log');
 
 /**
- * Icon svg to be displayed at the left edge of each extension block, encoded as a data URI.
- * @type {string}
- */
-// eslint-disable-next-line max-len
-const blockIconURI = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48dGl0bGU+ZXYzLWJsb2NrLWljb248L3RpdGxlPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0ibm9uemVybyIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNS41IDMuNSkiPjxyZWN0IHdpZHRoPSIyOCIgaGVpZ2h0PSIyNS44MSIgeD0iLjUiIHk9IjMuNTkiIGZpbGw9IiNmZmYiIHN0cm9rZT0iIzdjODdhNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiByeD0iMSIvPjxyZWN0IHdpZHRoPSIyNCIgaGVpZ2h0PSIzMiIgeD0iMi41IiB5PSIuNSIgZmlsbD0iI2U2ZTdlOCIgc3Ryb2tlPSIjN2M4N2E1IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHJ4PSIxIi8+PHBhdGggZmlsbD0iI2ZmZiIgc3Ryb2tlPSIjN2M4N2E1IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik0yLjUgMTQuNWgyNHYxM2gtMjR6Ii8+PHBhdGggZmlsbD0iI2U2ZTdlOCIgc3Ryb2tlPSIjN2M4N2E1IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik0xNC41IDEwLjV2NCIvPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIxMCIgeD0iNC41IiB5PSIyLjUiIGZpbGw9IiM0MTQ3NTciIHJ4PSIxIi8+PHJlY3Qgd2lkdGg9IjIiIGhlaWdodD0iMiIgeD0iMTMuNSIgeT0iMjAuMTMiIGZpbGw9IiM3Yzg3YTUiIG9wYWNpdHk9Ii41IiByeD0iLjUiLz48cGF0aCBmaWxsPSIjN2M4N2E1IiBkPSJNOS4wNiAyMC4xM2gxLjVhLjUuNSAwIDAgMSAuNS41djFhLjUuNSAwIDAgMS0uNS41aC0xLjVhMSAxIDAgMCAxIDAtMk0xOS45MyAyMi4xM2gtMS41MWEuNS41IDAgMCAxLS41LS41di0xYS41LjUgMCAwIDEgLjUtLjVoMS41YTEgMSAwIDAgMSAuMDEgMk04LjIzIDE3LjVINWEuNS41IDAgMCAxLS41LS41di0yLjVoNmwtMS44NSAyLjc4YS41MS41MSAwIDAgMS0uNDIuMjJNMTguMTUgMTguODVsLS41LjVhLjUuNSAwIDAgMC0uMTUuMzZWMjBhLjUuNSAwIDAgMS0uNS41aC0uNWEuNS41IDAgMCAxLS41LS41LjUuNSAwIDAgMC0uNS0uNWgtMmEuNS41IDAgMCAwLS41LjUuNS41IDAgMCAxLS41LjVIMTJhLjUuNSAwIDAgMS0uNS0uNXYtLjI5YS41LjUgMCAwIDAtLjE1LS4zNmwtLjUtLjVhLjUxLjUxIDAgMCAxIDAtLjcxbDEuNTEtMS40OWEuNDcuNDcgMCAwIDEgLjM1LS4xNWgzLjU4YS40Ny40NyAwIDAgMSAuMzUuMTVsMS41MSAxLjQ5YS41MS41MSAwIDAgMSAwIC43MU0xMC44NSAyMy40NWwuNS0uNWEuNS41IDAgMCAwIC4xNS0uMzZ2LS4yOWEuNS41IDAgMCAxIC41LS41aC41YS41LjUgMCAwIDEgLjUuNS41LjUgMCAwIDAgLjUuNWgyYS41LjUgMCAwIDAgLjUtLjUuNS41IDAgMCAxIC41LS41aC41YS41LjUgMCAwIDEgLjUuNXYuMjlhLjUuNSAwIDAgMCAuMTUuMzZsLjUuNWEuNS41IDAgMCAxIDAgLjdsLTEuNTEgMS41YS40Ny40NyAwIDAgMS0uMzUuMTVoLTMuNThhLjQ3LjQ3IDAgMCAxLS4zNS0uMTVsLTEuNTEtMS41YS41LjUgMCAwIDEgMC0uNyIgb3BhY2l0eT0iLjUiLz48cGF0aCBmaWxsPSIjZjE1YTI5IiBzdHJva2U9IiNjYzRjMjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgZD0iTTIxLjUgMjcuNWg1djRhMSAxIDAgMCAxLTEgMWgtNHoiLz48L2c+PC9zdmc+';
-
-/**
- * String with Ev3 expected pairing pin.
- * @readonly
- */
-const Ev3PairingPin = '1234';
-
-/**
- * A maximum number of BT message sends per second, to be enforced by the rate limiter.
- * @type {number}
- */
-const BTSendRateMax = 40;
-
-/**
- * Enum for Ev3 parameter encodings of various argument and return values.
- * Found in the 'EV3 Firmware Developer Kit', section4, page 9, at
- * https://education.lego.com/en-us/support/mindstorms-ev3/developer-kits.
- *
- * The format for these values is:
- * 0xxxxxxx for Short Format
- * 1ttt-bbb for Long Format
- *
- * @readonly
- * @enum {number}
- */
-const Ev3Encoding = {
-    ONE_BYTE: 0x81, // = 0b1000-001, "1 byte to follow"
-    TWO_BYTES: 0x82, // = 0b1000-010, "2 bytes to follow"
-    FOUR_BYTES: 0x83, // = 0b1000-011, "4 bytes to follow"
-    GLOBAL_VARIABLE_ONE_BYTE: 0xE1, // = 0b1110-001, "1 byte to follow"
-    GLOBAL_CONSTANT_INDEX_0: 0x20, // = 0b00100000
-    GLOBAL_VARIABLE_INDEX_0: 0x60 // = 0b01100000
-};
-
-/**
- * Enum for Ev3 direct command types.
- * Found in the 'EV3 Communication Developer Kit', section 4, page 24, at
- * https://education.lego.com/en-us/support/mindstorms-ev3/developer-kits.
- * @readonly
- * @enum {number}
- */
-const Ev3Command = {
-    DIRECT_COMMAND_REPLY: 0x00,
-    DIRECT_COMMAND_NO_REPLY: 0x80,
-    DIRECT_REPLY: 0x02
-};
-
-/**
- * Enum for Ev3 commands opcodes.
- * Found in the 'EV3 Firmware Developer Kit', section 4, page 10, at
- * https://education.lego.com/en-us/support/mindstorms-ev3/developer-kits.
- * @readonly
- * @enum {number}
- */
-const Ev3Opcode = {
-    OPOUTPUT_STEP_SPEED: 0xAE,
-    OPOUTPUT_TIME_SPEED: 0xAF,
-    OPOUTPUT_STOP: 0xA3,
-    OPOUTPUT_RESET: 0xA2,
-    OPOUTPUT_STEP_SYNC: 0xB0,
-    OPOUTPUT_TIME_SYNC: 0xB1,
-    OPOUTPUT_GET_COUNT: 0xB3,
-    OPSOUND: 0x94,
-    OPSOUND_CMD_TONE: 1,
-    OPSOUND_CMD_STOP: 0,
-    OPINPUT_DEVICE_LIST: 0x98,
-    OPINPUT_READSI: 0x9D
-};
-
-/**
- * Enum for Ev3 values used as arguments to various opcodes.
- * Found in the 'EV3 Firmware Developer Kit', section4, page 10-onwards, at
- * https://education.lego.com/en-us/support/mindstorms-ev3/developer-kits.
- * @readonly
- * @enum {number}
- */
-const Ev3Args = {
-    LAYER: 0, // always 0, chained EV3s not supported
-    COAST: 0,
-    BRAKE: 1,
-    RAMP: 50, // time in milliseconds
-    DO_NOT_CHANGE_TYPE: 0,
-    MAX_DEVICES: 32 // 'Normally 32' from pg. 46
-};
-
-/**
- * Enum for Ev3 device type numbers.
- * Found in the 'EV3 Firmware Developer Kit', section 5, page 100, at
- * https://education.lego.com/en-us/support/mindstorms-ev3/developer-kits.
- * @readonly
- * @enum {string}
- */
-const Ev3Device = {
-    29: 'color',
-    30: 'ultrasonic',
-    32: 'gyro',
-    16: 'touch',
-    8: 'mediumMotor',
-    7: 'largeMotor',
-    126: 'none',
-    125: 'none'
-};
-
-/**
- * Enum for Ev3 device modes.
- * Found in the 'EV3 Firmware Developer Kit', section 5, page 100, at
- * https://education.lego.com/en-us/support/mindstorms-ev3/developer-kits.
- * @readonly
- * @enum {number}
- */
-const Ev3Mode = {
-    touch: 0, // touch
-    color: 1, // ambient
-    ultrasonic: 1, // inch
-    none: 0
-};
-
-/**
- * Enum for Ev3 device labels used in the Scratch blocks/UI.
- * @readonly
- * @enum {string}
- */
-const Ev3Label = {
-    touch: 'button',
-    color: 'brightness',
-    ultrasonic: 'distance'
-};
-
-/**
  * Manage power, direction, and timers for one EV3 motor.
  */
 class EV3Motor {
+    /**
+     * Icon svg to be displayed at the left edge of each extension block, encoded as a data URI.
+     * @type {string}
+     */
+    // eslint-disable-next-line max-len
+    static blockIconURI = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48dGl0bGU+ZXYzLWJsb2NrLWljb248L3RpdGxlPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0ibm9uemVybyIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNS41IDMuNSkiPjxyZWN0IHdpZHRoPSIyOCIgaGVpZ2h0PSIyNS44MSIgeD0iLjUiIHk9IjMuNTkiIGZpbGw9IiNmZmYiIHN0cm9rZT0iIzdjODdhNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiByeD0iMSIvPjxyZWN0IHdpZHRoPSIyNCIgaGVpZ2h0PSIzMiIgeD0iMi41IiB5PSIuNSIgZmlsbD0iI2U2ZTdlOCIgc3Ryb2tlPSIjN2M4N2E1IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHJ4PSIxIi8+PHBhdGggZmlsbD0iI2ZmZiIgc3Ryb2tlPSIjN2M4N2E1IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik0yLjUgMTQuNWgyNHYxM2gtMjR6Ii8+PHBhdGggZmlsbD0iI2U2ZTdlOCIgc3Ryb2tlPSIjN2M4N2E1IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik0xNC41IDEwLjV2NCIvPjxyZWN0IHdpZHRoPSIyMCIgaGVpZ2h0PSIxMCIgeD0iNC41IiB5PSIyLjUiIGZpbGw9IiM0MTQ3NTciIHJ4PSIxIi8+PHJlY3Qgd2lkdGg9IjIiIGhlaWdodD0iMiIgeD0iMTMuNSIgeT0iMjAuMTMiIGZpbGw9IiM3Yzg3YTUiIG9wYWNpdHk9Ii41IiByeD0iLjUiLz48cGF0aCBmaWxsPSIjN2M4N2E1IiBkPSJNOS4wNiAyMC4xM2gxLjVhLjUuNSAwIDAgMSAuNS41djFhLjUuNSAwIDAgMS0uNS41aC0xLjVhMSAxIDAgMCAxIDAtMk0xOS45MyAyMi4xM2gtMS41MWEuNS41IDAgMCAxLS41LS41di0xYS41LjUgMCAwIDEgLjUtLjVoMS41YTEgMSAwIDAgMSAuMDEgMk04LjIzIDE3LjVINWEuNS41IDAgMCAxLS41LS41di0yLjVoNmwtMS44NSAyLjc4YS41MS41MSAwIDAgMS0uNDIuMjJNMTguMTUgMTguODVsLS41LjVhLjUuNSAwIDAgMC0uMTUuMzZWMjBhLjUuNSAwIDAgMS0uNS41aC0uNWEuNS41IDAgMCAxLS41LS41LjUuNSAwIDAgMC0uNS0uNWgtMmEuNS41IDAgMCAwLS41LjUuNS41IDAgMCAxLS41LjVIMTJhLjUuNSAwIDAgMS0uNS0uNXYtLjI5YS41LjUgMCAwIDAtLjE1LS4zNmwtLjUtLjVhLjUxLjUxIDAgMCAxIDAtLjcxbDEuNTEtMS40OWEuNDcuNDcgMCAwIDEgLjM1LS4xNWgzLjU4YS40Ny40NyAwIDAgMSAuMzUuMTVsMS41MSAxLjQ5YS41MS41MSAwIDAgMSAwIC43MU0xMC44NSAyMy40NWwuNS0uNWEuNS41IDAgMCAwIC4xNS0uMzZ2LS4yOWEuNS41IDAgMCAxIC41LS41aC41YS41LjUgMCAwIDEgLjUuNS41LjUgMCAwIDAgLjUuNWgyYS41LjUgMCAwIDAgLjUtLjUuNS41IDAgMCAxIC41LS41aC41YS41LjUgMCAwIDEgLjUuNXYuMjlhLjUuNSAwIDAgMCAuMTUuMzZsLjUuNWEuNS41IDAgMCAxIDAgLjdsLTEuNTEgMS41YS40Ny40NyAwIDAgMS0uMzUuMTVoLTMuNThhLjQ3LjQ3IDAgMCAxLS4zNS0uMTVsLTEuNTEtMS41YS41LjUgMCAwIDEgMC0uNyIgb3BhY2l0eT0iLjUiLz48cGF0aCBmaWxsPSIjZjE1YTI5IiBzdHJva2U9IiNjYzRjMjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgZD0iTTIxLjUgMjcuNWg1djRhMSAxIDAgMCAxLTEgMWgtNHoiLz48L2c+PC9zdmc+';
+
+    /**
+     * String with Ev3 expected pairing pin.
+     * @readonly
+     */
+    static Ev3PairingPin = '1234';
+
+    /**
+     * A maximum number of BT message sends per second, to be enforced by the rate limiter.
+     * @type {number}
+     */
+    static BTSendRateMax = 40;
+
+    /**
+     * Enum for Ev3 parameter encodings of various argument and return values.
+     * Found in the 'EV3 Firmware Developer Kit', section4, page 9, at
+     * https://education.lego.com/en-us/support/mindstorms-ev3/developer-kits.
+     *
+     * The format for these values is:
+     * 0xxxxxxx for Short Format
+     * 1ttt-bbb for Long Format
+     *
+     * @readonly
+     * @enum {number}
+     */
+    static Ev3Encoding = {
+        ONE_BYTE: 0x81, // = 0b1000-001, "1 byte to follow"
+        TWO_BYTES: 0x82, // = 0b1000-010, "2 bytes to follow"
+        FOUR_BYTES: 0x83, // = 0b1000-011, "4 bytes to follow"
+        GLOBAL_VARIABLE_ONE_BYTE: 0xE1, // = 0b1110-001, "1 byte to follow"
+        GLOBAL_CONSTANT_INDEX_0: 0x20, // = 0b00100000
+        GLOBAL_VARIABLE_INDEX_0: 0x60 // = 0b01100000
+    };
+
+    /**
+     * Enum for Ev3 direct command types.
+     * Found in the 'EV3 Communication Developer Kit', section 4, page 24, at
+     * https://education.lego.com/en-us/support/mindstorms-ev3/developer-kits.
+     * @readonly
+     * @enum {number}
+     */
+    static Ev3Command = {
+        DIRECT_COMMAND_REPLY: 0x00,
+        DIRECT_COMMAND_NO_REPLY: 0x80,
+        DIRECT_REPLY: 0x02
+    };
+
+    /**
+     * Enum for Ev3 commands opcodes.
+     * Found in the 'EV3 Firmware Developer Kit', section 4, page 10, at
+     * https://education.lego.com/en-us/support/mindstorms-ev3/developer-kits.
+     * @readonly
+     * @enum {number}
+     */
+    static Ev3Opcode = {
+        OPOUTPUT_STEP_SPEED: 0xAE,
+        OPOUTPUT_TIME_SPEED: 0xAF,
+        OPOUTPUT_STOP: 0xA3,
+        OPOUTPUT_RESET: 0xA2,
+        OPOUTPUT_STEP_SYNC: 0xB0,
+        OPOUTPUT_TIME_SYNC: 0xB1,
+        OPOUTPUT_GET_COUNT: 0xB3,
+        OPSOUND: 0x94,
+        OPSOUND_CMD_TONE: 1,
+        OPSOUND_CMD_STOP: 0,
+        OPINPUT_DEVICE_LIST: 0x98,
+        OPINPUT_READSI: 0x9D
+    };
+
+    /**
+     * Enum for Ev3 values used as arguments to various opcodes.
+     * Found in the 'EV3 Firmware Developer Kit', section4, page 10-onwards, at
+     * https://education.lego.com/en-us/support/mindstorms-ev3/developer-kits.
+     * @readonly
+     * @enum {number}
+     */
+    static Ev3Args = {
+        LAYER: 0, // always 0, chained EV3s not supported
+        COAST: 0,
+        BRAKE: 1,
+        RAMP: 50, // time in milliseconds
+        DO_NOT_CHANGE_TYPE: 0,
+        MAX_DEVICES: 32 // 'Normally 32' from pg. 46
+    };
+
+    /**
+     * Enum for Ev3 device type numbers.
+     * Found in the 'EV3 Firmware Developer Kit', section 5, page 100, at
+     * https://education.lego.com/en-us/support/mindstorms-ev3/developer-kits.
+     * @readonly
+     * @enum {string}
+     */
+    static Ev3Device = {
+        29: 'color',
+        30: 'ultrasonic',
+        32: 'gyro',
+        16: 'touch',
+        8: 'mediumMotor',
+        7: 'largeMotor',
+        126: 'none',
+        125: 'none'
+    };
+
+    /**
+     * Enum for Ev3 device modes.
+     * Found in the 'EV3 Firmware Developer Kit', section 5, page 100, at
+     * https://education.lego.com/en-us/support/mindstorms-ev3/developer-kits.
+     * @readonly
+     * @enum {number}
+     */
+    static Ev3Mode = {
+        touch: 0, // touch
+        color: 1, // ambient
+        ultrasonic: 1, // inch
+        none: 0
+    };
+
+    /**
+     * Enum for Ev3 device labels used in the Scratch blocks/UI.
+     * @readonly
+     * @enum {string}
+     */
+    static Ev3Label = {
+        touch: 'button',
+        color: 'brightness',
+        ultrasonic: 'distance'
+    };
 
     /**
      * Construct a EV3 Motor instance, which could be of type 'largeMotor' or
@@ -303,10 +302,10 @@ class EV3Motor {
         const port = this._portMask(this._index);
         let n = milliseconds;
         let speed = this._power * this._direction;
-        const ramp = Ev3Args.RAMP;
+        const ramp = EV3Motor.Ev3Args.RAMP;
 
         let byteCommand = [];
-        byteCommand[0] = Ev3Opcode.OPOUTPUT_TIME_SPEED;
+        byteCommand[0] = EV3Motor.Ev3Opcode.OPOUTPUT_TIME_SPEED;
 
         // If speed is less than zero, make it positive and multiply the input
         // value by -1
@@ -329,20 +328,20 @@ class EV3Motor {
         // Generate motor command values
         const runcmd = this._runValues(run);
         byteCommand = byteCommand.concat([
-            Ev3Args.LAYER,
+            EV3Motor.Ev3Args.LAYER,
             port,
-            Ev3Encoding.ONE_BYTE,
+            EV3Motor.Ev3Encoding.ONE_BYTE,
             dir & 0xff,
-            Ev3Encoding.ONE_BYTE,
+            EV3Motor.Ev3Encoding.ONE_BYTE,
             rampup
         ]).concat(runcmd.concat([
-            Ev3Encoding.ONE_BYTE,
+            EV3Motor.Ev3Encoding.ONE_BYTE,
             rampdown,
-            Ev3Args.BRAKE
+            EV3Motor.Ev3Args.BRAKE
         ]));
 
         const cmd = this._parent.generateCommand(
-            Ev3Command.DIRECT_COMMAND_NO_REPLY,
+            EV3Motor.Ev3Command.DIRECT_COMMAND_NO_REPLY,
             byteCommand
         );
 
@@ -379,12 +378,12 @@ class EV3Motor {
         if (this._power === 0) return;
 
         const cmd = this._parent.generateCommand(
-            Ev3Command.DIRECT_COMMAND_NO_REPLY,
+            EV3Motor.Ev3Command.DIRECT_COMMAND_NO_REPLY,
             [
-                Ev3Opcode.OPOUTPUT_STOP,
-                Ev3Args.LAYER,
+                EV3Motor.Ev3Opcode.OPOUTPUT_STOP,
+                EV3Motor.Ev3Args.LAYER,
                 this._portMask(this._index), // port output bit field
-                Ev3Args.COAST
+                EV3Motor.Ev3Args.COAST
             ]
         );
 
@@ -400,7 +399,7 @@ class EV3Motor {
         // If run duration is less than max 16-bit integer
         if (run < 0x7fff) {
             return [
-                Ev3Encoding.TWO_BYTES,
+                EV3Motor.Ev3Encoding.TWO_BYTES,
                 run & 0xff,
                 (run >> 8) & 0xff
             ];
@@ -408,7 +407,7 @@ class EV3Motor {
 
         // Run forever
         return [
-            Ev3Encoding.FOUR_BYTES,
+            EV3Motor.Ev3Encoding.FOUR_BYTES,
             run & 0xff,
             (run >> 8) & 0xff,
             (run >> 16) & 0xff,
@@ -430,6 +429,7 @@ class EV3Motor {
 }
 
 class EV3 {
+    static EV3Motor = EV3Motor;
 
     constructor (runtime, extensionId) {
 
@@ -513,7 +513,7 @@ class EV3 {
          * @type {RateLimiter}
          * @private
          */
-        this._rateLimiter = new RateLimiter(BTSendRateMax);
+        this._rateLimiter = new RateLimiter(EV3Motor.BTSendRateMax);
 
         this.reset = this.reset.bind(this);
         this._onConnect = this._onConnect.bind(this);
@@ -548,16 +548,16 @@ class EV3 {
 
     beep (freq, time) {
         const cmd = this.generateCommand(
-            Ev3Command.DIRECT_COMMAND_NO_REPLY,
+            EV3Motor.Ev3Command.DIRECT_COMMAND_NO_REPLY,
             [
-                Ev3Opcode.OPSOUND,
-                Ev3Opcode.OPSOUND_CMD_TONE,
-                Ev3Encoding.ONE_BYTE,
+                EV3Motor.Ev3Opcode.OPSOUND,
+                EV3Motor.Ev3Opcode.OPSOUND_CMD_TONE,
+                EV3Motor.Ev3Encoding.ONE_BYTE,
                 2,
-                Ev3Encoding.TWO_BYTES,
+                EV3Motor.Ev3Encoding.TWO_BYTES,
                 freq,
                 freq >> 8,
-                Ev3Encoding.TWO_BYTES,
+                EV3Motor.Ev3Encoding.TWO_BYTES,
                 time,
                 time >> 8
             ]
@@ -573,10 +573,10 @@ class EV3 {
 
     stopSound () {
         const cmd = this.generateCommand(
-            Ev3Command.DIRECT_COMMAND_NO_REPLY,
+            EV3Motor.Ev3Command.DIRECT_COMMAND_NO_REPLY,
             [
-                Ev3Opcode.OPSOUND,
-                Ev3Opcode.OPSOUND_CMD_STOP
+                EV3Motor.Ev3Opcode.OPSOUND,
+                EV3Motor.Ev3Opcode.OPSOUND_CMD_STOP
             ]
         );
 
@@ -610,7 +610,7 @@ class EV3 {
      */
     connect (id) {
         if (this._bt) {
-            this._bt.connectPeripheral(id, Ev3PairingPin);
+            this._bt.connectPeripheral(id, EV3Motor.Ev3PairingPin);
         }
     }
 
@@ -753,12 +753,12 @@ class EV3 {
         // Reset the list of devices every 20 counts
         if (this._pollingCounter % 20 === 0) {
             // GET DEVICE LIST
-            cmds[0] = Ev3Opcode.OPINPUT_DEVICE_LIST;
-            cmds[1] = Ev3Encoding.ONE_BYTE;
-            cmds[2] = Ev3Args.MAX_DEVICES;
-            cmds[3] = Ev3Encoding.GLOBAL_VARIABLE_INDEX_0;
-            cmds[4] = Ev3Encoding.GLOBAL_VARIABLE_ONE_BYTE;
-            cmds[5] = Ev3Encoding.GLOBAL_CONSTANT_INDEX_0;
+            cmds[0] = EV3Motor.Ev3Opcode.OPINPUT_DEVICE_LIST;
+            cmds[1] = EV3Motor.Ev3Encoding.ONE_BYTE;
+            cmds[2] = EV3Motor.Ev3Args.MAX_DEVICES;
+            cmds[3] = EV3Motor.Ev3Encoding.GLOBAL_VARIABLE_INDEX_0;
+            cmds[4] = EV3Motor.Ev3Encoding.GLOBAL_VARIABLE_ONE_BYTE;
+            cmds[5] = EV3Motor.Ev3Encoding.GLOBAL_CONSTANT_INDEX_0;
 
             // Command and payload lengths
             allocation = 33;
@@ -769,12 +769,12 @@ class EV3 {
             let index = 0;
             for (let i = 0; i < 4; i++) {
                 if (this._sensorPorts[i] !== 'none') {
-                    cmds[index + 0] = Ev3Opcode.OPINPUT_READSI;
-                    cmds[index + 1] = Ev3Args.LAYER;
+                    cmds[index + 0] = EV3Motor.Ev3Opcode.OPINPUT_READSI;
+                    cmds[index + 1] = EV3Motor.Ev3Args.LAYER;
                     cmds[index + 2] = i; // PORT
-                    cmds[index + 3] = Ev3Args.DO_NOT_CHANGE_TYPE;
-                    cmds[index + 4] = Ev3Mode[this._sensorPorts[i]];
-                    cmds[index + 5] = Ev3Encoding.GLOBAL_VARIABLE_ONE_BYTE;
+                    cmds[index + 3] = EV3Motor.Ev3Args.DO_NOT_CHANGE_TYPE;
+                    cmds[index + 4] = EV3Motor.Ev3Mode[this._sensorPorts[i]];
+                    cmds[index + 5] = EV3Motor.Ev3Encoding.GLOBAL_VARIABLE_ONE_BYTE;
                     cmds[index + 6] = sensorCount * 4; // GLOBAL INDEX
                     index += 7;
                 }
@@ -783,10 +783,10 @@ class EV3 {
 
             // GET MOTOR POSITION VALUES, EVEN IF NO MOTOR PRESENT
             for (let i = 0; i < 4; i++) {
-                cmds[index + 0] = Ev3Opcode.OPOUTPUT_GET_COUNT;
-                cmds[index + 1] = Ev3Args.LAYER;
+                cmds[index + 0] = EV3Motor.Ev3Opcode.OPOUTPUT_GET_COUNT;
+                cmds[index + 1] = EV3Motor.Ev3Args.LAYER;
                 cmds[index + 2] = i; // PORT (incorrectly specified as 'Output bit field' in LEGO docs)
-                cmds[index + 3] = Ev3Encoding.GLOBAL_VARIABLE_ONE_BYTE;
+                cmds[index + 3] = EV3Motor.Ev3Encoding.GLOBAL_VARIABLE_ONE_BYTE;
                 cmds[index + 4] = sensorCount * 4; // GLOBAL INDEX
                 index += 5;
                 sensorCount++;
@@ -797,7 +797,7 @@ class EV3 {
         }
 
         const cmd = this.generateCommand(
-            Ev3Command.DIRECT_COMMAND_REPLY,
+            EV3Motor.Ev3Command.DIRECT_COMMAND_REPLY,
             cmds,
             allocation
         );
@@ -834,7 +834,7 @@ class EV3 {
         const message = params.message;
         const data = Base64Util.base64ToUint8Array(message);
 
-        if (data[4] !== Ev3Command.DIRECT_REPLY) {
+        if (data[4] !== EV3Motor.Ev3Command.DIRECT_REPLY) {
             return;
         }
 
@@ -842,12 +842,12 @@ class EV3 {
 
             // PARSE DEVICE LIST
             for (let i = 0; i < 4; i++) {
-                const deviceType = Ev3Device[data[i + 5]];
+                const deviceType = EV3Motor.Ev3Device[data[i + 5]];
                 // if returned device type is null, use 'none'
                 this._sensorPorts[i] = deviceType ? deviceType : 'none';
             }
             for (let i = 0; i < 4; i++) {
-                const deviceType = Ev3Device[data[i + 21]];
+                const deviceType = EV3Motor.Ev3Device[data[i + 21]];
                 // if returned device type is null, use 'none'
                 this._motorPorts[i] = deviceType ? deviceType : 'none';
             }
@@ -880,12 +880,12 @@ class EV3 {
                 const view = new DataView(buffer);
                 const value = view.getFloat32(0, true);
 
-                if (Ev3Label[this._sensorPorts[i]] === 'button') {
+                if (EV3Motor.Ev3Label[this._sensorPorts[i]] === 'button') {
                     // Read a button value per port
                     this._sensors.buttons[i] = value ? value : 0;
-                } else if (Ev3Label[this._sensorPorts[i]]) { // if valid
+                } else if (EV3Motor.Ev3Label[this._sensorPorts[i]]) { // if valid
                     // Read brightness / distance values and set to 0 if null
-                    this._sensors[Ev3Label[this._sensorPorts[i]]] = value ? value : 0;
+                    this._sensors[EV3Motor.Ev3Label[this._sensorPorts[i]]] = value ? value : 0;
                 }
                 offset += 4;
             }
@@ -961,7 +961,7 @@ class Scratch3Ev3Blocks {
         return {
             id: Scratch3Ev3Blocks.EXTENSION_ID,
             name: 'LEGO EV3',
-            blockIconURI: blockIconURI,
+            blockIconURI: EV3Motor.blockIconURI,
             showStatusButton: true,
             blocks: [
                 {

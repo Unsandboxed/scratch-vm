@@ -736,4 +736,8 @@ execute.runtimeFunctions = runtimeFunctions;
 execute.saveGlobalState = saveGlobalState;
 execute.restoreGlobalState = restoreGlobalState;
 
+execute.baseRuntime = baseRuntime;
+execute.threadStack = threadStack;
+execute.globalState = globalState;
+
 module.exports = execute;

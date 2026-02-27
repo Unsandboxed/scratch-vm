@@ -2,6 +2,8 @@ const mutationAdapter = require('./mutation-adapter');
 const html = require('htmlparser2');
 const uid = require('../util/uid');
 
+const E = {html};
+
 /**
  * Convert and an individual block DOM to the representation tree.
  * Based on Blockly's `domToBlockHeadless_`.
@@ -11,7 +13,7 @@ const uid = require('../util/uid');
  * @param {?string} parent Parent block ID.
  * @return {undefined}
  */
-const domToBlock = function (blockDOM, blocks, isTopBlock, parent) {
+E.domToBlock = function (blockDOM, blocks, isTopBlock, parent) {
     if (!blockDOM.attribs.id) {
         blockDOM.attribs.id = uid();
     }
@@ -95,10 +97,10 @@ const domToBlock = function (blockDOM, blocks, isTopBlock, parent) {
         case 'statement':
         {
             // Recursively generate block structure for input block.
-            domToBlock(childBlockNode, blocks, false, block.id);
+            E.domToBlock(childBlockNode, blocks, false, block.id);
             if (childShadowNode && childBlockNode !== childShadowNode) {
                 // Also generate the shadow block.
-                domToBlock(childShadowNode, blocks, false, block.id);
+                E.domToBlock(childShadowNode, blocks, false, block.id);
             }
             // Link this block's input to the child block.
             const inputName = xmlChild.attribs.name;
@@ -116,7 +118,7 @@ const domToBlock = function (blockDOM, blocks, isTopBlock, parent) {
                 continue;
             }
             // Recursively generate block structure for next block.
-            domToBlock(childBlockNode, blocks, false, block.id);
+            E.domToBlock(childBlockNode, blocks, false, block.id);
             // Link next block to this block.
             block.next = childBlockNode.attribs.id;
             break;
@@ -137,7 +139,7 @@ const domToBlock = function (blockDOM, blocks, isTopBlock, parent) {
  * @param {Element} blocksDOM DOM tree for this event.
  * @return {Array.<object>} Usable list of blocks from this CREATE event.
  */
-const domToBlocks = function (blocksDOM) {
+E.domToBlocks = function (blocksDOM) {
     // At this level, there could be multiple blocks adjacent in the DOM tree.
     const blocks = {};
     for (let i = 0; i < blocksDOM.length; i++) {
@@ -147,7 +149,7 @@ const domToBlocks = function (blocksDOM) {
         }
         const tagName = block.name.toLowerCase();
         if (tagName === 'block' || tagName === 'shadow') {
-            domToBlock(block, blocks, true, null);
+            E.domToBlock(block, blocks, true, null);
         }
     }
     // Flatten blocks object into a list.
@@ -170,7 +172,9 @@ const adapter = function (e) {
     if (typeof e !== 'object') return;
     if (typeof e.xml !== 'object') return;
 
-    return domToBlocks(html.parseDOM(e.xml.outerHTML, {decodeEntities: true}));
+    return E.domToBlocks(html.parseDOM(e.xml.outerHTML, {decodeEntities: true}));
 };
+
+adapter.exports = E;
 
 module.exports = adapter;

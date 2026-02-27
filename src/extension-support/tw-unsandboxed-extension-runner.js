@@ -7,12 +7,14 @@ const staticFetch = require('../util/tw-static-fetch');
 
 /* eslint-disable require-await */
 
+const E = {};
+
 /**
  * Parse a URL object or return null.
  * @param {string} url
  * @returns {URL|null}
  */
-const parseURL = url => {
+E.parseURL = url => {
     try {
         return new URL(url, location.href);
     } catch (e) {
@@ -26,7 +28,7 @@ const parseURL = url => {
  * @param {boolean} pre Whether or not this is a "pre-mature" load
  * @returns {Promise<object[]>} Resolves with a list of extension objects when Scratch.extensions.register is called.
  */
-const setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
+E.setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
     pre = pre || false;
     const extensionObjects = [];
     const register = pre ? (() => {
@@ -49,7 +51,7 @@ const setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
     Scratch.renderer = vm.runtime.renderer;
 
     Scratch.canFetch = async url => {
-        const parsed = parseURL(url);
+        const parsed = E.parseURL(url);
         if (!parsed) {
             return false;
         }
@@ -61,7 +63,7 @@ const setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
     };
 
     Scratch.canOpenWindow = async url => {
-        const parsed = parseURL(url);
+        const parsed = E.parseURL(url);
         if (!parsed) {
             return false;
         }
@@ -74,7 +76,7 @@ const setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
     };
 
     Scratch.canRedirect = async url => {
-        const parsed = parseURL(url);
+        const parsed = E.parseURL(url);
         if (!parsed) {
             return false;
         }
@@ -97,7 +99,7 @@ const setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
     Scratch.canGeolocate = async () => vm.securityManager.canGeolocate();
 
     Scratch.canEmbed = async url => {
-        const parsed = parseURL(url);
+        const parsed = E.parseURL(url);
         if (!parsed) {
             return false;
         }
@@ -105,7 +107,7 @@ const setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
     };
 
     Scratch.canDownload = async (url, name) => {
-        const parsed = parseURL(url);
+        const parsed = E.parseURL(url);
         if (!parsed) {
             return false;
         }
@@ -181,7 +183,7 @@ const setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
  * Disable the existing global.Scratch unsandboxed extension APIs.
  * This helps debug poorly designed extensions.
  */
-const teardownUnsandboxedExtensionAPI = () => {
+E.teardownUnsandboxedExtensionAPI = () => {
     // We can assume global.Scratch already exists.
     global.Scratch.extensions.register = () => {
         throw new Error('Too late to register new extensions.');
@@ -194,8 +196,8 @@ const teardownUnsandboxedExtensionAPI = () => {
  * @param {Virtualmachine} vm
  * @returns {Promise<object[]>} Resolves with a list of extension objects if the extension was loaded successfully.
  */
-const loadUnsandboxedExtension = (extensionURL, vm) => new Promise((resolve, reject) => {
-    setupUnsandboxedExtensionAPI(vm).then(resolve);
+E.loadUnsandboxedExtension = (extensionURL, vm) => new Promise((resolve, reject) => {
+    E.setupUnsandboxedExtensionAPI(vm).then(resolve);
 
     const script = document.createElement('script');
     script.onerror = () => {
@@ -204,16 +206,13 @@ const loadUnsandboxedExtension = (extensionURL, vm) => new Promise((resolve, rej
     script.src = extensionURL;
     document.body.appendChild(script);
 }).then(objects => {
-    teardownUnsandboxedExtensionAPI();
+    E.teardownUnsandboxedExtensionAPI();
     return objects;
 });
 
 // Because loading unsandboxed extensions requires messing with global state (global.Scratch),
 // only let one extension load at a time.
-const limiter = new AsyncLimiter(loadUnsandboxedExtension, 1);
-const load = (extensionURL, vm) => limiter.do(extensionURL, vm);
+E.limiter = new AsyncLimiter(E.loadUnsandboxedExtension, 1);
+E.load = (extensionURL, vm) => E.limiter.do(extensionURL, vm);
 
-module.exports = {
-    setupUnsandboxedExtensionAPI,
-    load
-};
+module.exports = E;

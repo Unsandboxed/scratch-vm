@@ -1,38 +1,42 @@
 const uid = require('../util/uid');
-const frameSource = require('./tw-load-script-as-plain-text!./tw-iframe-extension-worker-entry');
 
-const none = "'none'";
-const featurePolicy = {
-    'accelerometer': none,
-    'ambient-light-sensor': none,
-    'battery': none,
-    'camera': none,
-    'display-capture': none,
-    'document-domain': none,
-    'encrypted-media': none,
-    'fullscreen': none,
-    'geolocation': none,
-    'gyroscope': none,
-    'magnetometer': none,
-    'microphone': none,
-    'midi': none,
-    'payment': none,
-    'picture-in-picture': none,
-    'publickey-credentials-get': none,
-    'speaker-selection': none,
-    'usb': none,
-    'vibrate': none,
-    'vr': none,
-    'screen-wake-lock': none,
-    'web-share': none,
-    'interest-cohort': none
+const E = {};
+E.frameSource = require('./tw-load-script-as-plain-text!./tw-iframe-extension-worker-entry');
+
+E.none = "'none'";
+E.featurePolicy = {
+    'accelerometer': E.none,
+    'ambient-light-sensor': E.none,
+    'battery': E.none,
+    'camera': E.none,
+    'display-capture': E.none,
+    'document-domain': E.none,
+    'encrypted-media': E.none,
+    'fullscreen': E.none,
+    'geolocation': E.none,
+    'gyroscope': E.none,
+    'magnetometer': E.none,
+    'microphone': E.none,
+    'midi': E.none,
+    'payment': E.none,
+    'picture-in-picture': E.none,
+    'publickey-credentials-get': E.none,
+    'speaker-selection': E.none,
+    'usb': E.none,
+    'vibrate': E.none,
+    'vr': E.none,
+    'screen-wake-lock': E.none,
+    'web-share': E.none,
+    'interest-cohort': E.none
 };
 
-const generateAllow = () => Object.entries(featurePolicy)
+E.generateAllow = () => Object.entries(E.featurePolicy)
     .map(([name, permission]) => `${name} ${permission}`)
     .join('; ');
 
 class IframeExtensionWorker {
+    static exports = E;
+
     constructor () {
         this.id = uid();
         this.isRemote = true;
@@ -45,13 +49,13 @@ class IframeExtensionWorker {
         this.iframe.style.display = 'none';
         this.iframe.setAttribute('aria-hidden', 'true');
         this.iframe.sandbox = 'allow-scripts';
-        this.iframe.allow = generateAllow();
+        this.iframe.allow = E.generateAllow();
         document.body.appendChild(this.iframe);
 
         window.addEventListener('message', this._onWindowMessage.bind(this));
         const blob = new Blob([
             // eslint-disable-next-line max-len
-            `<!DOCTYPE html><body><script>window.__WRAPPED_IFRAME_ID__=${JSON.stringify(this.id)};${frameSource}</script></body>`
+            `<!DOCTYPE html><body><script>window.__WRAPPED_IFRAME_ID__=${JSON.stringify(this.id)};${E.frameSource}</script></body>`
         ], {
             type: 'text/html; charset=utf-8'
         });

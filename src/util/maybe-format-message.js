@@ -15,4 +15,5 @@ const maybeFormatMessage = function (maybeMessage, args, locale) {
     return maybeMessage;
 };
 
+maybeFormatMessage._formatMessage = formatMessage;
 module.exports = maybeFormatMessage;

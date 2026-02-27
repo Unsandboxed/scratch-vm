@@ -1480,4 +1480,21 @@ BlocksRuntimeCache.getScripts = function (blocks, opcode) {
     return scripts;
 };
 
+Blocks.exports = {
+    BlocksExecuteCache,
+    BlocksRuntimeCache,
+
+    Variable: require('./variable'),
+    Comment: require('./comment'),
+    MonitorRecord,
+    MonitorState: require('./tw-monitor-state'),
+    ScratchBlocksConstants: require('./scratch-blocks-constants'),
+
+    newBlockIds: require('../util/new-block-ids'),
+    getMonitorId: require('../util/get-monitor-id'),
+
+    adapter,
+    mutationAdapter
+};
+
 module.exports = Blocks;

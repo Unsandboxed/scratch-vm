@@ -1,3 +1,5 @@
+const E = {};
+
 /**
  * Serialize all the assets of the given type ('sounds' or 'costumes')
  * in the provided runtime into an array of file descriptors.
@@ -8,7 +10,7 @@
  * @param {string=} optTargetId Optional target id to serialize assets for
  * @returns {Array<object>} An array of file descriptors for each asset
  */
-const serializeAssets = function (runtime, assetType, optTargetId) {
+E.serializeAssets = function (runtime, assetType, optTargetId) {
     const targets = optTargetId ? [runtime.getTargetById(optTargetId)] : runtime.targets;
     const assetDescs = [];
     for (let i = 0; i < targets.length; i++) {
@@ -38,8 +40,8 @@ const serializeAssets = function (runtime, assetType, optTargetId) {
  * @param {string=} optTargetId Optional targetid for serializing sounds of a single target
  * @returns {Array<object>} An array of file descriptors for each sound
  */
-const serializeSounds = function (runtime, optTargetId) {
-    return serializeAssets(runtime, 'sounds', optTargetId);
+E.serializeSounds = function (runtime, optTargetId) {
+    return E.serializeAssets(runtime, 'sounds', optTargetId);
 };
 
 /**
@@ -50,11 +52,8 @@ const serializeSounds = function (runtime, optTargetId) {
  * @param {string} optTargetId Optional targetid for serializing costumes of a single target
  * @returns {Array<object>} An array of file descriptors for each costume
  */
-const serializeCostumes = function (runtime, optTargetId) {
-    return serializeAssets(runtime, 'costumes', optTargetId);
+E.serializeCostumes = function (runtime, optTargetId) {
+    return E.serializeAssets(runtime, 'costumes', optTargetId);
 };
 
-module.exports = {
-    serializeSounds,
-    serializeCostumes
-};
+module.exports = E;

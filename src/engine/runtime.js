@@ -24,8 +24,6 @@ const fetchWithTimeout = require('../util/fetch-with-timeout');
 const platform = require('./tw-platform.js');
 const MonitorState = require('./tw-monitor-state.js');
 
-const CORE_BLOCKS = [];
-
 // Virtual I/O devices.
 const Clock = require('../io/clock');
 const Cloud = require('../io/cloud');
@@ -58,196 +56,204 @@ const MonitorRecord = require('./monitor-record.js');
 const Camera = require('./camera');
 const Cast = require('../util/cast.js');
 
-const defaultExtensionColors = ['#0FBD8C', '#0DA57A', '#0B8E69'];
+const RuntimeInternals = {
+    CORE_BLOCKS: [],
+    defaultExtensionColors: ['#0FBD8C', '#0DA57A', '#0B8E69'],
 
-const COMMENT_CONFIG_MAGIC = ' // _twconfig_';
+    COMMENT_CONFIG_MAGIC: ' // _twconfig_',
 
-/**
- * Information used for converting Scratch argument types into scratch-blocks data.
- * @type {object.<ArgumentType, {shadowType: string, fieldType: string}>}
- */
-const ArgumentTypeMap = (() => {
-    const map = {};
-    map[ArgumentType.ANGLE] = {
-        shadow: {
-            type: 'math_angle',
-            // We specify fieldNames here so that we can pick
-            // create and populate a field with the defaultValue
-            // specified in the extension.
-            // When the `fieldName` property is not specified,
-            // the <field></field> will be left out of the XML and
-            // the scratch-blocks defaults for that field will be
-            // used instead (e.g. default of 0 for number fields)
-            fieldName: 'NUM'
-        }
-    };
-    map[ArgumentType.COLOR] = {
-        shadow: {
-            type: 'colour_picker',
-            fieldName: 'COLOUR'
-        }
-    };
-    map[ArgumentType.NUMBER] = {
-        shadow: {
-            type: 'math_number',
-            fieldName: 'NUM'
-        }
-    };
-    map[ArgumentType.STRING] = {
-        shadow: {
-            type: 'text',
-            fieldName: 'TEXT'
-        }
-    };
-    map[ArgumentType.BOOLEAN] = {
-        check: 'Boolean'
-    };
-    map[ArgumentType.ARRAY] = {
-        check: 'Array'
-    };
-    map[ArgumentType.OBJECT] = {
-        check: 'Object'
-    };
-    map[ArgumentType.MATRIX] = {
-        shadow: {
-            type: 'matrix',
-            fieldName: 'MATRIX'
-        }
-    };
-    map[ArgumentType.NOTE] = {
-        shadow: {
-            type: 'note',
-            fieldName: 'NOTE'
-        }
-    };
-    map[ArgumentType.IMAGE] = {
-        // Inline images are weird because they're not actually "arguments".
-        // They are more analagous to the label on a block.
-        fieldType: 'field_image'
-    };
-    map[ArgumentType.COSTUME] = {
-        shadow: {
-            type: 'looks_costume',
-            fieldName: 'COSTUME'
-        }
-    };
-    map[ArgumentType.SOUND] = {
-        shadow: {
-            type: 'sound_sounds_menu',
-            fieldName: 'SOUND_MENU'
-        }
-    };
-    map[ArgumentType.VARIABLE] = {
-        fieldType: 'field_variable',
-        fieldName: 'VARIABLE'
-    };
-    map[ArgumentType.LABEL] = {
-        fieldType: 'field_label_serializable',
-        fieldName: 'LABEL'
-    };
-    map[ArgumentType.PARAMETER] = {
-        shadow: {
-            type: 'argument_reporter_string_number',
-            fieldName: 'VALUE'
-        }
-    };
-    return map;
-})();
+    defaultBlockPackages,
 
-const FieldTypeMap = (() => {
-    const map = {};
-    map[ArgumentType.ANGLE] = {
-        fieldName: 'field_angle'
-    };
-    map[ArgumentType.NUMBER] = {
-        fieldName: 'field_number'
-    };
-    map[ArgumentType.STRING] = {
-        fieldName: 'field_input'
-    };
-    map[ArgumentType.NOTE] = {
-        fieldName: 'field_note'
-    };
-    return map;
-})();
+    /**
+     * Information used for converting Scratch argument types into scratch-blocks data.
+     * @type {object.<ArgumentType, {shadowType: string, fieldType: string}>}
+     */
+    ArgumentTypeMap: (() => {
+        const map = {};
+        map[ArgumentType.ANGLE] = {
+            shadow: {
+                type: 'math_angle',
+                // We specify fieldNames here so that we can pick
+                // create and populate a field with the defaultValue
+                // specified in the extension.
+                // When the `fieldName` property is not specified,
+                // the <field></field> will be left out of the XML and
+                // the scratch-blocks defaults for that field will be
+                // used instead (e.g. default of 0 for number fields)
+                fieldName: 'NUM'
+            }
+        };
+        map[ArgumentType.COLOR] = {
+            shadow: {
+                type: 'colour_picker',
+                fieldName: 'COLOUR'
+            }
+        };
+        map[ArgumentType.NUMBER] = {
+            shadow: {
+                type: 'math_number',
+                fieldName: 'NUM'
+            }
+        };
+        map[ArgumentType.STRING] = {
+            shadow: {
+                type: 'text',
+                fieldName: 'TEXT'
+            }
+        };
+        map[ArgumentType.BOOLEAN] = {
+            check: 'Boolean'
+        };
+        map[ArgumentType.ARRAY] = {
+            check: 'Array'
+        };
+        map[ArgumentType.OBJECT] = {
+            check: 'Object'
+        };
+        map[ArgumentType.MATRIX] = {
+            shadow: {
+                type: 'matrix',
+                fieldName: 'MATRIX'
+            }
+        };
+        map[ArgumentType.NOTE] = {
+            shadow: {
+                type: 'note',
+                fieldName: 'NOTE'
+            }
+        };
+        map[ArgumentType.IMAGE] = {
+            // Inline images are weird because they're not actually "arguments".
+            // They are more analagous to the label on a block.
+            fieldType: 'field_image'
+        };
+        map[ArgumentType.COSTUME] = {
+            shadow: {
+                type: 'looks_costume',
+                fieldName: 'COSTUME'
+            }
+        };
+        map[ArgumentType.SOUND] = {
+            shadow: {
+                type: 'sound_sounds_menu',
+                fieldName: 'SOUND_MENU'
+            }
+        };
+        map[ArgumentType.VARIABLE] = {
+            fieldType: 'field_variable',
+            fieldName: 'VARIABLE'
+        };
+        map[ArgumentType.LABEL] = {
+            fieldType: 'field_label_serializable',
+            fieldName: 'LABEL'
+        };
+        map[ArgumentType.PARAMETER] = {
+            shadow: {
+                type: 'argument_reporter_string_number',
+                fieldName: 'VALUE'
+            }
+        };
+        return map;
+    })(),
 
-/**
- * A pair of functions used to manage the cloud variable limit,
- * to be used when adding (or attempting to add) or removing a cloud variable.
- * @typedef {object} CloudDataManager
- * @property {function} canAddCloudVariable A function to call to check that
- * a cloud variable can be added.
- * @property {function} addCloudVariable A function to call to track a new
- * cloud variable on the runtime.
- * @property {function} removeCloudVariable A function to call when
- * removing an existing cloud variable.
- * @property {function} hasCloudVariables A function to call to check that
- * the runtime has any cloud variables.
- * @property {function} getNumberOfCloudVariables A function that returns the
- * number of cloud variables in the project.
- */
+    FieldTypeMap: (() => {
+        const map = {};
+        map[ArgumentType.ANGLE] = {
+            fieldName: 'field_angle'
+        };
+        map[ArgumentType.NUMBER] = {
+            fieldName: 'field_number'
+        };
+        map[ArgumentType.STRING] = {
+            fieldName: 'field_input'
+        };
+        map[ArgumentType.NOTE] = {
+            fieldName: 'field_note'
+        };
+        return map;
+    })(),
 
-/**
- * Creates and manages cloud variable limit in a project,
- * and returns two functions to be used to add a new
- * cloud variable (while checking that it can be added)
- * and remove an existing cloud variable.
- * These are to be called whenever attempting to create or delete
- * a cloud variable.
- * @param {Object} cloudOptions
- * @param {number} cloudOptions.limit Maximum number of cloud variables
- * @return {CloudDataManager} The functions to be used when adding or removing a
- * cloud variable.
- */
-const cloudDataManager = cloudOptions => {
-    let count = 0;
+    /**
+     * A pair of functions used to manage the cloud variable limit,
+     * to be used when adding (or attempting to add) or removing a cloud variable.
+     * @typedef {object} CloudDataManager
+     * @property {function} canAddCloudVariable A function to call to check that
+     * a cloud variable can be added.
+     * @property {function} addCloudVariable A function to call to track a new
+     * cloud variable on the runtime.
+     * @property {function} removeCloudVariable A function to call when
+     * removing an existing cloud variable.
+     * @property {function} hasCloudVariables A function to call to check that
+     * the runtime has any cloud variables.
+     * @property {function} getNumberOfCloudVariables A function that returns the
+     * number of cloud variables in the project.
+     */
 
-    const canAddCloudVariable = () => count < cloudOptions.limit;
+    /**
+     * Creates and manages cloud variable limit in a project,
+     * and returns two functions to be used to add a new
+     * cloud variable (while checking that it can be added)
+     * and remove an existing cloud variable.
+     * These are to be called whenever attempting to create or delete
+     * a cloud variable.
+     * @param {Object} cloudOptions
+     * @param {number} cloudOptions.limit Maximum number of cloud variables
+     * @return {CloudDataManager} The functions to be used when adding or removing a
+     * cloud variable.
+     */
+    cloudDataManager: cloudOptions => {
+        let count = 0;
 
-    const addCloudVariable = () => {
-        count++;
-    };
+        const canAddCloudVariable = () => count < cloudOptions.limit;
 
-    const removeCloudVariable = () => {
-        count--;
-    };
+        const addCloudVariable = () => {
+            count++;
+        };
 
-    const hasCloudVariables = () => count > 0;
+        const removeCloudVariable = () => {
+            count--;
+        };
 
-    const getNumberOfCloudVariables = () => count;
+        const hasCloudVariables = () => count > 0;
 
-    return {
-        canAddCloudVariable,
-        addCloudVariable,
-        removeCloudVariable,
-        hasCloudVariables,
-        getNumberOfCloudVariables
-    };
+        const getNumberOfCloudVariables = () => count;
+
+        return {
+            canAddCloudVariable,
+            addCloudVariable,
+            removeCloudVariable,
+            hasCloudVariables,
+            getNumberOfCloudVariables
+        };
+    },
+
+    /**
+     * Numeric ID for Runtime._step in Profiler instances.
+     * @type {number}
+     */
+    stepProfilerId: -1,
+
+    /**
+     * Numeric ID for Sequencer.stepThreads in Profiler instances.
+     * @type {number}
+     */
+    stepThreadsProfilerId: -1,
+
+    /**
+     * Numeric ID for RenderWebGL.draw in Profiler instances.
+     * @type {number}
+     */
+    rendererDrawProfilerId: -1
 };
 
-/**
- * Numeric ID for Runtime._step in Profiler instances.
- * @type {number}
- */
-let stepProfilerId = -1;
-
-/**
- * Numeric ID for Sequencer.stepThreads in Profiler instances.
- * @type {number}
- */
-let stepThreadsProfilerId = -1;
-
-/**
- * Numeric ID for RenderWebGL.draw in Profiler instances.
- * @type {number}
- */
-let rendererDrawProfilerId = -1;
 
 /**
  * Manages targets, scripts, and the sequencer.
  * @constructor
  */
 class Runtime extends EventEmitter {
+    static exports = RuntimeInternals;
+
     constructor () {
         super();
 
@@ -436,7 +442,7 @@ class Runtime extends EventEmitter {
             limit: 10
         };
 
-        const newCloudDataManager = cloudDataManager(this.cloudOptions);
+        const newCloudDataManager = RuntimeInternals.cloudDataManager(this.cloudOptions);
 
         /**
          * Check wether the runtime has any cloud data.
@@ -628,8 +634,8 @@ class Runtime extends EventEmitter {
                 console.warn('You are using unsupported APIs. WHEN your code breaks, do not expect help.');
                 return ({
                     ScratchBlocksConstants,
-                    ArgumentTypeMap,
-                    FieldTypeMap
+                    ArgumentTypeMap: RuntimeInternals.ArgumentTypeMap,
+                    FieldTypeMap: RuntimeInternals.FieldTypeMap
                 });
             }
         };
@@ -1221,6 +1227,7 @@ class Runtime extends EventEmitter {
      * @param {object} fallbacks extension info
      */
     _mapColours (info, skipGen, fallbacks) {
+        const defaultExtensionColors = RuntimeInternals.defaultExtensionColors;
         // this is an absurd function meant to generate every possible colour setup onto one object :P
         if (Array.isArray(fallbacks)) {
             fallbacks = {
@@ -1631,10 +1638,10 @@ class Runtime extends EventEmitter {
 
         // Allow easily detecting which blocks use default colors
         if (
-            blockJSON.colour === defaultExtensionColors[0] &&
-            blockJSON.colourSecondary === defaultExtensionColors[1] &&
-            blockJSON.colourTertiary === defaultExtensionColors[2] &&
-            blockJSON.colourQuaternary === defaultExtensionColors[2]
+            blockJSON.colour === RuntimeInternals.defaultExtensionColors[0] &&
+            blockJSON.colourSecondary === RuntimeInternals.defaultExtensionColors[1] &&
+            blockJSON.colourTertiary === RuntimeInternals.defaultExtensionColors[2] &&
+            blockJSON.colourQuaternary === RuntimeInternals.defaultExtensionColors[2]
         ) {
             blockJSON.extensions.push('default_extension_colors');
         }
@@ -1952,11 +1959,11 @@ class Runtime extends EventEmitter {
     _convertPlaceholders (context, match, placeholder) {
         // Determine whether the argument type is one of the known standard field types
         const argInfo = context.blockInfo.arguments[placeholder] || {};
-        let argTypeInfo = ArgumentTypeMap[argInfo.type] || {};
+        let argTypeInfo = RuntimeInternals.ArgumentTypeMap[argInfo.type] || {};
         const customShape = context.categoryInfo.customShapes[argInfo.type] || null;
 
         // Field type not a standard field type, see if extension has registered custom field type
-        if (!ArgumentTypeMap[argInfo.type] && context.categoryInfo.customFieldTypes[argInfo.type]) {
+        if (!RuntimeInternals.ArgumentTypeMap[argInfo.type] && context.categoryInfo.customFieldTypes[argInfo.type]) {
             argTypeInfo = context.categoryInfo.customFieldTypes[argInfo.type].argumentTypeInfo;
         } else if (customShape) {
             argTypeInfo = customShape.argTypeInfo(context);
@@ -2023,8 +2030,8 @@ class Runtime extends EventEmitter {
                     shadowType = null;
                     fieldName = placeholder;
                 }
-            } else if (argInfo.acceptReporters === false && FieldTypeMap[argInfo.type]) {
-                argJSON.type = FieldTypeMap[argInfo.type].fieldName;
+            } else if (argInfo.acceptReporters === false && RuntimeInternals.FieldTypeMap[argInfo.type]) {
+                argJSON.type = RuntimeInternals.FieldTypeMap[argInfo.type].fieldName;
                 valueName = null;
                 shadowType = null;
                 fieldName = placeholder;
@@ -2819,7 +2826,7 @@ class Runtime extends EventEmitter {
         this.ioDevices.cloud.clear();
 
         // Reset runtime cloud data info
-        const newCloudDataManager = cloudDataManager(this.cloudOptions);
+        const newCloudDataManager = RuntimeInternals.cloudDataManager(this.cloudOptions);
         this.hasCloudData = newCloudDataManager.hasCloudVariables;
         this.canAddCloudVariable = newCloudDataManager.canAddCloudVariable;
         this.getNumberOfCloudVariables = newCloudDataManager.getNumberOfCloudVariables;
@@ -3032,10 +3039,10 @@ class Runtime extends EventEmitter {
         }
 
         if (this.profiler !== null) {
-            if (stepProfilerId === -1) {
-                stepProfilerId = this.profiler.idByName('Runtime._step');
+            if (RuntimeInternals.stepProfilerId === -1) {
+                RuntimeInternals.stepProfilerId = this.profiler.idByName('Runtime._step');
             }
-            this.profiler.start(stepProfilerId);
+            this.profiler.start(RuntimeInternals.stepProfilerId);
         }
 
         // Clean up threads that were told to stop during or since the last step
@@ -3053,10 +3060,10 @@ class Runtime extends EventEmitter {
         this.redrawRequested = false;
         this._pushMonitors();
         if (this.profiler !== null) {
-            if (stepThreadsProfilerId === -1) {
-                stepThreadsProfilerId = this.profiler.idByName('Sequencer.stepThreads');
+            if (RuntimeInternals.stepThreadsProfilerId === -1) {
+                RuntimeInternals.stepThreadsProfilerId = this.profiler.idByName('Sequencer.stepThreads');
             }
-            this.profiler.start(stepThreadsProfilerId);
+            this.profiler.start(RuntimeInternals.stepThreadsProfilerId);
         }
         this.emit(Runtime.BEFORE_EXECUTE);
         const doneThreads = this.sequencer.stepThreads();
@@ -3076,10 +3083,10 @@ class Runtime extends EventEmitter {
         if (this.renderer) {
             // @todo: Only render when this.redrawRequested or clones rendered.
             if (this.profiler !== null) {
-                if (rendererDrawProfilerId === -1) {
-                    rendererDrawProfilerId = this.profiler.idByName('RenderWebGL.draw');
+                if (RuntimeInternals.rendererDrawProfilerId === -1) {
+                    RuntimeInternals.rendererDrawProfilerId = this.profiler.idByName('RenderWebGL.draw');
                 }
-                this.profiler.start(rendererDrawProfilerId);
+                this.profiler.start(RuntimeInternals.rendererDrawProfilerId);
             }
             // tw: do not draw if document is hidden or a rAF loop is running
             // Checking for the animation frame loop is more reliable than using
@@ -3357,7 +3364,7 @@ class Runtime extends EventEmitter {
         const target = this.getTargetForStage();
         const comments = target.comments;
         for (const comment of Object.values(comments)) {
-            if (comment.text.includes(COMMENT_CONFIG_MAGIC)) {
+            if (comment.text.includes(RuntimeInternals.COMMENT_CONFIG_MAGIC)) {
                 return comment;
             }
         }
@@ -3367,13 +3374,13 @@ class Runtime extends EventEmitter {
     parseProjectOptions () {
         const comment = this.findProjectOptionsComment();
         if (!comment) return;
-        const lineWithMagic = comment.text.split('\n').find(i => i.endsWith(COMMENT_CONFIG_MAGIC));
+        const lineWithMagic = comment.text.split('\n').find(i => i.endsWith(RuntimeInternals.COMMENT_CONFIG_MAGIC));
         if (!lineWithMagic) {
             log.warn('Config comment does not contain valid line');
             return;
         }
 
-        const jsonText = lineWithMagic.substr(0, lineWithMagic.length - COMMENT_CONFIG_MAGIC.length);
+        const jsonText = lineWithMagic.substr(0, lineWithMagic.length - RuntimeInternals.COMMENT_CONFIG_MAGIC.length);
         let parsed;
         try {
             parsed = ExtendedJSON.parse(jsonText);
@@ -3443,7 +3450,7 @@ class Runtime extends EventEmitter {
     storeProjectOptions () {
         const options = this.generateDifferingProjectOptions();
         // TODO: translate
-        const text = `Configuration for https://alpha.unsandboxed.org/\nYou can move, resize, and minimize this comment, but don't edit it by hand. This comment can be deleted to remove the stored settings.\n${ExtendedJSON.stringify(options)}${COMMENT_CONFIG_MAGIC}`;
+        const text = `Configuration for https://alpha.unsandboxed.org/\nYou can move, resize, and minimize this comment, but don't edit it by hand. This comment can be deleted to remove the stored settings.\n${ExtendedJSON.stringify(options)}${RuntimeInternals.COMMENT_CONFIG_MAGIC}`;
         const existingComment = this.findProjectOptionsComment();
         if (existingComment) {
             existingComment.text = text;
@@ -3828,7 +3835,7 @@ class Runtime extends EventEmitter {
     }
 
     isCoreExtension (categoryId) {
-        return CORE_BLOCKS.indexOf(categoryId) > -1;
+        return RuntimeInternals.CORE_BLOCKS.indexOf(categoryId) > -1;
     }
 
     /**

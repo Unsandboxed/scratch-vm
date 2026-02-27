@@ -37,11 +37,16 @@ const Variable = require('../engine/variable');
  * @property {string} inputName - the name this argument will take when provided to the block implementation
  */
 
+const E = {};
+
 /**
  * Mapping of Scratch 2.0 opcode to Scratch 3.0 block metadata.
  * @type {object.<SB2SpecMap_blockInfo>}
  */
-const specMap = {
+E.specMap = {
+    // eslint-disable-next-line no-useless-computed-key
+    [0]: E, // HACK: allow exporting sillyness.
+
     'forward:': {
         opcode: 'motion_movesteps',
         argMap: [
@@ -1647,7 +1652,7 @@ const specMap = {
  * @param {string} sb2Opcode - the Scratch 2.0 opcode
  * @param {SB2SpecMap_blockInfo} blockInfo - the Scratch 3.0 block info
  */
-const addExtensionOp = function (sb2Extension, sb2Opcode, blockInfo) {
+E.addExtensionOp = function (sb2Extension, sb2Opcode, blockInfo) {
     /**
      * This string separates the name of an extension and the name of an opcode in more recent Scratch 2.0 projects.
      * Earlier projects used '.' as a separator, up until we added the 'LEGO WeDo 2.0' extension...
@@ -1656,15 +1661,15 @@ const addExtensionOp = function (sb2Extension, sb2Opcode, blockInfo) {
     const sep = '\u001F'; // Unicode Unit Separator
 
     // make one entry for projects saved by recent versions of the Scratch 2.0 editor
-    specMap[`${sb2Extension}${sep}${sb2Opcode}`] = blockInfo;
+    E.specMap[`${sb2Extension}${sep}${sb2Opcode}`] = blockInfo;
 
     // make a second for projects saved by older versions of the Scratch 2.0 editor
-    specMap[`${sb2Extension}.${sb2Opcode}`] = blockInfo;
+    E.specMap[`${sb2Extension}.${sb2Opcode}`] = blockInfo;
 };
 
-const weDo2 = 'LEGO WeDo 2.0';
+E.weDo2 = 'LEGO WeDo 2.0';
 
-addExtensionOp(weDo2, 'motorOnFor', {
+E.addExtensionOp(E.weDo2, 'motorOnFor', {
     opcode: 'wedo2_motorOnFor',
     argMap: [
         {
@@ -1680,7 +1685,7 @@ addExtensionOp(weDo2, 'motorOnFor', {
     ]
 });
 
-addExtensionOp(weDo2, 'motorOn', {
+E.addExtensionOp(E.weDo2, 'motorOn', {
     opcode: 'wedo2_motorOn',
     argMap: [
         {
@@ -1691,7 +1696,7 @@ addExtensionOp(weDo2, 'motorOn', {
     ]
 });
 
-addExtensionOp(weDo2, 'motorOff', {
+E.addExtensionOp(E.weDo2, 'motorOff', {
     opcode: 'wedo2_motorOff',
     argMap: [
         {
@@ -1702,7 +1707,7 @@ addExtensionOp(weDo2, 'motorOff', {
     ]
 });
 
-addExtensionOp(weDo2, 'startMotorPower', {
+E.addExtensionOp(E.weDo2, 'startMotorPower', {
     opcode: 'wedo2_startMotorPower',
     argMap: [
         {
@@ -1718,7 +1723,7 @@ addExtensionOp(weDo2, 'startMotorPower', {
     ]
 });
 
-addExtensionOp(weDo2, 'setMotorDirection', {
+E.addExtensionOp(E.weDo2, 'setMotorDirection', {
     opcode: 'wedo2_setMotorDirection',
     argMap: [
         {
@@ -1734,7 +1739,7 @@ addExtensionOp(weDo2, 'setMotorDirection', {
     ]
 });
 
-addExtensionOp(weDo2, 'setLED', {
+E.addExtensionOp(E.weDo2, 'setLED', {
     opcode: 'wedo2_setLightHue',
     argMap: [
         {
@@ -1745,7 +1750,7 @@ addExtensionOp(weDo2, 'setLED', {
     ]
 });
 
-addExtensionOp(weDo2, 'playNote', {
+E.addExtensionOp(E.weDo2, 'playNote', {
     opcode: 'wedo2_playNoteFor',
     argMap: [
         {
@@ -1761,7 +1766,7 @@ addExtensionOp(weDo2, 'playNote', {
     ]
 });
 
-addExtensionOp(weDo2, 'whenDistance', {
+E.addExtensionOp(E.weDo2, 'whenDistance', {
     opcode: 'wedo2_whenDistance',
     argMap: [
         {
@@ -1777,7 +1782,7 @@ addExtensionOp(weDo2, 'whenDistance', {
     ]
 });
 
-addExtensionOp(weDo2, 'whenTilted', {
+E.addExtensionOp(E.weDo2, 'whenTilted', {
     opcode: 'wedo2_whenTilted',
     argMap: [
         {
@@ -1788,12 +1793,12 @@ addExtensionOp(weDo2, 'whenTilted', {
     ]
 });
 
-addExtensionOp(weDo2, 'getDistance', {
+E.addExtensionOp(E.weDo2, 'getDistance', {
     opcode: 'wedo2_getDistance',
     argMap: []
 });
 
-addExtensionOp(weDo2, 'isTilted', {
+E.addExtensionOp(E.weDo2, 'isTilted', {
     opcode: 'wedo2_isTilted',
     argMap: [
         {
@@ -1804,7 +1809,7 @@ addExtensionOp(weDo2, 'isTilted', {
     ]
 });
 
-addExtensionOp(weDo2, 'getTilt', {
+E.addExtensionOp(E.weDo2, 'getTilt', {
     opcode: 'wedo2_getTiltAngle',
     argMap: [
         {
@@ -1815,4 +1820,4 @@ addExtensionOp(weDo2, 'getTilt', {
     ]
 });
 
-module.exports = specMap;
+module.exports = E.specMap;

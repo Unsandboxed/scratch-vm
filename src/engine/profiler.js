@@ -13,48 +13,50 @@
  * itself.
  */
 
-/**
- * The next id returned for a new profile'd function.
- * @type {number}
- */
-let nextId = 0;
 
-/**
- * The mapping of names to ids.
- * @const {Object.<string, number>}
- */
-const profilerNames = {};
+const ProfilerInternals = {
+    /**
+     * The next id returned for a new profile'd function.
+     * @type {number}
+     */
+    nextId: 0,
 
-/**
- * The START event identifier in Profiler records.
- * @const {number}
- */
-const START = 0;
+    /**
+     * The mapping of names to ids.
+     * @const {Object.<string, number>}
+     */
+    profilerNames: {},
 
-/**
- * The STOP event identifier in Profiler records.
- * @const {number}
- */
-const STOP = 1;
+    /**
+     * The START event identifier in Profiler records.
+     * @const {number}
+     */
+    START: 0,
 
-/**
- * The number of cells used in the records array by a START event.
- * @const {number}
- */
-const START_SIZE = 4;
+    /**
+     * The STOP event identifier in Profiler records.
+     * @const {number}
+     */
+    STOP: 1,
 
-/**
- * The number of cells used in the records array by a STOP event.
- * @const {number}
- */
-const STOP_SIZE = 2;
+    /**
+     * The number of cells used in the records array by a START event.
+     * @const {number}
+     */
+    START_SIZE: 4,
 
-/**
- * Stored reference to Performance instance provided by the Browser.
- * @const {Performance}
- */
-const performance = typeof window === 'object' && window.performance;
+    /**
+     * The number of cells used in the records array by a STOP event.
+     * @const {number}
+     */
+    STOP_SIZE: 2,
 
+    /**
+     * Stored reference to Performance instance provided by the Browser.
+     * @const {Performance}
+     */
+    performance: typeof window === 'object' && window.performance
+};
 
 /**
  * Callback handle called by Profiler for each frame it decodes from its
@@ -171,13 +173,13 @@ class Profiler {
          * A reference to the START record id constant.
          * @const {number}
          */
-        this.START = START;
+        this.START = ProfilerInternals.START;
 
         /**
          * A reference to the STOP record id constant.
          * @const {number}
          */
-        this.STOP = STOP;
+        this.STOP = ProfilerInternals.STOP;
     }
 
     /**
@@ -187,14 +189,14 @@ class Profiler {
      * @param {?*} arg An arbitrary argument value to store with the frame.
      */
     start (id, arg) {
-        this.records.push(START, id, arg, performance.now());
+        this.records.push(this.START, id, arg, performance.now());
     }
 
     /**
      * Stop the current frame.
      */
     stop () {
-        this.records.push(STOP, performance.now());
+        this.records.push(this.STOP, performance.now());
     }
 
     /**
@@ -248,7 +250,7 @@ class Profiler {
         // for each START event and "popped" for each STOP and handed to an
         // outside handle to any desired reduction of the collected data.
         for (let i = 0; i < this.records.length;) {
-            if (this.records[i] === START) {
+            if (this.records[i] === this.START) {
                 if (depth >= stack.length) {
                     stack.push(new ProfilerFrame(depth));
                 }
@@ -272,8 +274,8 @@ class Profiler {
                 // time difference.
                 frame.selfTime = 0;
 
-                i += START_SIZE;
-            } else if (this.records[i] === STOP) {
+                i += ProfilerInternals.START_SIZE;
+            } else if (this.records[i] === this.STOP) {
                 const now = this.records[i + 1];
 
                 const frame = stack[--depth];
@@ -293,7 +295,7 @@ class Profiler {
 
                 this.onFrame(frame);
 
-                i += STOP_SIZE;
+                i += ProfilerInternals.STOP_SIZE;
             } else {
                 this.records.length = 0;
                 throw new Error('Unable to decode Profiler records.');
@@ -342,10 +344,10 @@ class Profiler {
      * @return {number} The id for the passed name.
      */
     static idByName (name) {
-        if (typeof profilerNames[name] !== 'number') {
-            profilerNames[name] = nextId++;
+        if (typeof ProfilerInternals.profilerNames[name] !== 'number') {
+            ProfilerInternals.profilerNames[name] = ProfilerInternals.nextId++;
         }
-        return profilerNames[name];
+        return ProfilerInternals.profilerNames[name];
     }
 
     /**
@@ -355,8 +357,8 @@ class Profiler {
      * @return {string} The name for the given id.
      */
     static nameById (id) {
-        for (const name in profilerNames) {
-            if (profilerNames[name] === id) {
+        for (const name in ProfilerInternals.profilerNames) {
+            if (ProfilerInternals.profilerNames[name] === id) {
                 return name;
             }
         }
@@ -379,12 +381,15 @@ class Profiler {
  * A reference to the START record id constant.
  * @const {number}
  */
-Profiler.START = START;
+Profiler.START = ProfilerInternals.START;
 
 /**
  * A reference to the STOP record id constant.
  * @const {number}
  */
-Profiler.STOP = STOP;
+Profiler.STOP = ProfilerInternals.STOP;
+
+Profiler._ProfilerInternals = ProfilerInternals;
+Profiler._ProfilerFrame = ProfilerFrame;
 
 module.exports = Profiler;

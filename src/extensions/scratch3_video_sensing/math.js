@@ -70,6 +70,8 @@ const scratchAtan2 = function (y, x) {
 };
 
 module.exports = {
+    TO_DEGREE,
+    _motionVectorOut,
     motionVector,
     scratchDegrees,
     scratchAtan2
