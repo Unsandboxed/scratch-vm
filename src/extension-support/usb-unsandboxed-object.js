@@ -50,6 +50,7 @@ module.exports = function (vm, isAprematureLoad) {
         },
 
         base64: vmD.modules.base64_js,
+        immutable: vmD.modules.immutable(),
 
         Clone: require('../util/cast').Clone,
         Color: require('../util/cast').Color,
