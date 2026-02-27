@@ -1,5 +1,4 @@
 const ContextMenuContext = require('./context-menu-context');
-const Util_ = require('../util/usb-util');
 const hasOwn_ = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);
 /* eslint-disable no-undefined */
 const catchError_ = (promise, errors) => {
@@ -24,12 +23,14 @@ const catchError_ = (promise, errors) => {
 };
 /* eslint-enable no-undefined */
 
-module.exports = function (isAprematureLoad) {
+module.exports = function (vm, isAprematureLoad) {
+    const vmD = require('../exports');
+
     return {
         get Util () {
             // eslint-disable-next-line max-len
             console.warn('Depricated "Unsandboxed.Util" API was used, please switch :<');
-            return Util_;
+            return require('../util/usb-util');
         },
         get hasOwn () {
             // eslint-disable-next-line max-len
@@ -41,6 +42,30 @@ module.exports = function (isAprematureLoad) {
             console.warn('Depricated "Unsandboxed.catchError" API was used, please switch to "Unsandboxed.helpers.catchError".');
             return catchError_;
         },
+
+        json: {
+            five: vmD.modules.json5(),
+            extendedjson: vmD.modules.tw_json(),
+            Clone: require('../util/cast').Clone
+        },
+
+        base64: vmD.modules.base64_js,
+
+        Clone: require('../util/cast').Clone,
+        Color: require('../util/cast').Color,
+        Cast: require('../util/cast'),
+
+        resolves: vm.resolversTool,
+
+        helpers: Object.assign({
+            hasOwn: hasOwn_,
+            catchError: catchError_,
+
+            uid: vmD.help.uid,
+            xmlEscape: vmD.help.xmlEscape
+        }, vmD.flow()),
+
+        vmd: vmD,
 
         isAprematureLoad,
         ContextMenuContext

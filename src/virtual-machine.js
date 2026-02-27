@@ -13,6 +13,7 @@ const ExtensionManager = require('./extension-support/extension-manager');
 const log = require('./util/log');
 const MathUtil = require('./util/math-util');
 const Runtime = require('./engine/runtime');
+const Resolvers = require('./util/resolvers');
 const RenderedTarget = require('./sprites/rendered-target');
 const Sprite = require('./sprites/sprite');
 const StringUtil = require('./util/string-util');
@@ -75,6 +76,9 @@ class VirtualMachine extends EventEmitter {
         centralDispatch.setService('runtime', VirtualMachine.createRuntimeService(this.runtime)).catch(e => {
             log.error(`Failed to register runtime service: ${JSON.stringify(e)}`);
         });
+
+        this.resolversTool = new Resolvers(this);
+        this.resolversTool._Resolvers = Resolvers;
 
         this.io = {
             BLE,

@@ -40,7 +40,7 @@ E.setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
 
     // Create a new copy of global.Scratch and global.Unsandboxed for each extension
     const Scratch = Object.assign({}, global.Scratch || {}, ScratchCommon);
-    Scratch.UnsandboxedMod = createUnsandboxed(pre);
+    Scratch.UnsandboxedMod = createUnsandboxed(vm, pre);
     Scratch.extensions = {
         get isUSB () {
             // eslint-disable-next-line max-len

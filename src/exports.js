@@ -3,7 +3,7 @@
  */
 // "typo" intended.
 
-let _cache = {};
+const _cache = {};
 
 module.exports = {
     _cache,
@@ -130,7 +130,8 @@ module.exports = {
         diff_match_patch: () => require('diff-match-patch'),
         scratch_parser: () => require('scratch-parser'),
         scratch_sb1_converter: () => require('scratch-sb1-converter'),
-        scratch_translate_extension_languages: () => require('scratch-translate-extension-languages')
+        scratch_translate_extension_languages: () => require('scratch-translate-extension-languages'),
+        base64_js: () => require('base64-js')
     },
 
     flow: () => {
@@ -154,5 +155,5 @@ module.exports = {
             ramda
         };
         return _cache.flow;
-    },
+    }
 };
