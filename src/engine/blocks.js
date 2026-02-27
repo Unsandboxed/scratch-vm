@@ -1602,23 +1602,26 @@ class Blocks {
     }
 
     _updateDirtyCallerMutation (block, newMutation) {
+        const orphaned = !block.next && !block.parent;
+
         // Update the mutation data.
-        if (block.mutation.hat === newMutation.hat) {
-            if (!block.next && block.mutation.return !== newMutation.return) {
-                if (Cast.toBooleanSimple(newMutation.hat)) {
-                    newMutation.return = ScratchBlocksConstants.RETURN_TYPE_HAT;
-                }
-                block.mutation.return = newMutation.return;
+        // eslint-disable-next-line curly
+        if (orphaned && block.mutation.hat === newMutation.hat) udcm1:{
+            if (block.mutation.return === newMutation.return) break udcm1;
+
+            if (Cast.toBooleanSimple(newMutation.hat)) {
+                newMutation.return = ScratchBlocksConstants.RETURN_TYPE_HAT;
             }
-        } else {
+            block.mutation.return = newMutation.return;
+        // eslint-disable-next-line curly
+        } else if (orphaned) udcm2:{
             block.mutation.hat = newMutation.hat;
 
-            if (!block.next && (block.mutation.return === '0' || !block.mutation.return)) {
-                if (Cast.toBooleanSimple(newMutation.hat)) {
-                    newMutation.return = ScratchBlocksConstants.RETURN_TYPE_HAT;
-                }
-                block.mutation.return = newMutation.return;
+            if (block.mutation.return !== '0' && block.mutation.return) break udcm2;
+            if (Cast.toBooleanSimple(newMutation.hat)) {
+                newMutation.return = ScratchBlocksConstants.RETURN_TYPE_HAT;
             }
+            block.mutation.return = newMutation.return;
         }
         if (block.mutation.hatalwaysactivated !== newMutation.hatalwaysactivated) {
             block.mutation.hatalwaysactivated = newMutation.hatalwaysactivated;

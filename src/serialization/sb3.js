@@ -4,6 +4,7 @@
  * JSON and then generates all needed scratch-vm runtime structures.
  */
 
+const Cast = require('../util/cast');
 const Runtime = require('../engine/runtime');
 const Blocks = require('../engine/blocks');
 const Sprite = require('../sprites/sprite');
@@ -1173,6 +1174,10 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
         // @todo
         return Promise.resolve(null);
     }
+
+    // Global proccodes found in the second pass that need to be added
+    const globalProccodes = [];
+
     // Blocks container for this object.
     const blocks = new Blocks(runtime);
 
@@ -1189,6 +1194,12 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
         for (const blockId in object.blocks) {
             if (!Object.prototype.hasOwnProperty.call(object.blocks, blockId)) continue;
             const blockJSON = object.blocks[blockId];
+            if (
+                blockJSON.opcode === 'procedures_prototype' &&
+                (blockJSON.mutation && Cast.toBooleanSimple(blockJSON.mutation.global))
+            ) {
+                globalProccodes.push(blockJSON.mutation.proccode);
+            }
             blocks.createBlock(blockJSON);
 
             // If the block is from an extension, record it.
@@ -1333,6 +1344,13 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
         // Make sure if soundBank is undefined, sprite.soundBank is then null.
         sprite.soundBank = soundBank || null;
     });
+    for (const procCode of globalProccodes) {
+        if (runtime._globalProcedures[procCode]) {
+            console.warn('global procedure with proccode', procCode, 'already exists, skipping it.');
+            continue;
+        }
+        runtime._globalProcedures[procCode] = target.id;
+    }
     return Promise.all(costumePromises.concat(soundPromises)).then(() => target);
 };
 
