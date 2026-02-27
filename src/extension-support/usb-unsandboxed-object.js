@@ -1,8 +1,8 @@
 const ContextMenuContext = require('./context-menu-context');
-const Util = require('../util/usb-util');
-const hasOwn = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);
+const Util_ = require('../util/usb-util');
+const hasOwn_ = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);
 /* eslint-disable no-undefined */
-const catchError = (promise, errors) => {
+const catchError_ = (promise, errors) => {
     if (!(promise instanceof Promise)) {
         throw new TypeError('Expected "promise" to be PromiseLike.');
     }
@@ -24,11 +24,25 @@ const catchError = (promise, errors) => {
 };
 /* eslint-enable no-undefined */
 
-module.exports = function () {
+module.exports = function (isAprematureLoad) {
     return {
-        ContextMenuContext,
-        Util,
-        hasOwn,
-        catchError
+        get Util () {
+            // eslint-disable-next-line max-len
+            console.warn('Depricated "Unsandboxed.Util" API was used, please switch :<');
+            return Util_;
+        },
+        get hasOwn () {
+            // eslint-disable-next-line max-len
+            console.warn('Depricated "Unsandboxed.hasOwn" API was used, please switch to "Unsandboxed.helpers.hasOwn".');
+            return hasOwn_;
+        },
+        get catchError () {
+            // eslint-disable-next-line max-len
+            console.warn('Depricated "Unsandboxed.catchError" API was used, please switch to "Unsandboxed.helpers.catchError".');
+            return catchError_;
+        },
+
+        isAprematureLoad,
+        ContextMenuContext
     };
 };

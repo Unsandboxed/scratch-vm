@@ -3,7 +3,11 @@
  */
 // "typo" intended.
 
+let _cache = {};
+
 module.exports = {
+    _cache,
+
     // eslint-disable-next-line arrow-body-style
     superSecret: () => {
         console.trace('meow meow im a cow');
@@ -105,5 +109,50 @@ module.exports = {
         throw new Error('nuh uh');
     },
 
-    ExtensionManager: () => require('./extension-support/extension-manager')
+    ExtensionManager: () => require('./extension-support/extension-manager'),
+
+    modules: {
+        immutable: () => require('immutable'),
+        tw_json: () => require('@turbowarp/json'),
+        tw_jszip: () => require('@turbowarp/jszip'),
+        tw_nanolog: () => require('@turbowarp/nanolog'),
+        tw_scratchsvgrenderer: () => require('@turbowarp/scratch-svg-renderer'),
+        buffer: () => require('buffer'),
+        minimatch: () => require('minimatch'),
+        json5: () => require('json5'),
+        punycode: () => require('punycode'),
+        zlib: () => require('zlib'),
+        decodeHTML: () => require('decode-html'),
+        vernier_godirect: () => require('@vernier/godirect'),
+        htmlparser2: () => require('htmlparser2'),
+        format_message: () => require('format-message'),
+        uuid: () => require('uuid'),
+        diff_match_patch: () => require('diff-match-patch'),
+        scratch_parser: () => require('scratch-parser'),
+        scratch_sb1_converter: () => require('scratch-sb1-converter'),
+        scratch_translate_extension_languages: () => require('scratch-translate-extension-languages')
+    },
+
+    flow: () => {
+        if (_cache.flow) return _cache.flow;
+
+        const lodash = require('lodash').noConflict();
+        const lodashFp = require('lodash/fp').noConflict();
+        const fpts = require('fp-ts');
+        const futil = require('futil');
+        const ramda = require('ramda');
+
+        if (global._ && global._.noConflict) {
+            global._.noConflict();
+        }
+
+        _cache.flow = {
+            lodash,
+            lodashFp,
+            fpts,
+            futil,
+            ramda
+        };
+        return _cache.flow;
+    },
 };

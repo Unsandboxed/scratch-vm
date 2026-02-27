@@ -40,10 +40,19 @@ E.setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
 
     // Create a new copy of global.Scratch and global.Unsandboxed for each extension
     const Scratch = Object.assign({}, global.Scratch || {}, ScratchCommon);
-    const Unsandboxed = Object.assign({}, createUnsandboxed());
+    Scratch.UnsandboxedMod = createUnsandboxed(pre);
     Scratch.extensions = {
-        isPremature: pre,
-        isUSB: true,
+        get isUSB () {
+            // eslint-disable-next-line max-len
+            console.warn('Depricated "Scratch.extensions.isUSB" API was used, please use "Scratch.UnsandboxedMod" instead.');
+            return !!Scratch.UnsandboxedMod; // Always true.
+        },
+        get isPremature () {
+            // eslint-disable-next-line max-len
+            console.warn('Depricated "Scratch.extensions.isPremature" API was used, please use "Scratch.UnsandboxedMod.isAprematureLoad" instead.');
+            return Scratch.UnsandboxedMod.isAprematureLoad;
+        },
+
         unsandboxed: true,
         register
     };
@@ -168,14 +177,33 @@ E.setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
 
     // We want Scratch.gui even when it is loaded prematurly as it gives access to some fancy API's in the GUI
     vm.emit('CREATE_UNSANDBOXED_EXTENSION_API', Scratch, pre);
-    vm.emit('CREATE_USB_API', Unsandboxed, pre);
+    vm.emit('CREATE_USB_API', Scratch.UnsandboxedMod, pre);
+
+    // Polyfill some basic "global" APIs that might be used.
+    global.global = global;
+    global.globalThis = global;
 
     if (pre) {
-        resolve({Scratch, ScratchExtensions, Unsandboxed});
+        resolve({Scratch, ScratchExtensions, Unsandboxed: Scratch.UnsandboxedMod});
     } else {
-        global.Unsandboxed = Unsandboxed;
         global.Scratch = Scratch;
         global.ScratchExtensions = ScratchExtensions;
+
+        delete global.Unsandboxed;
+        const binder = {Unsandboxed: Scratch.UnsandboxedMod};
+        Object.defineProperty(global, 'Unsandboxed', {
+            configurable: true,
+            enumerable: true,
+            get: (function () {
+                // eslint-disable-next-line max-len
+                console.warn('Depricated global "Unsandboxed" API was used, please use global "Scratch.UnsandboxedMod" instead.');
+                return this.Unsandboxed;
+            }).bind(binder),
+            set: (function (v) {
+                this.Unsandboxed = v;
+                return true;
+            }).bind(binder)
+        });
     }
 });
 
