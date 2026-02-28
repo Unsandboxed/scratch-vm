@@ -190,7 +190,7 @@ module.exports = function (compilerData, {
             return;
         }
         // eslint-disable-next-line max-len
-        jsg.source += `void(yield* p${block.inputs.index}(function(v) {procedureReturnV[0]=true;procedureReturnV[1]=v}, thread, target, deftarget));`;
+        jsg.source += `void(yield* p${block.inputs.index}(function(v) {procedureReturnV[0]=true;procedureReturnV[1]=v}, thread, target, (deftarget, target) ));`;
         jsg.source += `if (procedureReturnV[0]) {`;
         jsg.stopScriptAndReturn(`procedureReturnV[1]`);
         jsg.source += `};`;

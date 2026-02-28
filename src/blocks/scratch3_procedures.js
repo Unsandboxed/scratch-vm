@@ -193,6 +193,7 @@ class Scratch3ProcedureBlocks {
         });
 
         util.thread.pushStack(branch.block, target);
+        util.thread.peekStackFrame().polluteLocals = true;
     }
 }
 
