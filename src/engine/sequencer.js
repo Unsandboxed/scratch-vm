@@ -372,6 +372,15 @@ class Sequencer {
         // from the stack by the sequencer, returning control to the caller.
         thread.pushStack(definition, target);
 
+        const blocks = target ? target.blocks : thread.blockContainer;
+        const definitionBlock = blocks.getBlock(definition);
+        const innerBlock = blocks.getBlock(
+            definitionBlock.inputs.custom_block.block);
+
+        if (innerBlock && innerBlock.mutation) {
+            thread.peekStackFrame().polluteLocals = Cast.toBooleanSimple(innerBlock.mutation.pollutelocals);
+        }
+
         // In known warp-mode threads, only yield when time is up.
         if (thread.peekStackFrame().warpMode &&
             thread.warpTimer.timeElapsed() > Sequencer.WARP_TIME) {
@@ -379,10 +388,6 @@ class Sequencer {
         } else {
             // Look for warp-mode flag on definition, and set the thread
             // to warp-mode if needed.
-            const blocks = target ? target.blocks : thread.blockContainer;
-            const definitionBlock = blocks.getBlock(definition);
-            const innerBlock = blocks.getBlock(
-                definitionBlock.inputs.custom_block.block);
             let doWarp = false;
             if (innerBlock && innerBlock.mutation) {
                 doWarp = Cast.toBooleanSimple(innerBlock.mutation.warp);

@@ -74,11 +74,36 @@ class BlockUtility {
     }
 
     lookupOrCreateVariable (id, name) {
-        const defTargetSf = this.thread.peekStackFrame();
-        if (defTargetSf && defTargetSf.targetContext) {
-            return defTargetSf.targetContext.lookupOrCreateVariable(id, name);
+        let psfi = null;
+        for (let i = this.thread.stackFrames.length - 1, sf; i >= 0; i--) {
+            sf = this.thread.stackFrames[i];
+
+            if (sf.polluteLocals === false) {
+                psfi = null;
+                break;
+            }
+            if (sf.polluteLocals) {
+                psfi = sf;
+                break;
+            }
         }
-        return this.target.lookupOrCreateVariable(id, name);
+        let v;
+        if (psfi) {
+            v = this.target.lookupVariableById(id);
+            if (!v) {
+                v = Object.values(this.target.variables).find(vr => vr.name === name);
+            }
+        }
+        if (!v) {
+            const defTargetSf = this.thread.peekStackFrame();
+            if (defTargetSf && defTargetSf.targetContext) {
+                v = defTargetSf.targetContext.lookupOrCreateVariable(id, name);
+            } else if (psfi) {
+                console.warn('polluting local variable', name, 'because the target context could not be found.');
+                v = this.target.lookupOrCreateVariable(id, name);
+            }
+        }
+        return v;
     }
 
     /**

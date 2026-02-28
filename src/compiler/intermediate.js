@@ -310,6 +310,12 @@ class IntermediateScript {
         this.procedureCode = '';
 
         /**
+         * This procedure's prototype info, if any.
+         * @type {?object}
+         */
+        this.procedurePrototype = null;
+
+        /**
          * List of names of arguments accepted by this function, if it is a procedure.
          * @type {string[]}
          */

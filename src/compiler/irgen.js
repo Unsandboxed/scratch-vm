@@ -28,6 +28,7 @@ const oldCompilerCompatiblity = require('./old-compiler-compatibility.js');
  * @property {string | null} id
  * @property {string} name
  * @property {boolean} isCloud
+ * @property {boolean} deftarget
  */
 
 /**
@@ -331,7 +332,7 @@ class ScriptTreeGenerator {
      *  yields: boolean
      * }}
      */
-    getProcedureInfo (block) {
+    getProcedureInfo (block, dontDepend = false) {
         const procedureCode = block.mutation.proccode;
         let paramNamesIdsAndDefaults = this.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
         if (!paramNamesIdsAndDefaults) {
@@ -392,25 +393,27 @@ class ScriptTreeGenerator {
 
         const variant = generateProcedureVariant(procedureCode, isWarp);
 
-        if (!this.script.dependedProcedures.includes(variant)) {
+        if (!this.script.dependedProcedures.includes(variant) && !dontDepend) {
             this.script.dependedProcedures.push(variant);
         }
 
         const args = [];
-        for (let i = 0; i < paramIds.length; i++) {
-            let value;
-            if (block.inputs[paramIds[i]] && block.inputs[paramIds[i]].block) {
-                if (paramIds[i].startsWith('SUBSTACK')) {
-                    value = this.descendSubstack(block, paramIds[i]);
+        if (!dontDepend) {
+            for (let i = 0; i < paramIds.length; i++) {
+                let value;
+                if (block.inputs[paramIds[i]] && block.inputs[paramIds[i]].block) {
+                    if (paramIds[i].startsWith('SUBSTACK')) {
+                        value = this.descendSubstack(block, paramIds[i]);
+                    } else {
+                        value = this.descendInputOfBlock(block, paramIds[i], true);
+                    }
+                } else if (paramIds[i].startsWith('SUBSTACK')) {
+                    value = new IntermediateStack();
                 } else {
-                    value = this.descendInputOfBlock(block, paramIds[i], true);
+                    value = this.createConstantInput(paramDefaults[i], true);
                 }
-            } else if (paramIds[i].startsWith('SUBSTACK')) {
-                value = new IntermediateStack();
-            } else {
-                value = this.createConstantInput(paramDefaults[i], true);
+                args.push(value);
             }
-            args.push(value);
         }
 
         this.blocks = oldBlocks;
@@ -420,7 +423,8 @@ class ScriptTreeGenerator {
             inputs: {
                 code: procedureCode,
                 variant,
-                arguments: args
+                arguments: args,
+                mutation: block.mutation
             },
             yields: !this.script.isWarp && procedureCode === this.script.procedureCode,
         };
@@ -475,17 +479,28 @@ class ScriptTreeGenerator {
      */
     _descendVariable (id, name, type) {
         // eslint-disable-next-line no-shadow
-        const target = this.target;
+        const target = (
+            this.script.procedurePrototype ?
+                (
+                    Cast.toBooleanSimple(this.script.procedurePrototype.inputs.mutation.pollutelocals) ?
+                        this.target :
+                        this.globalTarget
+                ) :
+                this.globalTarget
+        );
         const stage = this.stage;
+
+        const deftargetq = target.id === this.globalTarget.id;
 
         // Look for by ID in target...
         if (Object.prototype.hasOwnProperty.call(target.variables, id)) {
-            const currVar = this.globalTarget.variables[String(id)];
+            const currVar = target.variables[String(id)];
             return {
                 scope: 'target',
                 id: currVar.id,
                 name: currVar.name,
-                isCloud: currVar.isCloud
+                isCloud: currVar.isCloud,
+                deftarget: deftargetq
             };
         }
 
@@ -497,7 +512,8 @@ class ScriptTreeGenerator {
                     scope: 'stage',
                     id: currVar.id,
                     name: currVar.name,
-                    isCloud: currVar.isCloud
+                    isCloud: currVar.isCloud,
+                    deftarget: deftargetq
                 };
             }
         }
@@ -511,7 +527,8 @@ class ScriptTreeGenerator {
                         scope: 'target',
                         id: currVar.id,
                         name: currVar.name,
-                        isCloud: currVar.isCloud
+                        isCloud: currVar.isCloud,
+                        deftarget: deftargetq
                     };
                 }
             }
@@ -527,7 +544,8 @@ class ScriptTreeGenerator {
                             scope: 'stage',
                             id: currVar.id,
                             name: currVar.name,
-                            isCloud: currVar.isCloud
+                            isCloud: currVar.isCloud,
+                            deftarget: deftargetq
                         };
                     }
                 }
@@ -558,7 +576,8 @@ class ScriptTreeGenerator {
             // This is intentional to match vanilla Scratch quirks.
             id,
             name: newVariable.name,
-            isCloud: newVariable.isCloud
+            isCloud: newVariable.isCloud,
+            deftarget: deftargetq
         };
     }
 
@@ -769,6 +788,8 @@ class ScriptTreeGenerator {
             let entryBlock;
             if (topBlock.opcode === 'procedures_definition') {
                 entryBlock = topBlock.next;
+
+                this.script.procedurePrototype = this.getProcedureInfo(this.getBlockById(topBlock.inputs.custom_block.block), true);
             } else {
                 entryBlock = topBlockId;
             }
@@ -779,6 +800,8 @@ class ScriptTreeGenerator {
         }
 
         this.script.targetId = this.targetId;
+
+        console.log(this.script);
 
         return this.script;
     }

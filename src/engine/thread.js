@@ -108,6 +108,8 @@ class _StackFrame {
          * @type {boolean}
          */
         this.isIterable = false;
+
+        this.polluteLocals = 0; // 0 means ignore this frame, false means disable, true means enable.
     }
 
     /**
@@ -127,6 +129,7 @@ class _StackFrame {
         this.op = null;
         this.isBreakable = false;
         this.isIterable = false;
+        this.polluteLocals = 0;
 
         for (let i = 0; i < this.onBranchEnd.length; i++) {
             this.onBranchEnd[i]();
@@ -144,9 +147,10 @@ class _StackFrame {
      * @param {?boolean} warpMode defaults to current warpMode
      * @returns {_StackFrame} this
      */
-    reuse (warpMode = this.warpMode) {
+    reuse (warpMode = this.warpMode, polluteLocals = this.polluteLocals) {
         this.reset();
         this.warpMode = Boolean(warpMode);
+        this.polluteLocals = polluteLocals;
         return this;
     }
 
@@ -380,6 +384,9 @@ class Thread {
         if (this.stack.length > this.stackFrames.length) {
             const parent = this.stackFrames[this.stackFrames.length - 1];
             const stackFrame = _StackFrame.create(typeof parent !== 'undefined' && parent.warpMode);
+            if (typeof parent !== 'undefined') {
+                stackFrame.polluteLocals = parent.polluteLocals;
+            }
 
             if (target) {
                 stackFrame.targetContext = target;

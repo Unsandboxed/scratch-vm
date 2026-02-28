@@ -380,7 +380,7 @@ class JSGenerator {
 
     referenceVariable (variable) {
         if (variable.scope === 'target') {
-            return this.evaluateOnce(`deftarget.variables["${sanitize(variable.id)}"]`);
+            return this.evaluateOnce(`${variable.deftarget ? 'deftarget' : 'target'}.variables["${sanitize(variable.id)}"]`);
         }
         return this.evaluateOnce(`stage.variables["${sanitize(variable.id)}"]`);
     }

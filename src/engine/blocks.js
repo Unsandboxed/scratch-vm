@@ -1637,6 +1637,12 @@ class Blocks {
         if (block.mutation.hatalwaysactivated !== newMutation.hatalwaysactivated) {
             block.mutation.hatalwaysactivated = newMutation.hatalwaysactivated;
         }
+        if (block.mutation.warp !== newMutation.warp) {
+            block.mutation.warp = newMutation.warp;
+        }
+        if (block.mutation.pollutelocals !== newMutation.pollutelocals) {
+            block.mutation.pollutelocals = newMutation.pollutelocals;
+        }
     }
 
     /**

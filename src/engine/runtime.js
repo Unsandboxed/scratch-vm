@@ -648,8 +648,6 @@ class Runtime extends EventEmitter {
          */
         this.temporaryStorage = {};
         this.on(Runtime.PROJECT_START, () => {
-            this.requestGlobalProceduresMutationsRefresh();
-            this.requestGlobalProceduresRefresh();
             this.temporaryStorage = {};
         });
         this.on(Runtime.PROJECT_STOP_ALL, () => {
@@ -657,8 +655,8 @@ class Runtime extends EventEmitter {
         });
 
         this.on(Runtime.PROJECT_CHANGED, () => {
-            this.requestGlobalProceduresMutationsRefresh();
-            this.requestGlobalProceduresRefresh();
+            this.requestGlobalProceduresMutationsRefresh(true);
+            this.requestGlobalProceduresRefresh(true);
         });
         this.on(Runtime.PROJECT_LOADED, () => {
             this.requestGlobalProceduresMutationsRefresh();
@@ -4250,6 +4248,7 @@ class Runtime extends EventEmitter {
             // hack: use the cache to get an easy list of currently existing procedure definitions.
             target.blocks.populateProcedureCache();
             const proccodes = Object.keys(target.blocks._cache.procedureDefinitions);
+            const Pexists = new Set();
             for (let j = 0; j < proccodes.length; j++) {
                 const proccode = proccodes[j];
                 const mutation = target.blocks.getProcedureMutation(proccode);
@@ -4262,14 +4261,16 @@ class Runtime extends EventEmitter {
                     if (Pold.has(proccode)) Premoved.add(proccode);
                     continue;
                 }
-                if (!Pold.has(proccode)) {
+                if (Pold.has(proccode)) {
+                    Pexists.add(proccode);
+                } else {
                     Pnew.add(proccode);
                     globalProcedures[proccode] = target.id;
                 }
             }
-            Premoved = Premoved.union(new Set(
+            Premoved = Pexists.difference(Premoved.union(new Set(
                 this.getGlobalProceduresFromTarget(target.id)
-            ).difference(new Set(proccodes)));
+            ).difference(new Set(proccodes))));
             target.blocks.resetCache(); // Reset the cache because the procedures might be dirty now.
         }
 
@@ -4293,9 +4294,11 @@ class Runtime extends EventEmitter {
                     this._globalProcedures[proccode] = globalProcedures[proccode];
                     continue;
                 }
-                // otherwise delete it (this can happen for a variety of reasons)
-                this.emit('GLOBAL_PROCEDURE_REMOVED', proccode);
-                delete this._globalProcedures[proccode];
+                if (Premoved.has(proccode)) {
+                    // otherwise delete it (this can happen for a variety of reasons)
+                    this.emit('GLOBAL_PROCEDURE_REMOVED', proccode);
+                    delete this._globalProcedures[proccode];
+                }
             }
 
             for (const proccode in this._dirtyGlobalProcedures) {
