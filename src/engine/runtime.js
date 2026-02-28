@@ -4239,6 +4239,7 @@ class Runtime extends EventEmitter {
         // (this is used for cleanup)
         const Pold = new Set(Object.keys(this._globalProcedures));
         const Pnew = new Set();
+        const Pexists = new Set();
         let Premoved = new Set();
         const globalProcedures = {};
 
@@ -4248,7 +4249,6 @@ class Runtime extends EventEmitter {
             // hack: use the cache to get an easy list of currently existing procedure definitions.
             target.blocks.populateProcedureCache();
             const proccodes = Object.keys(target.blocks._cache.procedureDefinitions);
-            const Pexists = new Set();
             for (let j = 0; j < proccodes.length; j++) {
                 const proccode = proccodes[j];
                 const mutation = target.blocks.getProcedureMutation(proccode);
@@ -4268,14 +4268,12 @@ class Runtime extends EventEmitter {
                     globalProcedures[proccode] = target.id;
                 }
             }
-            Premoved = Pexists.difference(Premoved.union(new Set(
-                this.getGlobalProceduresFromTarget(target.id)
-            ).difference(new Set(proccodes))));
             target.blocks.resetCache(); // Reset the cache because the procedures might be dirty now.
         }
 
-        let res = false;
+        Premoved = Premoved.union(Pold.difference(Pexists));
 
+        let res = false;
         const changed = Array.from(Pnew.union(Premoved));
 
         if (deadTargets.size > 0) {
