@@ -4300,12 +4300,7 @@ class Runtime extends EventEmitter {
             }
 
             for (const proccode in this._dirtyGlobalProcedures) {
-                // If the dirty procedure was deleted then it cannot be dirty anymore;
-                // or if the dirty procedures old name exists.
-                if (this._globalProcedures[proccode]) {
-                    delete this._dirtyGlobalProcedures[proccode];
-                }
-                if (!this._globalProcedures[this._dirtyGlobalProcedures[proccode]]) {
+                if (Pnew.has(proccode) || Premoved.has(this._dirtyGlobalProcedures[proccode])) {
                     delete this._dirtyGlobalProcedures[proccode];
                 }
             }
