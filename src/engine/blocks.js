@@ -1649,7 +1649,7 @@ class Blocks {
     /**
      * Updates dirty global procedures in this block container.
      */
-    updateDirtyGlobalProcedures (dirtyProccode, newProccode, pniad) {
+    updateDirtyGlobalProcedures (nop, dirtyProccode, newProccode, pniad) {
         const dirtyCallers = this.getAllProcedureCallersByProccode(dirtyProccode);
 
         if (dirtyCallers.length === 0) return;
@@ -1659,13 +1659,15 @@ class Blocks {
         }
 
         this.resetCache();
-        this.emitProjectChanged();
+        if (!nop) {
+            this.emitProjectChanged();
+        }
     }
 
     /**
      * Updates dirty global procedure mutations in this block container.
      */
-    updateDirtyGlobalProceduresMutations (dirtyProccode, newMutation) {
+    updateDirtyGlobalProceduresMutations (nop, dirtyProccode, newMutation) {
         const dirtyCallers = this.getAllProcedureCallersByProccode(dirtyProccode);
 
         if (dirtyCallers.length === 0) return;
@@ -1675,7 +1677,9 @@ class Blocks {
         }
 
         this.resetCache();
-        this.emitProjectChanged();
+        if (!nop) {
+            this.emitProjectChanged();
+        }
     }
 }
 

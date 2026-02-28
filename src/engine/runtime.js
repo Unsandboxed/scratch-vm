@@ -654,9 +654,14 @@ class Runtime extends EventEmitter {
             this.temporaryStorage = {};
         });
 
+        this._triggerByRequestOfGlobalProcedures = false;
         this.on(Runtime.PROJECT_CHANGED, () => {
-            this.requestGlobalProceduresMutationsRefresh(true);
-            this.requestGlobalProceduresRefresh(true);
+            if (this._triggerByRequestOfGlobalProcedures) {
+                this._triggerByRequestOfGlobalProcedures = false;
+                return;
+            }
+            this.requestGlobalProceduresMutationsRefresh();
+            this.requestGlobalProceduresRefresh();
         });
         this.on(Runtime.PROJECT_LOADED, () => {
             this.requestGlobalProceduresMutationsRefresh();
@@ -4321,6 +4326,7 @@ class Runtime extends EventEmitter {
                     )) continue;
 
                     target.blocks.updateDirtyGlobalProcedures(
+                        true,
                         dirtyProccode,
                         this._dirtyGlobalProcedures[dirtyProccode],
                         this.getGlobalProcedureParamNamesIdsAndDefaults(
@@ -4332,6 +4338,11 @@ class Runtime extends EventEmitter {
             this._dirtyGlobalProcedures = {};
 
             res = true;
+        }
+
+        if (res) {
+            this._triggerByRequestOfGlobalProcedures = true;
+            this.emitProjectChanged();
         }
 
         return res;
@@ -4347,12 +4358,16 @@ class Runtime extends EventEmitter {
                     continue;
                 }
                 target.blocks.updateDirtyGlobalProceduresMutations(
+                    true,
                     dirtyProccode,
                     this._dirtyGlobalProceduresMutations[dirtyProccode]
                 );
             }
         }
         this._dirtyGlobalProceduresMutations = {};
+
+        this._triggerByRequestOfGlobalProcedures = true;
+        this.emitProjectChanged();
     }
 
     /**
