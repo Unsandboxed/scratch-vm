@@ -801,8 +801,6 @@ class ScriptTreeGenerator {
 
         this.script.targetId = this.targetId;
 
-        console.log(this.script);
-
         return this.script;
     }
 }
