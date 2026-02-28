@@ -62,7 +62,8 @@ module.exports = {
         Mouse: () => require('./io/mouse'),
         MouseWheel: () => require('./io/mouseWheel'),
         UserData: () => require('./io/userData'),
-        Video: () => require('./io/video')
+        Video: () => require('./io/video'),
+        Storage: () => require('./io/storage')
     },
 
     limiter: {

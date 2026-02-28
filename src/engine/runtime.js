@@ -32,6 +32,7 @@ const Mouse = require('../io/mouse');
 const MouseWheel = require('../io/mouseWheel');
 const UserData = require('../io/userData');
 const Video = require('../io/video');
+const {StorageProvider} = require('../io/storage');
 
 const StringUtil = require('../util/string-util');
 const uid = require('../util/uid');
@@ -620,15 +621,28 @@ class Runtime extends EventEmitter {
             volume: 1
         };
 
-        /**
-         * A temporary storage area that gets cleared when the project starts or stops
-         */
-        this.temporaryStorage = {};
-        this.on(Runtime.PROJECT_START, () => {
-            this.temporaryStorage = {};
+        this.store = new StorageProvider(this, this);
+        Object.defineProperty(this, 'temporaryStorage', {
+            enumerable: true,
+            configurable: true,
+            get: () => {
+                log.warn('DEPRICATED API WAS USED: Please use the .store temporary API instead.');
+                return this.store.unsafe$getTemporaryStorage();
+            },
+            set: () => {
+                throw new ReferenceError('DEPRICATED: Cannot set the temporaryStorage object.');
+            }
         });
-        this.on(Runtime.PROJECT_STOP_ALL, () => {
-            this.temporaryStorage = {};
+        Object.defineProperty(this, 'extensionStorage', {
+            enumerable: true,
+            configurable: true,
+            get: () => {
+                log.warn('DEPRICATED API WAS USED: (extensionStorage) Please use the .store extension API instead.');
+                return this.store.unsafe$getExtensionStorage();
+            },
+            set: () => {
+                throw new ReferenceError('DEPRICATED: Cannot set the extensionStorage object.');
+            }
         });
 
         /**
@@ -637,7 +651,7 @@ class Runtime extends EventEmitter {
         this.exports = {
             ExtendedJSON,
             i_will_not_ask_for_help_when_these_break: () => {
-                console.warn('You are using unsupported APIs. WHEN your code breaks, do not expect help.');
+                log.warn('You are using unsupported APIs. WHEN your code breaks, do not expect help.');
                 return ({
                     ScratchBlocksConstants,
                     ArgumentTypeMap: RuntimeInternals.ArgumentTypeMap,
@@ -2511,6 +2525,7 @@ class Runtime extends EventEmitter {
     _stopThread (thread) {
         // Mark the thread for later removal
         thread.isKilled = true;
+        thread.store.clearStorage();
         // Inform sequencer to stop executing that thread.
         this.sequencer.retireThread(thread);
     }
@@ -2806,7 +2821,9 @@ class Runtime extends EventEmitter {
         });
 
         this.targets.map(this.disposeTarget, this);
-        this.extensionStorage = {};
+        this.store.clearProjectStorage();
+        this.store.clearTemporaryStorage();
+        this.store.clearExtensionStorage();
         // tw: explicitly emit a MONITORS_UPDATE instead of relying on implicit behavior of _step()
         if (!this._monitorState.empty()) {
             this._monitorState = new MonitorState();

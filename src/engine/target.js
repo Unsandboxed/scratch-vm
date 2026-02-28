@@ -7,6 +7,7 @@ const uid = require('../util/uid');
 const log = require('../util/log');
 const StringUtil = require('../util/string-util');
 const VariableUtil = require('../util/variable-util');
+const {StorageProvider} = require('../io/storage');
 
 /**
  * @fileoverview
@@ -70,11 +71,29 @@ class Target extends EventEmitter {
          */
         this._edgeActivatedHatValues = {};
 
-        /**
-         * Maps extension ID to a JSON-serializable value.
-         * @type {Object.<string, object>}
-         */
-        this.extensionStorage = {};
+        this.store = new StorageProvider(runtime, this);
+        Object.defineProperty(this, 'temporaryStorage', {
+            enumerable: true,
+            configurable: true,
+            get: () => {
+                // eslint-disable-next-line max-len
+                throw new ReferenceError('DEPRICATED: Cannot get the temporaryStorage object, please use the .store temporary API instead.');
+            },
+            set: () => {
+                throw new ReferenceError('DEPRICATED: Cannot set the temporaryStorage object.');
+            }
+        });
+        Object.defineProperty(this, 'extensionStorage', {
+            enumerable: true,
+            configurable: true,
+            get: () => {
+                log.warn('DEPRICATED API WAS USED: (extensionStorage) Please use the .store extension API instead.');
+                return this.store.unsafe$getExtensionStorage();
+            },
+            set: () => {
+                throw new ReferenceError('DEPRICATED: Cannot set the extensionStorage object.');
+            }
+        });
 
         /**
          * Pause status of this target
@@ -540,6 +559,10 @@ class Target extends EventEmitter {
         if (this.runtime) {
             this.runtime.removeExecutable(this);
         }
+
+        this.store.clearProjectStorage();
+        this.store.clearTemporaryStorage();
+        this.store.clearExtensionStorage();
     }
 
     // Variable Conflict Resolution Helpers

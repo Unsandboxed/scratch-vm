@@ -747,10 +747,14 @@ E.serialize = function (runtime, targetId, {allowOptimization = true} = {}) {
         .map((serialized, index) => {
             // can't serialize extensionStorage until the list of used extensions is fully known
             const target = originalTargetsToSerialize[index];
-            const targetExtensionStorage = E.serializeExtensionStorage(target.extensionStorage, extensions);
+            const targetExtensionStorage = E.serializeExtensionStorage(
+                target.store.unsafe$getExtensionStorage(),
+                extensions
+            );
             if (targetExtensionStorage) {
                 serialized.extensionStorage = targetExtensionStorage;
             }
+            serialized.projectStorage = target.store.unsafe$getProjectStorage();
             return serialized;
         });
 
@@ -772,10 +776,11 @@ E.serialize = function (runtime, targetId, {allowOptimization = true} = {}) {
         return serializedTargets[0];
     }
 
-    const globalExtensionStorage = E.serializeExtensionStorage(runtime.extensionStorage, extensions);
+    const globalExtensionStorage = E.serializeExtensionStorage(runtime.store.unsafe$getExtensionStorage(), extensions);
     if (globalExtensionStorage) {
         obj.extensionStorage = globalExtensionStorage;
     }
+    obj.projectStorage = runtime.store.unsafe$getProjectStorage();
 
     obj.targets = serializedTargets;
 
@@ -1325,7 +1330,7 @@ E.parseScratchObject = function (object, runtime, extensions, zip, assets) {
         target.draggable = object.draggable;
     }
     if (Object.prototype.hasOwnProperty.call(object, 'extensionStorage')) {
-        target.extensionStorage = object.extensionStorage;
+        target.store.unsafe$setProjectStorage(Object.assign(Object.create(null), object));
     }
     Promise.all(costumePromises).then(costumes => {
         sprite.costumes = costumes;
@@ -1608,7 +1613,7 @@ E.deserialize = async function (json, runtime, zip, isSingleSprite) {
         .then(targets => {
             monitorObjects.map(monitorDesc => E.deserializeMonitor(monitorDesc, runtime, targets, extensions));
             if (Object.prototype.hasOwnProperty.call(json, 'extensionStorage')) {
-                runtime.extensionStorage = json.extensionStorage;
+                runtime.store.unsafe$setProjectStorage(Object.assign(Object.create(null), json.extensionStorage));
             }
             return targets;
         })
