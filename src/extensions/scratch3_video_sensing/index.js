@@ -10,67 +10,69 @@ const Video = require('../../io/video');
 const VideoMotion = require('./library');
 
 /**
- * Icon svg to be displayed in the blocks category menu, encoded as a data URI.
- * @type {string}
- */
-// eslint-disable-next-line max-len
-const menuIconURI = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDIwIDIwIj48dGl0bGU+RXh0ZW5zaW9ucy9Tb2Z0d2FyZS9WaWRlby1TZW5zaW5nLU1lbnU8L3RpdGxlPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0ibm9uemVybyIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCA1KSI+PGNpcmNsZSBjeD0iMTYiIGN5PSI4IiByPSIyIiBmaWxsPSIjMGViZDhjIiBvcGFjaXR5PSIuMjUiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjYiIHI9IjIiIGZpbGw9IiMwZWJkOGMiIG9wYWNpdHk9Ii41Ii8+PGNpcmNsZSBjeD0iMTYiIGN5PSI0IiByPSIyIiBmaWxsPSIjMGViZDhjIiBvcGFjaXR5PSIuNzUiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjIiIHI9IjIiIGZpbGw9IiMwZWJkOGMiLz48cGF0aCBmaWxsPSIjNGQ0ZDRkIiBzdHJva2U9IiMwMDAiIHN0cm9rZS1vcGFjaXR5PSIuMTUiIHN0cm9rZS13aWR0aD0iLjUiIGQ9Im0xMS4zMzYgMi4yMS0zLjA4NiAyVjMuMDVjMC0xLjAwNS0uNzgxLTEuOC0xLjc1LTEuOEgyLjA1Yy0xLjAxMiAwLTEuOC43ODgtMS44IDEuOFY3YzAgLjk2NC43OTIgMS43NTYgMS44IDEuOEg2LjVjLjk1IDAgMS43NS0uODI3IDEuNzUtMS44VjUuODU4bC4zNzkuMjI4IDIuNzk4IDEuNjg3Yy4wMS4wMS4wNDkuMDI3LjA3My4wMjdhLjI1LjI1IDAgMCAwIC4yNS0uMjVWMi40YzAgLjAxOC0uMDI4LS4wNDctLjA2NC0uMTIxLS4wNzMtLjEyMS0uMjE1LS4xNS0uMzUtLjA3WiIvPjwvZz48L3N2Zz4=';
-
-/**
- * Icon svg to be displayed at the left edge of each extension block, encoded as a data URI.
- * @type {string}
- */
-// eslint-disable-next-line max-len
-const blockIconURI = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48dGl0bGU+RXh0ZW5zaW9ucy9Tb2Z0d2FyZS9WaWRlby1TZW5zaW5nLUJsb2NrPC90aXRsZT48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9Im5vbnplcm8iIHN0cm9rZT0iIzAwMCIgc3Ryb2tlLW9wYWNpdHk9Ii4xNSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCAxMCkiPjxjaXJjbGUgY3g9IjMyIiBjeT0iMTYiIHI9IjQuNSIgZmlsbD0iI2ZmZiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBvcGFjaXR5PSIuMjUiLz48Y2lyY2xlIGN4PSIzMiIgY3k9IjEyIiByPSI0LjUiIGZpbGw9IiNmZmYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgb3BhY2l0eT0iLjUiLz48Y2lyY2xlIGN4PSIzMiIgY3k9IjgiIHI9IjQuNSIgZmlsbD0iI2ZmZiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBvcGFjaXR5PSIuNzUiLz48Y2lyY2xlIGN4PSIzMiIgY3k9IjQiIHI9IjQuNSIgZmlsbD0iI2ZmZiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZmlsbD0iIzRkNGQ0ZCIgZD0ibTIyLjY3MiA0LjQyLTYuMTcyIDRWNi4xYzAtMi4wMS0xLjU2My0zLjYtMy41LTMuNkg0LjFDMi4wNzYgMi41LjUgNC4wNzYuNSA2LjFWMTRjMCAxLjkyNyAxLjU4NCAzLjUxMiAzLjYgMy42SDEzYzEuOTAyIDAgMy41LTEuNjUzIDMuNS0zLjZ2LTIuMjgzbDYuMjU3IDMuNzU0LjA5Ny4wNzVjLjAyLjAyLjA5OC4wNTQuMTQ2LjA1NC4yNjcgMCAuNS0uMjE3LjUtLjVWNC44YzAgLjAzNy0uMDU2LS4wOTQtLjEyOS0uMjQzLS4xNDUtLjI0Mi0uNDMtLjI5OS0uNy0uMTM3WiIvPjwvZz48L3N2Zz4=';
-
-/**
- * Sensor attribute video sensor block should report.
- * @readonly
- * @enum {string}
- */
-const SensingAttribute = {
-    /** The amount of motion. */
-    MOTION: 'motion',
-
-    /** The direction of the motion. */
-    DIRECTION: 'direction'
-};
-
-/**
- * Subject video sensor block should report for.
- * @readonly
- * @enum {string}
- */
-const SensingSubject = {
-    /** The sensor traits of the whole stage. */
-    STAGE: 'Stage',
-
-    /** The senosr traits of the area overlapped by this sprite. */
-    SPRITE: 'this sprite'
-};
-
-/**
- * States the video sensing activity can be set to.
- * @readonly
- * @enum {string}
- */
-const VideoState = {
-    /** Video turned off. */
-    OFF: 'off',
-
-    /** Video turned on with default y axis mirroring. */
-    ON: 'on',
-
-    /** Video turned on without default y axis mirroring. */
-    ON_FLIPPED: 'on-flipped'
-};
-
-/**
  * Class for the motion-related blocks in Scratch 3.0
  * @param {Runtime} runtime - the runtime instantiating this block package.
  * @constructor
  */
 class Scratch3VideoSensingBlocks {
+    static exports = require('./debug');
+
+    /**
+     * Icon svg to be displayed in the blocks category menu, encoded as a data URI.
+     * @type {string}
+     */
+    // eslint-disable-next-line max-len
+    static menuIconURI = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDIwIDIwIj48dGl0bGU+RXh0ZW5zaW9ucy9Tb2Z0d2FyZS9WaWRlby1TZW5zaW5nLU1lbnU8L3RpdGxlPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0ibm9uemVybyIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCA1KSI+PGNpcmNsZSBjeD0iMTYiIGN5PSI4IiByPSIyIiBmaWxsPSIjMGViZDhjIiBvcGFjaXR5PSIuMjUiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjYiIHI9IjIiIGZpbGw9IiMwZWJkOGMiIG9wYWNpdHk9Ii41Ii8+PGNpcmNsZSBjeD0iMTYiIGN5PSI0IiByPSIyIiBmaWxsPSIjMGViZDhjIiBvcGFjaXR5PSIuNzUiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjIiIHI9IjIiIGZpbGw9IiMwZWJkOGMiLz48cGF0aCBmaWxsPSIjNGQ0ZDRkIiBzdHJva2U9IiMwMDAiIHN0cm9rZS1vcGFjaXR5PSIuMTUiIHN0cm9rZS13aWR0aD0iLjUiIGQ9Im0xMS4zMzYgMi4yMS0zLjA4NiAyVjMuMDVjMC0xLjAwNS0uNzgxLTEuOC0xLjc1LTEuOEgyLjA1Yy0xLjAxMiAwLTEuOC43ODgtMS44IDEuOFY3YzAgLjk2NC43OTIgMS43NTYgMS44IDEuOEg2LjVjLjk1IDAgMS43NS0uODI3IDEuNzUtMS44VjUuODU4bC4zNzkuMjI4IDIuNzk4IDEuNjg3Yy4wMS4wMS4wNDkuMDI3LjA3My4wMjdhLjI1LjI1IDAgMCAwIC4yNS0uMjVWMi40YzAgLjAxOC0uMDI4LS4wNDctLjA2NC0uMTIxLS4wNzMtLjEyMS0uMjE1LS4xNS0uMzUtLjA3WiIvPjwvZz48L3N2Zz4=';
+
+    /**
+     * Icon svg to be displayed at the left edge of each extension block, encoded as a data URI.
+     * @type {string}
+     */
+    // eslint-disable-next-line max-len
+    static blockIconURI = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48dGl0bGU+RXh0ZW5zaW9ucy9Tb2Z0d2FyZS9WaWRlby1TZW5zaW5nLUJsb2NrPC90aXRsZT48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9Im5vbnplcm8iIHN0cm9rZT0iIzAwMCIgc3Ryb2tlLW9wYWNpdHk9Ii4xNSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCAxMCkiPjxjaXJjbGUgY3g9IjMyIiBjeT0iMTYiIHI9IjQuNSIgZmlsbD0iI2ZmZiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBvcGFjaXR5PSIuMjUiLz48Y2lyY2xlIGN4PSIzMiIgY3k9IjEyIiByPSI0LjUiIGZpbGw9IiNmZmYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgb3BhY2l0eT0iLjUiLz48Y2lyY2xlIGN4PSIzMiIgY3k9IjgiIHI9IjQuNSIgZmlsbD0iI2ZmZiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBvcGFjaXR5PSIuNzUiLz48Y2lyY2xlIGN4PSIzMiIgY3k9IjQiIHI9IjQuNSIgZmlsbD0iI2ZmZiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZmlsbD0iIzRkNGQ0ZCIgZD0ibTIyLjY3MiA0LjQyLTYuMTcyIDRWNi4xYzAtMi4wMS0xLjU2My0zLjYtMy41LTMuNkg0LjFDMi4wNzYgMi41LjUgNC4wNzYuNSA2LjFWMTRjMCAxLjkyNyAxLjU4NCAzLjUxMiAzLjYgMy42SDEzYzEuOTAyIDAgMy41LTEuNjUzIDMuNS0zLjZ2LTIuMjgzbDYuMjU3IDMuNzU0LjA5Ny4wNzVjLjAyLjAyLjA5OC4wNTQuMTQ2LjA1NC4yNjcgMCAuNS0uMjE3LjUtLjVWNC44YzAgLjAzNy0uMDU2LS4wOTQtLjEyOS0uMjQzLS4xNDUtLjI0Mi0uNDMtLjI5OS0uNy0uMTM3WiIvPjwvZz48L3N2Zz4=';
+
+    /**
+     * Sensor attribute video sensor block should report.
+     * @readonly
+     * @enum {string}
+     */
+    static _SensingAttribute = {
+        /** The amount of motion. */
+        MOTION: 'motion',
+
+        /** The direction of the motion. */
+        DIRECTION: 'direction'
+    };
+
+    /**
+     * Subject video sensor block should report for.
+     * @readonly
+     * @enum {string}
+     */
+    static _SensingSubject = {
+        /** The sensor traits of the whole stage. */
+        STAGE: 'Stage',
+
+        /** The senosr traits of the area overlapped by this sprite. */
+        SPRITE: 'this sprite'
+    };
+
+    /**
+     * States the video sensing activity can be set to.
+     * @readonly
+     * @enum {string}
+     */
+    static _VideoState = {
+        /** Video turned off. */
+        OFF: 'off',
+
+        /** Video turned on with default y axis mirroring. */
+        ON: 'on',
+
+        /** Video turned on without default y axis mirroring. */
+        ON_FLIPPED: 'on-flipped'
+    };
+
     constructor (runtime) {
         /**
          * The runtime instantiating this block package.
@@ -182,7 +184,7 @@ class Scratch3VideoSensingBlocks {
         // Though the default value for the stage is normally 'on', we need to default
         // to 'off' here to prevent the video device from briefly activating
         // while waiting for stage targets to be installed that say it should be off
-        return VideoState.OFF;
+        return Scratch3VideoSensingBlocks.VideoState.OFF;
     }
 
     set globalVideoState (state) {
@@ -291,7 +293,7 @@ class Scratch3VideoSensingBlocks {
     }
 
     static get SensingAttribute () {
-        return SensingAttribute;
+        return Scratch3VideoSensingBlocks._SensingAttribute;
     }
 
     /**
@@ -310,7 +312,7 @@ class Scratch3VideoSensingBlocks {
                     default: 'motion',
                     description: 'Attribute for the "video [ATTRIBUTE] on [SUBJECT]" block'
                 }),
-                value: SensingAttribute.MOTION
+                value: Scratch3VideoSensingBlocks.SensingAttribute.MOTION
             },
             {
                 name: formatMessage({
@@ -318,13 +320,13 @@ class Scratch3VideoSensingBlocks {
                     default: 'direction',
                     description: 'Attribute for the "video [ATTRIBUTE] on [SUBJECT]" block'
                 }),
-                value: SensingAttribute.DIRECTION
+                value: Scratch3VideoSensingBlocks.SensingAttribute.DIRECTION
             }
         ];
     }
 
     static get SensingSubject () {
-        return SensingSubject;
+        return Scratch3VideoSensingBlocks._SensingSubject;
     }
 
     /**
@@ -341,7 +343,7 @@ class Scratch3VideoSensingBlocks {
                     default: 'sprite',
                     description: 'Subject for the "video [ATTRIBUTE] on [SUBJECT]" block'
                 }),
-                value: SensingSubject.SPRITE
+                value: Scratch3VideoSensingBlocks.SensingSubject.SPRITE
             },
             {
                 name: formatMessage({
@@ -349,7 +351,7 @@ class Scratch3VideoSensingBlocks {
                     default: 'stage',
                     description: 'Subject for the "video [ATTRIBUTE] on [SUBJECT]" block'
                 }),
-                value: SensingSubject.STAGE
+                value: Scratch3VideoSensingBlocks.SensingSubject.STAGE
             }
         ];
     }
@@ -360,7 +362,7 @@ class Scratch3VideoSensingBlocks {
      * @enum {string}
      */
     static get VideoState () {
-        return VideoState;
+        return Scratch3VideoSensingBlocks._VideoState;
     }
 
     /**
@@ -377,7 +379,7 @@ class Scratch3VideoSensingBlocks {
                     default: 'off',
                     description: 'Option for the "turn video [STATE]" block'
                 }),
-                value: VideoState.OFF
+                value: Scratch3VideoSensingBlocks.VideoState.OFF
             },
             {
                 name: formatMessage({
@@ -385,7 +387,7 @@ class Scratch3VideoSensingBlocks {
                     default: 'on',
                     description: 'Option for the "turn video [STATE]" block'
                 }),
-                value: VideoState.ON
+                value: Scratch3VideoSensingBlocks.VideoState.ON
             },
             {
                 name: formatMessage({
@@ -394,7 +396,7 @@ class Scratch3VideoSensingBlocks {
                     description: 'Option for the "turn video [STATE]" block that causes the video to be flipped' +
                         ' horizontally (reversed as in a mirror)'
                 }),
-                value: VideoState.ON_FLIPPED
+                value: Scratch3VideoSensingBlocks.VideoState.ON_FLIPPED
             }
         ];
     }
@@ -408,7 +410,7 @@ class Scratch3VideoSensingBlocks {
         // first added to a project, and is overwritten by a PROJECT_LOADED
         // event listener that later calls updateVideoDisplay
         if (this.firstInstall) {
-            this.globalVideoState = VideoState.ON;
+            this.globalVideoState = Scratch3VideoSensingBlocks.VideoState.ON;
             this.globalVideoTransparency = 50;
             this.updateVideoDisplay();
             this.firstInstall = false;
@@ -422,8 +424,8 @@ class Scratch3VideoSensingBlocks {
                 default: 'Video Sensing',
                 description: 'Label for the video sensing extension category'
             }),
-            blockIconURI: blockIconURI,
-            menuIconURI: menuIconURI,
+            blockIconURI: Scratch3VideoSensingBlocks.blockIconURI,
+            menuIconURI: Scratch3VideoSensingBlocks.menuIconURI,
             blocks: [
                 {
                     // @todo this hat needs to be set itself to restart existing
@@ -454,12 +456,12 @@ class Scratch3VideoSensingBlocks {
                         ATTRIBUTE: {
                             type: ArgumentType.NUMBER,
                             menu: 'ATTRIBUTE',
-                            defaultValue: SensingAttribute.MOTION
+                            defaultValue: Scratch3VideoSensingBlocks.SensingAttribute.MOTION
                         },
                         SUBJECT: {
                             type: ArgumentType.NUMBER,
                             menu: 'SUBJECT',
-                            defaultValue: SensingSubject.SPRITE
+                            defaultValue: Scratch3VideoSensingBlocks.SensingSubject.SPRITE
                         }
                     }
                 },
@@ -474,7 +476,7 @@ class Scratch3VideoSensingBlocks {
                         VIDEO_STATE: {
                             type: ArgumentType.NUMBER,
                             menu: 'VIDEO_STATE',
-                            defaultValue: VideoState.ON
+                            defaultValue: Scratch3VideoSensingBlocks.VideoState.ON
                         }
                     }
                 },
@@ -538,11 +540,11 @@ class Scratch3VideoSensingBlocks {
         this.detect.analyzeFrame();
 
         let state = this.detect;
-        if (args.SUBJECT === SensingSubject.SPRITE) {
+        if (args.SUBJECT === Scratch3VideoSensingBlocks.SensingSubject.SPRITE) {
             state = this._analyzeLocalMotion(util.target);
         }
 
-        if (args.ATTRIBUTE === SensingAttribute.MOTION) {
+        if (args.ATTRIBUTE === Scratch3VideoSensingBlocks.SensingAttribute.MOTION) {
             return state.motionAmount;
         }
         return state.motionDirection;
@@ -576,12 +578,12 @@ class Scratch3VideoSensingBlocks {
     videoToggle (args) {
         const state = args.VIDEO_STATE;
         this.globalVideoState = state;
-        if (state === VideoState.OFF) {
+        if (state === Scratch3VideoSensingBlocks.VideoState.OFF) {
             this.runtime.ioDevices.video.disableVideo();
         } else {
             this.runtime.ioDevices.video.enableVideo();
             // Mirror if state is ON. Do not mirror if state is ON_FLIPPED.
-            this.runtime.ioDevices.video.mirror = state === VideoState.ON;
+            this.runtime.ioDevices.video.mirror = state === Scratch3VideoSensingBlocks.VideoState.ON;
         }
     }
 

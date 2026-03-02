@@ -1,5 +1,6 @@
 const log = require('../util/log');
 const uid = require('../util/uid');
+const {UnmanagedTemporaryStorageProvider} = require('../io/storage');
 
 /**
  * Recycle bin for empty stackFrame objects
@@ -15,6 +16,8 @@ const _stackFrameFreeList = [];
  * @private
  */
 class _StackFrame {
+    static _stackFrameFreeList = _stackFrameFreeList;
+
     constructor (warpMode) {
         /**
          * Whether this level of the stack is a loop.
@@ -293,6 +296,8 @@ class Thread {
         this.procedures = null;
         this.executableHat = false;
         this.compatibilityStackFrame = null;
+
+        this.store = new UnmanagedTemporaryStorageProvider(this);
     }
 
     /**
@@ -355,6 +360,10 @@ class Thread {
     setStatus (newStatus) {
         this.previousStatus = this.status;
         this.status = newStatus;
+
+        if (newStatus === Thread.STATUS_DONE) {
+            this.store.clearStorage();
+        }
         // todo: Possibly make an event?
     }
 

@@ -1,9 +1,11 @@
+const external = {};
+
 /**
  * @param {string} url
  * @returns {void} if URL is supported
  * @throws if URL is unsupported
  */
-const checkURL = url => {
+external.checkURL = url => {
     // URL might be a very long data: URL, so try to avoid fully parsing it if we can.
     // The notable requirement here is that the URL must be an absolute URL, not something
     // relative to where the extension is loaded from or where the extension is running.
@@ -19,7 +21,6 @@ const checkURL = url => {
     }
 };
 
-const external = {};
 
 /**
  * @param {string} url
@@ -27,7 +28,7 @@ const external = {};
  * @returns {Promise<T>}
  */
 external.importModule = url => {
-    checkURL(url);
+    external.checkURL(url);
     // Need to specify webpackIgnore so that webpack compiles this directly to a call to import()
     // instead of trying making it try to use the webpack import system.
     return import(/* webpackIgnore: true */ url);
@@ -38,7 +39,7 @@ external.importModule = url => {
  * @returns {Promise<Response>}
  */
 external.fetch = async url => {
-    checkURL(url);
+    external.checkURL(url);
     const res = await fetch(url);
     if (!res.ok) {
         throw new Error(`HTTP ${res.status} fetching ${url}`);

@@ -1,6 +1,8 @@
 const JSZip = require('@turbowarp/jszip');
 const log = require('../util/log');
 
+const E = {};
+
 /**
  * Deserializes sound from file into storage cache so that it can
  * be loaded into the runtime.
@@ -14,7 +16,7 @@ const log = require('../util/log');
  * into the runtime storage cache, the sound was already stored, or an error has
  * occurred.
  */
-const deserializeSound = function (sound, runtime, zip, assetFileName) {
+E.deserializeSound = function (sound, runtime, zip, assetFileName) {
     const fileName = assetFileName ? assetFileName : sound.md5;
     const storage = runtime.storage;
     if (!storage) {
@@ -74,7 +76,7 @@ const deserializeSound = function (sound, runtime, zip, assetFileName) {
  * into the runtime storage cache, the costume was already stored, or an error has
  * occurred.
  */
-const deserializeCostume = function (costume, runtime, zip, assetFileName, textLayerFileName) {
+E.deserializeCostume = function (costume, runtime, zip, assetFileName, textLayerFileName) {
     const storage = runtime.storage;
     const assetId = costume.assetId;
     const fileName = assetFileName ? assetFileName :
@@ -172,7 +174,4 @@ const deserializeCostume = function (costume, runtime, zip, assetFileName, textL
     ]);
 };
 
-module.exports = {
-    deserializeSound,
-    deserializeCostume
-};
+module.exports = E;

@@ -128,8 +128,54 @@ module.exports = function (compilerData, {
         dynamicChanges: true,
         type: InputType.ANY
     });
-    compilerData.inputs.set('procedures_call', compilerData.stacks.get('procedures_call'));
+    compilerData.registerBlock('procedures_set_parameter', function (stg, block) {
+        let index = -1;
+        if (block.inputs.PARAM && block.inputs.PARAM.block) {
+            const input = stg.blocks.getBlock(block.inputs.PARAM.block);
+            if (input && (
+                input.opcode === 'argument_reporter_string_number' ||
+                input.opcode === 'argument_reporter_boolean'
+            ) && input.fields.VALUE) {
+                index = stg.script.arguments.lastIndexOf(input.fields.VALUE.value);
+            }
+        }
+        return new IntermediateStackBlock(this.ir_opcode, {
+            index: index,
+            param: stg.descendInputOfBlock(block, 'PARAM'),
+            value: stg.descendInputOfBlock(block, 'VALUE')
+        }, this.yields);
+    }, function (jsg, block) {
+        if (block.inputs.index === -1) {
+            // Even if the param is not found we need to evaluate the params for side effects.
+            // eslint-disable-next-line max-len
+            jsg.source += `void(${jsg.descendInput(block.inputs.param)});void(${jsg.descendInput(block.inputs.value)});`;
+            return;
+        }
+        jsg.source += `p${block.inputs.index} = ${jsg.descendInput(block.inputs.value)};`;
+    }, {
+        input: false
+    });
+    compilerData.registerBlock('argument_statement', function (stg, block) {
+        const name = block.fields.VALUE.value;
+        const index = stg.script.arguments.lastIndexOf(name);
+        return new IntermediateStackBlock(this.ir_opcode, {index}, this.yields);
+        // eslint-disable-next-line no-unused-vars
+    }, function (jsg, block) {
+        if (block.inputs.index === -1 || !jsg.isProcedure) {
+            return;
+        }
+        // eslint-disable-next-line max-len
+        jsg.source += `void(yield* p${block.inputs.index}(function(v) {procedureReturnV[0]=true;procedureReturnV[1]=v}, thread, target, (deftarget, target) ));`;
+        jsg.source += `if (procedureReturnV[0]) {`;
+        jsg.stopScriptAndReturn(`procedureReturnV[1]`);
+        jsg.source += `};`;
+    }, {
+        input: false,
+        yields: true,
+        dynamicChanges: false
+    });
     // Inputs
+    compilerData.inputs.set('procedures_call', compilerData.stacks.get('procedures_call'));
     compilerData.registerBlock('argument_reporter_string_number', function (stg, block) {
         const name = block.fields.VALUE.value;
         // lastIndexOf because multiple parameters with the same name will use the value of the last definition
@@ -179,24 +225,5 @@ module.exports = function (compilerData, {
     }, {
         input: true,
         type: InputType.BOOLEAN
-    });
-    compilerData.registerBlock('argument_statement', function (stg, block) {
-        const name = block.fields.VALUE.value;
-        const index = stg.script.arguments.lastIndexOf(name);
-        return new IntermediateStackBlock(this.ir_opcode, {index}, this.yields);
-        // eslint-disable-next-line no-unused-vars
-    }, function (jsg, block) {
-        if (block.inputs.index === -1 || !jsg.isProcedure) {
-            return;
-        }
-        // eslint-disable-next-line max-len
-        jsg.source += `void(yield* p${block.inputs.index}(function(v) {procedureReturnV[0]=true;procedureReturnV[1]=v}, thread, target, (deftarget, target) ));`;
-        jsg.source += `if (procedureReturnV[0]) {`;
-        jsg.stopScriptAndReturn(`procedureReturnV[1]`);
-        jsg.source += `};`;
-    }, {
-        input: false,
-        yields: true,
-        dynamicChanges: false
     });
 };

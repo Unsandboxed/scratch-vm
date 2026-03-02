@@ -7,12 +7,14 @@ const staticFetch = require('../util/tw-static-fetch');
 
 /* eslint-disable require-await */
 
+const E = {};
+
 /**
  * Parse a URL object or return null.
  * @param {string} url
  * @returns {URL|null}
  */
-const parseURL = url => {
+E.parseURL = url => {
     try {
         return new URL(url, location.href);
     } catch (e) {
@@ -26,7 +28,7 @@ const parseURL = url => {
  * @param {boolean} pre Whether or not this is a "pre-mature" load
  * @returns {Promise<object[]>} Resolves with a list of extension objects when Scratch.extensions.register is called.
  */
-const setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
+E.setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
     pre = pre || false;
     const extensionObjects = [];
     const register = pre ? (() => {
@@ -38,10 +40,19 @@ const setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
 
     // Create a new copy of global.Scratch and global.Unsandboxed for each extension
     const Scratch = Object.assign({}, global.Scratch || {}, ScratchCommon);
-    const Unsandboxed = Object.assign({}, createUnsandboxed());
+    Scratch.UnsandboxedMod = createUnsandboxed(vm, pre);
     Scratch.extensions = {
-        isPremature: pre,
-        isUSB: true,
+        get isUSB () {
+            // eslint-disable-next-line max-len
+            console.warn('Depricated "Scratch.extensions.isUSB" API was used, please use "Scratch.UnsandboxedMod" instead.');
+            return !!Scratch.UnsandboxedMod; // Always true.
+        },
+        get isPremature () {
+            // eslint-disable-next-line max-len
+            console.warn('Depricated "Scratch.extensions.isPremature" API was used, please use "Scratch.UnsandboxedMod.isAprematureLoad" instead.');
+            return Scratch.UnsandboxedMod.isAprematureLoad;
+        },
+
         unsandboxed: true,
         register
     };
@@ -49,7 +60,7 @@ const setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
     Scratch.renderer = vm.runtime.renderer;
 
     Scratch.canFetch = async url => {
-        const parsed = parseURL(url);
+        const parsed = E.parseURL(url);
         if (!parsed) {
             return false;
         }
@@ -61,7 +72,7 @@ const setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
     };
 
     Scratch.canOpenWindow = async url => {
-        const parsed = parseURL(url);
+        const parsed = E.parseURL(url);
         if (!parsed) {
             return false;
         }
@@ -74,7 +85,7 @@ const setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
     };
 
     Scratch.canRedirect = async url => {
-        const parsed = parseURL(url);
+        const parsed = E.parseURL(url);
         if (!parsed) {
             return false;
         }
@@ -97,7 +108,7 @@ const setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
     Scratch.canGeolocate = async () => vm.securityManager.canGeolocate();
 
     Scratch.canEmbed = async url => {
-        const parsed = parseURL(url);
+        const parsed = E.parseURL(url);
         if (!parsed) {
             return false;
         }
@@ -105,7 +116,7 @@ const setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
     };
 
     Scratch.canDownload = async (url, name) => {
-        const parsed = parseURL(url);
+        const parsed = E.parseURL(url);
         if (!parsed) {
             return false;
         }
@@ -166,14 +177,33 @@ const setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
 
     // We want Scratch.gui even when it is loaded prematurly as it gives access to some fancy API's in the GUI
     vm.emit('CREATE_UNSANDBOXED_EXTENSION_API', Scratch, pre);
-    vm.emit('CREATE_USB_API', Unsandboxed, pre);
+    vm.emit('CREATE_USB_API', Scratch.UnsandboxedMod, pre);
+
+    // Polyfill some basic "global" APIs that might be used.
+    global.global = global;
+    global.globalThis = global;
 
     if (pre) {
-        resolve({Scratch, ScratchExtensions, Unsandboxed});
+        resolve({Scratch, ScratchExtensions, Unsandboxed: Scratch.UnsandboxedMod});
     } else {
-        global.Unsandboxed = Unsandboxed;
         global.Scratch = Scratch;
         global.ScratchExtensions = ScratchExtensions;
+
+        delete global.Unsandboxed;
+        const binder = {Unsandboxed: Scratch.UnsandboxedMod};
+        Object.defineProperty(global, 'Unsandboxed', {
+            configurable: true,
+            enumerable: true,
+            get: (function () {
+                // eslint-disable-next-line max-len
+                console.warn('Depricated global "Unsandboxed" API was used, please use global "Scratch.UnsandboxedMod" instead.');
+                return this.Unsandboxed;
+            }).bind(binder),
+            set: (function (v) {
+                this.Unsandboxed = v;
+                return true;
+            }).bind(binder)
+        });
     }
 });
 
@@ -181,7 +211,7 @@ const setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
  * Disable the existing global.Scratch unsandboxed extension APIs.
  * This helps debug poorly designed extensions.
  */
-const teardownUnsandboxedExtensionAPI = () => {
+E.teardownUnsandboxedExtensionAPI = () => {
     // We can assume global.Scratch already exists.
     global.Scratch.extensions.register = () => {
         throw new Error('Too late to register new extensions.');
@@ -194,8 +224,8 @@ const teardownUnsandboxedExtensionAPI = () => {
  * @param {Virtualmachine} vm
  * @returns {Promise<object[]>} Resolves with a list of extension objects if the extension was loaded successfully.
  */
-const loadUnsandboxedExtension = (extensionURL, vm) => new Promise((resolve, reject) => {
-    setupUnsandboxedExtensionAPI(vm).then(resolve);
+E.loadUnsandboxedExtension = (extensionURL, vm) => new Promise((resolve, reject) => {
+    E.setupUnsandboxedExtensionAPI(vm).then(resolve);
 
     const script = document.createElement('script');
     script.onerror = () => {
@@ -204,16 +234,13 @@ const loadUnsandboxedExtension = (extensionURL, vm) => new Promise((resolve, rej
     script.src = extensionURL;
     document.body.appendChild(script);
 }).then(objects => {
-    teardownUnsandboxedExtensionAPI();
+    E.teardownUnsandboxedExtensionAPI();
     return objects;
 });
 
 // Because loading unsandboxed extensions requires messing with global state (global.Scratch),
 // only let one extension load at a time.
-const limiter = new AsyncLimiter(loadUnsandboxedExtension, 1);
-const load = (extensionURL, vm) => limiter.do(extensionURL, vm);
+E.limiter = new AsyncLimiter(E.loadUnsandboxedExtension, 1);
+E.load = (extensionURL, vm) => E.limiter.do(extensionURL, vm);
 
-module.exports = {
-    setupUnsandboxedExtensionAPI,
-    load
-};
+module.exports = E;

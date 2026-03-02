@@ -10,25 +10,6 @@ const log = require('../../util/log');
 const StageLayering = require('../../engine/stage-layering');
 
 /**
- * Icon svg to be displayed at the left edge of each extension block, encoded as a data URI.
- * @type {string}
- */
-// eslint-disable-next-line max-len
-const blockIconURI = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48dGl0bGU+cGVuLWljb248L3RpdGxlPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgc3Ryb2tlPSIjNTc1ZTc1IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGZpbGw9IiNmZmYiIGQ9Im04Ljc1MyAzNC42MDItNC4yNSAxLjc4IDEuNzgzLTQuMjM3YzEuMjE4LTIuODkyIDIuOTA3LTUuNDIzIDUuMDMtNy41MzhMMzEuMDY2IDQuOTNjLjg0Ni0uODQyIDIuNjUtLjQxIDQuMDMyLjk2NyAxLjM4IDEuMzc1IDEuODE2IDMuMTczLjk3IDQuMDE1TDE2LjMxOCAyOS41OWMtMi4xMjMgMi4xMTYtNC42NjQgMy44LTcuNTY1IDUuMDEyIi8+PHBhdGggZD0iTTI5LjQxIDYuMTFzLTQuNDUtMi4zNzgtOC4yMDIgNS43NzJjLTEuNzM0IDMuNzY2LTQuMzUgMS41NDYtNC4zNSAxLjU0NiIvPjxwYXRoIGZpbGw9IiM0Yzk3ZmYiIGQ9Ik0zNi40MiA4LjgyNWMwIC40NjMtLjE0Ljg3My0uNDMyIDEuMTY0bC05LjMzNSA5LjNjLjI4Mi0uMjkuNDEtLjY2OC40MS0xLjEyIDAtLjg3NC0uNTA3LTEuOTYzLTEuNDA2LTIuODY4LTEuMzYyLTEuMzU4LTMuMTQ3LTEuOC00LjAwMi0uOTlMMzAuOTkgNS4wMWMuODQ0LS44NCAyLjY1LS40MSA0LjAzNS45Ni44OTguOTA0IDEuMzk2IDEuOTgyIDEuMzk2IDIuODU1TTEwLjUxNSAzMy43NzRhMjQgMjQgMCAwIDEtMS43NjQuODNMNC41IDM2LjM4MmwxLjc4Ni00LjIzNWMuMjU4LS42MDQuNTMtMS4xODYuODMzLTEuNzU3LjY5LjE4MyAxLjQ0OC42MjUgMi4xMDggMS4yODIuNjYuNjU4IDEuMTAyIDEuNDEyIDEuMjg3IDIuMTAyIi8+PHBhdGggZmlsbD0iIzU3NWU3NSIgZD0iTTM2LjQ5OCA4Ljc0OGMwIC40NjQtLjE0Ljg3NC0uNDMzIDEuMTY1bC0xOS43NDIgMTkuNjhjLTIuMTMgMi4xMS00LjY3MyAzLjc5My03LjU3MiA1LjAxTDQuNSAzNi4zOGwuOTc0LTIuMzE2IDEuOTI1LS44MDhjMi44OTgtMS4yMTggNS40NC0yLjkgNy41Ny01LjAxbDE5Ljc0My0xOS42OGMuMjkyLS4yOTIuNDMyLS43MDIuNDMyLTEuMTY1IDAtLjY0Ni0uMjctMS40LS43OC0yLjEyMi4yNS4xNzIuNS4zNzcuNzM3LjYxNC44OTguOTA1IDEuMzk2IDEuOTgzIDEuMzk2IDIuODU2IiBvcGFjaXR5PSIuMTUiLz48cGF0aCBmaWxsPSIjNTc1ZTc1IiBkPSJNMTguNDUgMTIuODNhLjkwNC45MDQgMCAxIDEtLjkwMy0uOTAyYy41IDAgLjkwNC40MDQuOTA0LjkwNHoiLz48L2c+PC9zdmc+';
-
-/**
- * Enum for pen color parameter values.
- * @readonly
- * @enum {string}
- */
-const ColorParam = {
-    COLOR: 'color',
-    SATURATION: 'saturation',
-    BRIGHTNESS: 'brightness',
-    TRANSPARENCY: 'transparency'
-};
-
-/**
  * @typedef {object} PenState - the pen state associated with a particular target.
  * @property {Boolean} penDown - tracks whether the pen should draw for this target.
  * @property {number} color - the current color (hue) of the pen.
@@ -42,6 +23,25 @@ const ColorParam = {
  * @constructor
  */
 class Scratch3PenBlocks {
+    /**
+     * Icon svg to be displayed at the left edge of each extension block, encoded as a data URI.
+     * @type {string}
+     */
+    // eslint-disable-next-line max-len
+    static blockIconURI = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48dGl0bGU+cGVuLWljb248L3RpdGxlPjxnIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgc3Ryb2tlPSIjNTc1ZTc1IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGZpbGw9IiNmZmYiIGQ9Im04Ljc1MyAzNC42MDItNC4yNSAxLjc4IDEuNzgzLTQuMjM3YzEuMjE4LTIuODkyIDIuOTA3LTUuNDIzIDUuMDMtNy41MzhMMzEuMDY2IDQuOTNjLjg0Ni0uODQyIDIuNjUtLjQxIDQuMDMyLjk2NyAxLjM4IDEuMzc1IDEuODE2IDMuMTczLjk3IDQuMDE1TDE2LjMxOCAyOS41OWMtMi4xMjMgMi4xMTYtNC42NjQgMy44LTcuNTY1IDUuMDEyIi8+PHBhdGggZD0iTTI5LjQxIDYuMTFzLTQuNDUtMi4zNzgtOC4yMDIgNS43NzJjLTEuNzM0IDMuNzY2LTQuMzUgMS41NDYtNC4zNSAxLjU0NiIvPjxwYXRoIGZpbGw9IiM0Yzk3ZmYiIGQ9Ik0zNi40MiA4LjgyNWMwIC40NjMtLjE0Ljg3My0uNDMyIDEuMTY0bC05LjMzNSA5LjNjLjI4Mi0uMjkuNDEtLjY2OC40MS0xLjEyIDAtLjg3NC0uNTA3LTEuOTYzLTEuNDA2LTIuODY4LTEuMzYyLTEuMzU4LTMuMTQ3LTEuOC00LjAwMi0uOTlMMzAuOTkgNS4wMWMuODQ0LS44NCAyLjY1LS40MSA0LjAzNS45Ni44OTguOTA0IDEuMzk2IDEuOTgyIDEuMzk2IDIuODU1TTEwLjUxNSAzMy43NzRhMjQgMjQgMCAwIDEtMS43NjQuODNMNC41IDM2LjM4MmwxLjc4Ni00LjIzNWMuMjU4LS42MDQuNTMtMS4xODYuODMzLTEuNzU3LjY5LjE4MyAxLjQ0OC42MjUgMi4xMDggMS4yODIuNjYuNjU4IDEuMTAyIDEuNDEyIDEuMjg3IDIuMTAyIi8+PHBhdGggZmlsbD0iIzU3NWU3NSIgZD0iTTM2LjQ5OCA4Ljc0OGMwIC40NjQtLjE0Ljg3NC0uNDMzIDEuMTY1bC0xOS43NDIgMTkuNjhjLTIuMTMgMi4xMS00LjY3MyAzLjc5My03LjU3MiA1LjAxTDQuNSAzNi4zOGwuOTc0LTIuMzE2IDEuOTI1LS44MDhjMi44OTgtMS4yMTggNS40NC0yLjkgNy41Ny01LjAxbDE5Ljc0My0xOS42OGMuMjkyLS4yOTIuNDMyLS43MDIuNDMyLTEuMTY1IDAtLjY0Ni0uMjctMS40LS43OC0yLjEyMi4yNS4xNzIuNS4zNzcuNzM3LjYxNC44OTguOTA1IDEuMzk2IDEuOTgzIDEuMzk2IDIuODU2IiBvcGFjaXR5PSIuMTUiLz48cGF0aCBmaWxsPSIjNTc1ZTc1IiBkPSJNMTguNDUgMTIuODNhLjkwNC45MDQgMCAxIDEtLjkwMy0uOTAyYy41IDAgLjkwNC40MDQuOTA0LjkwNHoiLz48L2c+PC9zdmc+';
+
+    /**
+     * Enum for pen color parameter values.
+     * @readonly
+     * @enum {string}
+     */
+    static ColorParam = {
+        COLOR: 'color',
+        SATURATION: 'saturation',
+        BRIGHTNESS: 'brightness',
+        TRANSPARENCY: 'transparency'
+    };
+
     constructor (runtime) {
         /**
          * The runtime instantiating this block package.
@@ -225,7 +225,7 @@ class Scratch3PenBlocks {
                     default: 'color',
                     description: 'label for color element in color picker for pen extension'
                 }),
-                value: ColorParam.COLOR
+                value: Scratch3PenBlocks.ColorParam.COLOR
             },
             {
                 text: formatMessage({
@@ -233,7 +233,7 @@ class Scratch3PenBlocks {
                     default: 'saturation',
                     description: 'label for saturation element in color picker for pen extension'
                 }),
-                value: ColorParam.SATURATION
+                value: Scratch3PenBlocks.ColorParam.SATURATION
             },
             {
                 text: formatMessage({
@@ -241,7 +241,7 @@ class Scratch3PenBlocks {
                     default: 'brightness',
                     description: 'label for brightness element in color picker for pen extension'
                 }),
-                value: ColorParam.BRIGHTNESS
+                value: Scratch3PenBlocks.ColorParam.BRIGHTNESS
             },
             {
                 text: formatMessage({
@@ -249,7 +249,7 @@ class Scratch3PenBlocks {
                     default: 'transparency',
                     description: 'label for transparency element in color picker for pen extension'
                 }),
-                value: ColorParam.TRANSPARENCY
+                value: Scratch3PenBlocks.ColorParam.TRANSPARENCY
 
             }
         ];
@@ -300,7 +300,7 @@ class Scratch3PenBlocks {
                 default: 'Pen',
                 description: 'Label for the pen extension category'
             }),
-            blockIconURI: blockIconURI,
+            blockIconURI: Scratch3PenBlocks.blockIconURI,
             blocks: [
                 // tw: additional message when on the stage for clarity
                 {
@@ -407,7 +407,7 @@ class Scratch3PenBlocks {
                         COLOR_PARAM: {
                             type: ArgumentType.STRING,
                             menu: 'colorParam',
-                            defaultValue: ColorParam.COLOR
+                            defaultValue: Scratch3PenBlocks.ColorParam.COLOR
                         },
                         VALUE: {
                             type: ArgumentType.NUMBER,
@@ -428,7 +428,7 @@ class Scratch3PenBlocks {
                         COLOR_PARAM: {
                             type: ArgumentType.STRING,
                             menu: 'colorParam',
-                            defaultValue: ColorParam.COLOR
+                            defaultValue: Scratch3PenBlocks.ColorParam.COLOR
                         },
                         VALUE: {
                             type: ArgumentType.NUMBER,
@@ -697,16 +697,16 @@ class Scratch3PenBlocks {
      */
     _setOrChangeColorParam (param, value, penState, change) { // used by compiler
         switch (param) {
-        case ColorParam.COLOR:
+        case Scratch3PenBlocks.ColorParam.COLOR:
             penState.color = this._wrapColor(value + (change ? penState.color : 0));
             break;
-        case ColorParam.SATURATION:
+        case Scratch3PenBlocks.ColorParam.SATURATION:
             penState.saturation = this._clampColorParam(value + (change ? penState.saturation : 0));
             break;
-        case ColorParam.BRIGHTNESS:
+        case Scratch3PenBlocks.ColorParam.BRIGHTNESS:
             penState.brightness = this._clampColorParam(value + (change ? penState.brightness : 0));
             break;
-        case ColorParam.TRANSPARENCY:
+        case Scratch3PenBlocks.ColorParam.TRANSPARENCY:
             penState.transparency = this._clampColorParam(value + (change ? penState.transparency : 0));
             break;
         default:
@@ -782,8 +782,8 @@ class Scratch3PenBlocks {
     _setPenHueToNumber (hueValue, target) {
         const penState = this._getPenState(target);
         const colorValue = hueValue / 2;
-        this._setOrChangeColorParam(ColorParam.COLOR, colorValue, penState, false);
-        this._setOrChangeColorParam(ColorParam.TRANSPARENCY, 0, penState, false);
+        this._setOrChangeColorParam(Scratch3PenBlocks.ColorParam.COLOR, colorValue, penState, false);
+        this._setOrChangeColorParam(Scratch3PenBlocks.ColorParam.TRANSPARENCY, 0, penState, false);
         this._legacyUpdatePenColor(penState);
     }
 
@@ -799,7 +799,7 @@ class Scratch3PenBlocks {
     _changePenHueBy (hueChange, target) { // used by compiler
         const penState = this._getPenState(target);
         const colorChange = hueChange / 2;
-        this._setOrChangeColorParam(ColorParam.COLOR, colorChange, penState, true);
+        this._setOrChangeColorParam(Scratch3PenBlocks.ColorParam.COLOR, colorChange, penState, true);
 
         this._legacyUpdatePenColor(penState);
     }

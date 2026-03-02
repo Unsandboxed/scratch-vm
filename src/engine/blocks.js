@@ -738,7 +738,7 @@ class Blocks {
      */
     changeBlock (args) {
         // Validate
-        if (['field', 'mutation', 'checkbox'].indexOf(args.element) === -1) return;
+        if (['field', 'mutation', 'shadow', 'checkbox'].indexOf(args.element) === -1) return;
         let block = this._blocks[args.id];
         if (typeof block === 'undefined') return;
         switch (args.element) {
@@ -811,6 +811,9 @@ class Blocks {
             block.mutation = adapter;
             break;
         }
+        case 'shadow':
+            block.shadow = args.value;
+            break;
         case 'checkbox': {
             // A checkbox usually has a one to one correspondence with the monitor
             // block but in the case of monitored reporters that have arguments,
@@ -1752,6 +1755,23 @@ BlocksRuntimeCache.getScripts = function (blocks, opcode) {
         }
     }
     return scripts;
+};
+
+Blocks.exports = {
+    BlocksExecuteCache,
+    BlocksRuntimeCache,
+
+    Variable: require('./variable'),
+    Comment: require('./comment'),
+    MonitorRecord,
+    MonitorState: require('./tw-monitor-state'),
+    ScratchBlocksConstants: require('./scratch-blocks-constants'),
+
+    newBlockIds: require('../util/new-block-ids'),
+    getMonitorId: require('../util/get-monitor-id'),
+
+    adapter,
+    mutationAdapter
 };
 
 module.exports = Blocks;

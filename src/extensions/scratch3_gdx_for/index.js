@@ -8,112 +8,114 @@ const godirect = require('@vernier/godirect/dist/godirect.min.umd.js');
 const ScratchLinkDeviceAdapter = require('./scratch-link-device-adapter');
 
 /**
- * Icon png to be displayed at the left edge of each extension block, encoded as a data URI.
- * @type {string}
- */
-// eslint-disable-next-line max-len
-const blockIconURI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAABGdBTUEAALGPC/xhBQAABVNJREFUeNrtnH9MG1UcwMuIiWMaE7c5ptkUhyQaEzWLi8aE+BfRPxbjEowxipMlisxlTFAY9JAQoNfyG/wRGQyH9uj6AyiFzblRuohzxCmYjZ9tZaNlEGPUaNTEQZ/vW97Zs/bWwsKul3y/ySe8e+8Vvvn0vXv3jvY0NxJlHzuSSnihi9MJC1qdkagJyBlyr64+tUGjVGh5ow2SUTMgUTGBnE6YFxMp1XeSysYuUtnUHddAjpCrdCQqJlAiTypRFfKkEpUWKE1MFbA3On4EwrtbwRJSA2yWxJdAaUIv28fjEkm+KBAFytFziexvGyTv1neREr2JFBtM5J2GbpJL67K6LqLA65FtukAK622y566iWmtgn+kbFBiJV63f09F2PBD8Hbzwp1YvVJXXdj1S1ujYrtV1chxv/APaoM9e8wgKDCe/uS/4WipqrqCj43/bq+IGYQtt/4lC8pt6UaCUfaYL4q5gSfeBPVUjExUVnds4nXEJ+mabv0OBIrlHXeLom4n+N4Vp6Jv7yVkUKHKg5cyyQL3xTNT9t15wQt/9bU4UKPLmsS/Za4Xp6HeAhPHgCGzHEfgv2ce/JWz1/ZsQkqCRiUxCEmmfa7QvvAYFSimqsSxv9HnTQdnpy3cWQJ/CGguuwuEcODLAFhLBIy9Q8EKft1qdKDCcvZYRmMIBLW8MwDWfJiwqK21boR14zTqKAiNR0GQXR2FbhMXjKG2DPriVkyPn2JC4Gv+qCQuog7acjiEUKMcr3RdJicEU3A+XGUwZGhZQhrpi2kb7oMDrcfCjz9kljfE3rc78TGnNZ88ul43QhrezYrkrc7jGHByFUqCOtqHA2FbkUXLowxPksMEEQBnq8I403tJHgeoRWNhnJ64vngegjAJXQk7vV+R35x2EDGoAKEMdCoyV2v73QZwUqEOBsVLgOEGWBhNEeVCGOhS4Eo6cLCc/OzcDUF7d5ZB1lLz+6dfBOz35zQ5chWOV9XaTA/79CblIQYEyI0tWFscL5D2DiZTVmEl5vVU1AhUZWeGyKiJ8TlE9ApWXBahW4JpOw4qGaLLUL1BhWeoXqKAs9QuMLqtOVhYKZMexyEKBcgLZ8YrQNVtWAwoEZvsfhP3uqnDbd6JAr+NRsuhMXBVjPU+hQDwHosCbK3Cm72E4f60Jk/ZdKPBGmOh5AqcwTmEUiALx665RgFzjSiAkxOkFNX3hGnKOH4GiPE4FX/mHHFnOyguUPu6kVC+o56ET0tnCC/OKCYRHhkASaqZUJ1gVEwgP3uGqBAs8/kSND97heMFyyGxer1FnyJ9Tr84vRERs12CgQBSIAlEgBgpcC4HyoMAYdjb90eRxvNCHpqJHKiXth5nLozB1W1raXoBjyj2UBNQTPe4GYUPnzlWBwMtXfBMZGRk7UWLskQSykpOTHxJHIf05IpF4FyqKHltBVlZW1pNXZn3TINHt8bigjnErKgrFOjaqdlDup2xiddskEn0g8dTp0wVM4BbUxoLJSwtjo1SizWZ7AwROuT0DrP0+1LYcCeKq6/Z6z46PT3YzQSms/RY43r1nz+Mg0Ofz/8jaU1FdSGAa4PPP/UIlBdLT0x9jdUmU26Gcl5f3NAikU9nN2nagulCkgBS3x+sESQMDg0VwLOX8+WEDtF0aG7Owuu2oLRSbQUp7e/tLIMk/d/Uvp8vFZWZm7oIFhF4P6mj9NcpidV3dbibwTtQWikQ2JdOGh4drYRpTSBiLIFVyflyH2v4bt4EcoLW19cXJqamTs/65BXrO809MTvc2NjY+B22M9agrcmxg14FpMqSgvNim8yZ2nfcA417Kxnictv8ABNVN4ivCsdYAAAAASUVORK5CYII=';
-
-/**
- * Icon png to be displayed in the blocks category menu, encoded as a data URI.
- * @type {string}
- */
-// eslint-disable-next-line max-len
-const menuIconURI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAABGdBTUEAALGPC/xhBQAAAppJREFUeNrtmF1r01AYx6OI4CfQG2+88BMIXnjhy5V3XoikHZq+bCsKszChsS9Lk5WONFnbbSKIm5frSdLVrhWldm4qEzoVX5CpeCFeidsnENGZs/OEhcFaxtYl67noA394esp5+uuTf05ODrNdSGrx2JBcwK4pg1ZTqnGGaTeSMkoLqrYmqjoeuTPrqEhNADSTCkJtAw4pmijlilhUNMe7l8qXsEhqCxk0vGdA0MCDBXy1+tUJkVrPsVV3vwCvVb7gwXs1M67qZkw1zPDUvEkVYDQ7YyYyaE1SSqekseIF4q2//NisSQVgsPje8hSJA/a8fL5xBMYCpY+dB+xDb3B81Pi9dW5CNf4FjA+dB+TKyzhBvBcfR0fteZAnFM2E76jw4K27j82kvLmeQQ5j1NwkIfQax1Xjjz0PchijBpArfwYfmmKmkBPkwn24QWCMGkBQUH+HAQzUq73d2ULdfZJs0WL9EohOwOuPGvj/i4MgyOnsoPJkEtQ07n/4CYeml/DNqQUcmahaPhVHjf0HbIapwCKOE7Bdy1p1rG3WMMmTqu44YFsw6fFy02ZVyrkAGJ6c24CZ3w0MyH1AMWuAbzZgZraD6QigXazljz1DfvzKuNJSddTbecB6oQ+/1L0tVZsOdQ5wDgXxos7uSE8L/V1AG7BduQzo/Hsx1HQAUEZIUHXXThbg1ELIaCNtA6Zz2nH4t24Kzn8YtwOsUKk18K+VVUvV2tKuLl0XkHpAQUVnm7wla+cY2sLD8SmPn5cYWsPri15muciyJEmHqASEAySPj6+STuoMrUG6d9jji3z3+qMXqYFiOX6AdC5sfyb5BIEcpAawh+PPE8hvPcHoCbY/dpL48IcnEDvN0BTQMdYXWSH6yfpu33Cq7jqUK06WtbQJQQAAAABJRU5ErkJggg==';
-
-/**
- * Enum for Vernier godirect protocol.
- * @readonly
- * @enum {string}
- */
-const BLEUUID = {
-    service: 'd91714ef-28b9-4f91-ba16-f0d9a604f112',
-    commandChar: 'f4bf14a6-c7d5-4b6d-8aa8-df1a7c83adcb',
-    responseChar: 'b41e6675-a329-40e0-aa01-44d2f444babe'
-};
-
-/**
- * A time interval to wait (in milliseconds) before reporting to the BLE socket
- * that data has stopped coming from the peripheral.
- */
-const BLETimeout = 4500;
-
-/**
- * A string to report to the BLE socket when the GdxFor has stopped receiving data.
- * @type {string}
- */
-const BLEDataStoppedError = 'Force and Acceleration extension stopped receiving data';
-
-/**
- * Sensor ID numbers for the GDX-FOR.
- */
-const GDXFOR_SENSOR = {
-    FORCE: 1,
-    ACCELERATION_X: 2,
-    ACCELERATION_Y: 3,
-    ACCELERATION_Z: 4,
-    SPIN_SPEED_X: 5,
-    SPIN_SPEED_Y: 6,
-    SPIN_SPEED_Z: 7
-};
-
-/**
- * The update rate, in milliseconds, for sensor data input from the peripheral.
- */
-const GDXFOR_UPDATE_RATE = 80;
-
-/**
- * Threshold for pushing and pulling force, for the whenForcePushedOrPulled hat block.
- * @type {number}
- */
-const FORCE_THRESHOLD = 5;
-
-/**
- * Threshold for acceleration magnitude, for the "shaken" gesture.
- * @type {number}
- */
-const SHAKEN_THRESHOLD = 30;
-
-/**
- * Threshold for acceleration magnitude, to check if we are facing up.
- * @type {number}
- */
-const FACING_THRESHOLD = 9;
-
-/**
- * An offset for the facing threshold, used to check that we are no longer facing up.
- * @type {number}
- */
-const FACING_THRESHOLD_OFFSET = 5;
-
-/**
- * Threshold for acceleration magnitude, below which we are in freefall.
- * @type {number}
- */
-const FREEFALL_THRESHOLD = 0.5;
-
-/**
- * Factor used to account for influence of rotation during freefall.
- * @type {number}
- */
-const FREEFALL_ROTATION_FACTOR = 0.3;
-
-/**
- * Threshold in degrees for reporting that the sensor is tilted.
- * @type {number}
- */
-const TILT_THRESHOLD = 15;
-
-/**
- * Acceleration due to gravity, in m/s^2.
- * @type {number}
- */
-const GRAVITY = 9.8;
-
-/**
  * Manage communication with a GDX-FOR peripheral over a Scratch Link client socket.
  */
 class GdxFor {
+    static godirect = godirect;
+    static ScratchLinkDeviceAdapter = ScratchLinkDeviceAdapter;
+
+    /**
+     * Icon png to be displayed at the left edge of each extension block, encoded as a data URI.
+     * @type {string}
+     */
+    // eslint-disable-next-line max-len
+    static blockIconURI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAABQCAYAAACOEfKtAAAABGdBTUEAALGPC/xhBQAABVNJREFUeNrtnH9MG1UcwMuIiWMaE7c5ptkUhyQaEzWLi8aE+BfRPxbjEowxipMlisxlTFAY9JAQoNfyG/wRGQyH9uj6AyiFzblRuohzxCmYjZ9tZaNlEGPUaNTEQZ/vW97Zs/bWwsKul3y/ySe8e+8Vvvn0vXv3jvY0NxJlHzuSSnihi9MJC1qdkagJyBlyr64+tUGjVGh5ow2SUTMgUTGBnE6YFxMp1XeSysYuUtnUHddAjpCrdCQqJlAiTypRFfKkEpUWKE1MFbA3On4EwrtbwRJSA2yWxJdAaUIv28fjEkm+KBAFytFziexvGyTv1neREr2JFBtM5J2GbpJL67K6LqLA65FtukAK622y566iWmtgn+kbFBiJV63f09F2PBD8Hbzwp1YvVJXXdj1S1ujYrtV1chxv/APaoM9e8wgKDCe/uS/4WipqrqCj43/bq+IGYQtt/4lC8pt6UaCUfaYL4q5gSfeBPVUjExUVnds4nXEJ+mabv0OBIrlHXeLom4n+N4Vp6Jv7yVkUKHKg5cyyQL3xTNT9t15wQt/9bU4UKPLmsS/Za4Xp6HeAhPHgCGzHEfgv2ce/JWz1/ZsQkqCRiUxCEmmfa7QvvAYFSimqsSxv9HnTQdnpy3cWQJ/CGguuwuEcODLAFhLBIy9Q8EKft1qdKDCcvZYRmMIBLW8MwDWfJiwqK21boR14zTqKAiNR0GQXR2FbhMXjKG2DPriVkyPn2JC4Gv+qCQuog7acjiEUKMcr3RdJicEU3A+XGUwZGhZQhrpi2kb7oMDrcfCjz9kljfE3rc78TGnNZ88ul43QhrezYrkrc7jGHByFUqCOtqHA2FbkUXLowxPksMEEQBnq8I403tJHgeoRWNhnJ64vngegjAJXQk7vV+R35x2EDGoAKEMdCoyV2v73QZwUqEOBsVLgOEGWBhNEeVCGOhS4Eo6cLCc/OzcDUF7d5ZB1lLz+6dfBOz35zQ5chWOV9XaTA/79CblIQYEyI0tWFscL5D2DiZTVmEl5vVU1AhUZWeGyKiJ8TlE9ApWXBahW4JpOw4qGaLLUL1BhWeoXqKAs9QuMLqtOVhYKZMexyEKBcgLZ8YrQNVtWAwoEZvsfhP3uqnDbd6JAr+NRsuhMXBVjPU+hQDwHosCbK3Cm72E4f60Jk/ZdKPBGmOh5AqcwTmEUiALx665RgFzjSiAkxOkFNX3hGnKOH4GiPE4FX/mHHFnOyguUPu6kVC+o56ET0tnCC/OKCYRHhkASaqZUJ1gVEwgP3uGqBAs8/kSND97heMFyyGxer1FnyJ9Tr84vRERs12CgQBSIAlEgBgpcC4HyoMAYdjb90eRxvNCHpqJHKiXth5nLozB1W1raXoBjyj2UBNQTPe4GYUPnzlWBwMtXfBMZGRk7UWLskQSykpOTHxJHIf05IpF4FyqKHltBVlZW1pNXZn3TINHt8bigjnErKgrFOjaqdlDup2xiddskEn0g8dTp0wVM4BbUxoLJSwtjo1SizWZ7AwROuT0DrP0+1LYcCeKq6/Z6z46PT3YzQSms/RY43r1nz+Mg0Ofz/8jaU1FdSGAa4PPP/UIlBdLT0x9jdUmU26Gcl5f3NAikU9nN2nagulCkgBS3x+sESQMDg0VwLOX8+WEDtF0aG7Owuu2oLRSbQUp7e/tLIMk/d/Uvp8vFZWZm7oIFhF4P6mj9NcpidV3dbibwTtQWikQ2JdOGh4drYRpTSBiLIFVyflyH2v4bt4EcoLW19cXJqamTs/65BXrO809MTvc2NjY+B22M9agrcmxg14FpMqSgvNim8yZ2nfcA417Kxnictv8ABNVN4ivCsdYAAAAASUVORK5CYII=';
+
+    /**
+     * Icon png to be displayed in the blocks category menu, encoded as a data URI.
+     * @type {string}
+     */
+    // eslint-disable-next-line max-len
+    static menuIconURI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAABGdBTUEAALGPC/xhBQAAAppJREFUeNrtmF1r01AYx6OI4CfQG2+88BMIXnjhy5V3XoikHZq+bCsKszChsS9Lk5WONFnbbSKIm5frSdLVrhWldm4qEzoVX5CpeCFeidsnENGZs/OEhcFaxtYl67noA394esp5+uuTf05ODrNdSGrx2JBcwK4pg1ZTqnGGaTeSMkoLqrYmqjoeuTPrqEhNADSTCkJtAw4pmijlilhUNMe7l8qXsEhqCxk0vGdA0MCDBXy1+tUJkVrPsVV3vwCvVb7gwXs1M67qZkw1zPDUvEkVYDQ7YyYyaE1SSqekseIF4q2//NisSQVgsPje8hSJA/a8fL5xBMYCpY+dB+xDb3B81Pi9dW5CNf4FjA+dB+TKyzhBvBcfR0fteZAnFM2E76jw4K27j82kvLmeQQ5j1NwkIfQax1Xjjz0PchijBpArfwYfmmKmkBPkwn24QWCMGkBQUH+HAQzUq73d2ULdfZJs0WL9EohOwOuPGvj/i4MgyOnsoPJkEtQ07n/4CYeml/DNqQUcmahaPhVHjf0HbIapwCKOE7Bdy1p1rG3WMMmTqu44YFsw6fFy02ZVyrkAGJ6c24CZ3w0MyH1AMWuAbzZgZraD6QigXazljz1DfvzKuNJSddTbecB6oQ+/1L0tVZsOdQ5wDgXxos7uSE8L/V1AG7BduQzo/Hsx1HQAUEZIUHXXThbg1ELIaCNtA6Zz2nH4t24Kzn8YtwOsUKk18K+VVUvV2tKuLl0XkHpAQUVnm7wla+cY2sLD8SmPn5cYWsPri15muciyJEmHqASEAySPj6+STuoMrUG6d9jji3z3+qMXqYFiOX6AdC5sfyb5BIEcpAawh+PPE8hvPcHoCbY/dpL48IcnEDvN0BTQMdYXWSH6yfpu33Cq7jqUK06WtbQJQQAAAABJRU5ErkJggg==';
+
+    /**
+     * Enum for Vernier godirect protocol.
+     * @readonly
+     * @enum {string}
+     */
+    static BLEUUID = {
+        service: 'd91714ef-28b9-4f91-ba16-f0d9a604f112',
+        commandChar: 'f4bf14a6-c7d5-4b6d-8aa8-df1a7c83adcb',
+        responseChar: 'b41e6675-a329-40e0-aa01-44d2f444babe'
+    };
+
+    /**
+     * A time interval to wait (in milliseconds) before reporting to the BLE socket
+     * that data has stopped coming from the peripheral.
+     */
+    static BLETimeout = 4500;
+
+    /**
+     * A string to report to the BLE socket when the GdxFor has stopped receiving data.
+     * @type {string}
+     */
+    static BLEDataStoppedError = 'Force and Acceleration extension stopped receiving data';
+
+    /**
+     * Sensor ID numbers for the GDX-FOR.
+     */
+    static GDXFOR_SENSOR = {
+        FORCE: 1,
+        ACCELERATION_X: 2,
+        ACCELERATION_Y: 3,
+        ACCELERATION_Z: 4,
+        SPIN_SPEED_X: 5,
+        SPIN_SPEED_Y: 6,
+        SPIN_SPEED_Z: 7
+    };
+
+    /**
+     * The update rate, in milliseconds, for sensor data input from the peripheral.
+     */
+    static GDXFOR_UPDATE_RATE = 80;
+
+    /**
+     * Threshold for pushing and pulling force, for the whenForcePushedOrPulled hat block.
+     * @type {number}
+     */
+    static FORCE_THRESHOLD = 5;
+
+    /**
+     * Threshold for acceleration magnitude, for the "shaken" gesture.
+     * @type {number}
+     */
+    static SHAKEN_THRESHOLD = 30;
+
+    /**
+     * Threshold for acceleration magnitude, to check if we are facing up.
+     * @type {number}
+     */
+    static FACING_THRESHOLD = 9;
+
+    /**
+     * An offset for the facing threshold, used to check that we are no longer facing up.
+     * @type {number}
+     */
+    static FACING_THRESHOLD_OFFSET = 5;
+
+    /**
+     * Threshold for acceleration magnitude, below which we are in freefall.
+     * @type {number}
+     */
+    static FREEFALL_THRESHOLD = 0.5;
+
+    /**
+     * Factor used to account for influence of rotation during freefall.
+     * @type {number}
+     */
+    static FREEFALL_ROTATION_FACTOR = 0.3;
+
+    /**
+     * Threshold in degrees for reporting that the sensor is tilted.
+     * @type {number}
+     */
+    static TILT_THRESHOLD = 15;
+
+    /**
+     * Acceleration due to gravity, in m/s^2.
+     * @type {number}
+     */
+    static GRAVITY = 9.8;
 
     /**
      * Construct a GDX-FOR communication object.
@@ -190,7 +192,7 @@ class GdxFor {
                 {namePrefix: 'GDX-FOR'}
             ],
             optionalServices: [
-                BLEUUID.service
+                GdxFor.BLEUUID.service
             ]
         }, this._onConnect, this.reset);
     }
@@ -254,7 +256,7 @@ class GdxFor {
      * @private
      */
     _onConnect () {
-        const adapter = new ScratchLinkDeviceAdapter(this._ble, BLEUUID);
+        const adapter = new ScratchLinkDeviceAdapter(this._ble, GdxFor.BLEUUID);
         godirect.createDevice(adapter, {open: true, startMeasurements: false}).then(device => {
             // Setup device
             this._device = device;
@@ -274,13 +276,13 @@ class GdxFor {
                     });
                 });
                 this._timeoutID = window.setInterval(
-                    () => this._ble.handleDisconnectError(BLEDataStoppedError),
-                    BLETimeout
+                    () => this._ble.handleDisconnectError(GdxFor.BLEDataStoppedError),
+                    GdxFor.BLETimeout
                 );
             });
 
             // Start device
-            this._device.start(GDXFOR_UPDATE_RATE);
+            this._device.start(GdxFor.GDXFOR_UPDATE_RATE);
         });
     }
 
@@ -291,35 +293,35 @@ class GdxFor {
      */
     _onSensorValueChanged (sensor) {
         switch (sensor.number) {
-        case GDXFOR_SENSOR.FORCE:
+        case GdxFor.GDXFOR_SENSOR.FORCE:
             // Normalize the force, which can be measured between -50 and 50 N,
             // to be a value between -100 and 100.
             this._sensors.force = MathUtil.clamp(sensor.value * 2, -100, 100);
             break;
-        case GDXFOR_SENSOR.ACCELERATION_X:
+        case GdxFor.GDXFOR_SENSOR.ACCELERATION_X:
             this._sensors.accelerationX = sensor.value;
             break;
-        case GDXFOR_SENSOR.ACCELERATION_Y:
+        case GdxFor.GDXFOR_SENSOR.ACCELERATION_Y:
             this._sensors.accelerationY = sensor.value;
             break;
-        case GDXFOR_SENSOR.ACCELERATION_Z:
+        case GdxFor.GDXFOR_SENSOR.ACCELERATION_Z:
             this._sensors.accelerationZ = sensor.value;
             break;
-        case GDXFOR_SENSOR.SPIN_SPEED_X:
+        case GdxFor.GDXFOR_SENSOR.SPIN_SPEED_X:
             this._sensors.spinSpeedX = this._spinSpeedFromGyro(sensor.value);
             break;
-        case GDXFOR_SENSOR.SPIN_SPEED_Y:
+        case GdxFor.GDXFOR_SENSOR.SPIN_SPEED_Y:
             this._sensors.spinSpeedY = this._spinSpeedFromGyro(sensor.value);
             break;
-        case GDXFOR_SENSOR.SPIN_SPEED_Z:
+        case GdxFor.GDXFOR_SENSOR.SPIN_SPEED_Z:
             this._sensors.spinSpeedZ = this._spinSpeedFromGyro(sensor.value);
             break;
         }
         // cancel disconnect timeout and start a new one
         window.clearInterval(this._timeoutID);
         this._timeoutID = window.setInterval(
-            () => this._ble.handleDisconnectError(BLEDataStoppedError),
-            BLETimeout
+            () => this._ble.handleDisconnectError(GdxFor.BLEDataStoppedError),
+            GdxFor.BLETimeout
         );
     }
 
@@ -419,55 +421,10 @@ class GdxFor {
 }
 
 /**
- * Enum for pushed and pulled menu options.
- * @readonly
- * @enum {string}
- */
-const PushPullValues = {
-    PUSHED: 'pushed',
-    PULLED: 'pulled'
-};
-
-/**
- * Enum for motion gesture menu options.
- * @readonly
- * @enum {string}
- */
-const GestureValues = {
-    SHAKEN: 'shaken',
-    STARTED_FALLING: 'started falling',
-    TURNED_FACE_UP: 'turned face up',
-    TURNED_FACE_DOWN: 'turned face down'
-};
-
-/**
- * Enum for tilt axis menu options.
- * @readonly
- * @enum {string}
- */
-const TiltAxisValues = {
-    FRONT: 'front',
-    BACK: 'back',
-    LEFT: 'left',
-    RIGHT: 'right',
-    ANY: 'any'
-};
-
-/**
- * Enum for axis menu options.
- * @readonly
- * @enum {string}
- */
-const AxisValues = {
-    X: 'x',
-    Y: 'y',
-    Z: 'z'
-};
-
-/**
  * Scratch 3.0 blocks to interact with a GDX-FOR peripheral.
  */
 class Scratch3GdxForBlocks {
+    static GdxFor = GdxFor;
 
     /**
      * @return {string} - the name of this extension.
@@ -483,19 +440,65 @@ class Scratch3GdxForBlocks {
         return 'gdxfor';
     }
 
+    /**
+     * Enum for pushed and pulled menu options.
+     * @readonly
+     * @enum {string}
+     */
+    static PushPullValues = {
+        PUSHED: 'pushed',
+        PULLED: 'pulled'
+    };
+
+    /**
+     * Enum for motion gesture menu options.
+     * @readonly
+     * @enum {string}
+     */
+    static GestureValues = {
+        SHAKEN: 'shaken',
+        STARTED_FALLING: 'started falling',
+        TURNED_FACE_UP: 'turned face up',
+        TURNED_FACE_DOWN: 'turned face down'
+    };
+
+    /**
+     * Enum for tilt axis menu options.
+     * @readonly
+     * @enum {string}
+     */
+    static TiltAxisValues = {
+        FRONT: 'front',
+        BACK: 'back',
+        LEFT: 'left',
+        RIGHT: 'right',
+        ANY: 'any'
+    };
+
+    /**
+     * Enum for axis menu options.
+     * @readonly
+     * @enum {string}
+     */
+    static AxisValues = {
+        X: 'x',
+        Y: 'y',
+        Z: 'z'
+    };
+
     get AXIS_MENU () {
         return [
             {
                 text: 'x',
-                value: AxisValues.X
+                value: Scratch3GdxForBlocks.AxisValues.X
             },
             {
                 text: 'y',
-                value: AxisValues.Y
+                value: Scratch3GdxForBlocks.AxisValues.Y
             },
             {
                 text: 'z',
-                value: AxisValues.Z
+                value: Scratch3GdxForBlocks.AxisValues.Z
             }
         ];
     }
@@ -508,7 +511,7 @@ class Scratch3GdxForBlocks {
                     default: 'front',
                     description: 'label for front element in tilt direction picker for gdxfor extension'
                 }),
-                value: TiltAxisValues.FRONT
+                value: Scratch3GdxForBlocks.TiltAxisValues.FRONT
             },
             {
                 text: formatMessage({
@@ -516,7 +519,7 @@ class Scratch3GdxForBlocks {
                     default: 'back',
                     description: 'label for back element in tilt direction picker for gdxfor extension'
                 }),
-                value: TiltAxisValues.BACK
+                value: Scratch3GdxForBlocks.TiltAxisValues.BACK
             },
             {
                 text: formatMessage({
@@ -524,7 +527,7 @@ class Scratch3GdxForBlocks {
                     default: 'left',
                     description: 'label for left element in tilt direction picker for gdxfor extension'
                 }),
-                value: TiltAxisValues.LEFT
+                value: Scratch3GdxForBlocks.TiltAxisValues.LEFT
             },
             {
                 text: formatMessage({
@@ -532,7 +535,7 @@ class Scratch3GdxForBlocks {
                     default: 'right',
                     description: 'label for right element in tilt direction picker for gdxfor extension'
                 }),
-                value: TiltAxisValues.RIGHT
+                value: Scratch3GdxForBlocks.TiltAxisValues.RIGHT
             }
         ];
     }
@@ -546,7 +549,7 @@ class Scratch3GdxForBlocks {
                     default: 'any',
                     description: 'label for any direction element in tilt direction picker for gdxfor extension'
                 }),
-                value: TiltAxisValues.ANY
+                value: Scratch3GdxForBlocks.TiltAxisValues.ANY
             }
         ];
     }
@@ -559,7 +562,7 @@ class Scratch3GdxForBlocks {
                     default: 'pushed',
                     description: 'the force sensor was pushed inward'
                 }),
-                value: PushPullValues.PUSHED
+                value: Scratch3GdxForBlocks.PushPullValues.PUSHED
             },
             {
                 text: formatMessage({
@@ -567,7 +570,7 @@ class Scratch3GdxForBlocks {
                     default: 'pulled',
                     description: 'the force sensor was pulled outward'
                 }),
-                value: PushPullValues.PULLED
+                value: Scratch3GdxForBlocks.PushPullValues.PULLED
             }
         ];
     }
@@ -580,7 +583,7 @@ class Scratch3GdxForBlocks {
                     default: 'shaken',
                     description: 'the sensor was shaken'
                 }),
-                value: GestureValues.SHAKEN
+                value: Scratch3GdxForBlocks.GestureValues.SHAKEN
             },
             {
                 text: formatMessage({
@@ -588,7 +591,7 @@ class Scratch3GdxForBlocks {
                     default: 'started falling',
                     description: 'the sensor started free falling'
                 }),
-                value: GestureValues.STARTED_FALLING
+                value: Scratch3GdxForBlocks.GestureValues.STARTED_FALLING
             },
             {
                 text: formatMessage({
@@ -596,7 +599,7 @@ class Scratch3GdxForBlocks {
                     default: 'turned face up',
                     description: 'the sensor was turned to face up'
                 }),
-                value: GestureValues.TURNED_FACE_UP
+                value: Scratch3GdxForBlocks.GestureValues.TURNED_FACE_UP
             },
             {
                 text: formatMessage({
@@ -604,7 +607,7 @@ class Scratch3GdxForBlocks {
                     default: 'turned face down',
                     description: 'the sensor was turned to face down'
                 }),
-                value: GestureValues.TURNED_FACE_DOWN
+                value: Scratch3GdxForBlocks.GestureValues.TURNED_FACE_DOWN
             }
         ];
     }
@@ -631,8 +634,8 @@ class Scratch3GdxForBlocks {
         return {
             id: Scratch3GdxForBlocks.EXTENSION_ID,
             name: Scratch3GdxForBlocks.EXTENSION_NAME,
-            blockIconURI: blockIconURI,
-            menuIconURI: menuIconURI,
+            blockIconURI: GdxFor.blockIconURI,
+            menuIconURI: GdxFor.menuIconURI,
             showStatusButton: true,
             blocks: [
                 {
@@ -647,7 +650,7 @@ class Scratch3GdxForBlocks {
                         GESTURE: {
                             type: ArgumentType.STRING,
                             menu: 'gestureOptions',
-                            defaultValue: GestureValues.SHAKEN
+                            defaultValue: Scratch3GdxForBlocks.GestureValues.SHAKEN
                         }
                     }
                 },
@@ -663,7 +666,7 @@ class Scratch3GdxForBlocks {
                         PUSH_PULL: {
                             type: ArgumentType.STRING,
                             menu: 'pushPullOptions',
-                            defaultValue: PushPullValues.PUSHED
+                            defaultValue: Scratch3GdxForBlocks.PushPullValues.PUSHED
                         }
                     }
                 },
@@ -689,7 +692,7 @@ class Scratch3GdxForBlocks {
                         TILT: {
                             type: ArgumentType.STRING,
                             menu: 'tiltAnyOptions',
-                            defaultValue: TiltAxisValues.ANY
+                            defaultValue: Scratch3GdxForBlocks.TiltAxisValues.ANY
                         }
                     }
                 },
@@ -705,7 +708,7 @@ class Scratch3GdxForBlocks {
                         TILT: {
                             type: ArgumentType.STRING,
                             menu: 'tiltAnyOptions',
-                            defaultValue: TiltAxisValues.ANY
+                            defaultValue: Scratch3GdxForBlocks.TiltAxisValues.ANY
                         }
                     }
                 },
@@ -721,7 +724,7 @@ class Scratch3GdxForBlocks {
                         TILT: {
                             type: ArgumentType.STRING,
                             menu: 'tiltOptions',
-                            defaultValue: TiltAxisValues.FRONT
+                            defaultValue: Scratch3GdxForBlocks.TiltAxisValues.FRONT
                         }
                     }
                 },
@@ -747,7 +750,7 @@ class Scratch3GdxForBlocks {
                         DIRECTION: {
                             type: ArgumentType.STRING,
                             menu: 'axisOptions',
-                            defaultValue: AxisValues.Z
+                            defaultValue: Scratch3GdxForBlocks.AxisValues.Z
                         }
                     }
                 },
@@ -763,7 +766,7 @@ class Scratch3GdxForBlocks {
                         DIRECTION: {
                             type: ArgumentType.STRING,
                             menu: 'axisOptions',
-                            defaultValue: AxisValues.X
+                            defaultValue: Scratch3GdxForBlocks.AxisValues.X
                         }
                     }
                 }
@@ -795,10 +798,10 @@ class Scratch3GdxForBlocks {
 
     whenForcePushedOrPulled (args) {
         switch (args.PUSH_PULL) {
-        case PushPullValues.PUSHED:
-            return this._peripheral.getForce() < FORCE_THRESHOLD * -1;
-        case PushPullValues.PULLED:
-            return this._peripheral.getForce() > FORCE_THRESHOLD;
+        case Scratch3GdxForBlocks.PushPullValues.PUSHED:
+            return this._peripheral.getForce() < GdxFor.FORCE_THRESHOLD * -1;
+        case Scratch3GdxForBlocks.PushPullValues.PULLED:
+            return this._peripheral.getForce() > GdxFor.FORCE_THRESHOLD;
         default:
             log.warn(`unknown push/pull value in whenForcePushedOrPulled: ${args.PUSH_PULL}`);
             return false;
@@ -811,14 +814,14 @@ class Scratch3GdxForBlocks {
 
     whenGesture (args) {
         switch (args.GESTURE) {
-        case GestureValues.SHAKEN:
-            return this.gestureMagnitude() > SHAKEN_THRESHOLD;
-        case GestureValues.STARTED_FALLING:
+        case Scratch3GdxForBlocks.GestureValues.SHAKEN:
+            return this.gestureMagnitude() > GdxFor.SHAKEN_THRESHOLD;
+        case Scratch3GdxForBlocks.GestureValues.STARTED_FALLING:
             return this.isFreeFalling();
-        case GestureValues.TURNED_FACE_UP:
-            return this._isFacing(GestureValues.TURNED_FACE_UP);
-        case GestureValues.TURNED_FACE_DOWN:
-            return this._isFacing(GestureValues.TURNED_FACE_DOWN);
+        case Scratch3GdxForBlocks.GestureValues.TURNED_FACE_UP:
+            return this._isFacing(Scratch3GdxForBlocks.GestureValues.TURNED_FACE_UP);
+        case Scratch3GdxForBlocks.GestureValues.TURNED_FACE_DOWN:
+            return this._isFacing(Scratch3GdxForBlocks.GestureValues.TURNED_FACE_DOWN);
         default:
             log.warn(`unknown gesture value in whenGesture: ${args.GESTURE}`);
             return false;
@@ -836,18 +839,18 @@ class Scratch3GdxForBlocks {
         // If the sensor is already facing up or down, reduce the threshold.
         // This prevents small fluctations in acceleration while it is being
         // turned from causing the hat block to trigger multiple times.
-        let threshold = FACING_THRESHOLD;
+        let threshold = GdxFor.FACING_THRESHOLD;
         if (this._facingUp || this._facingDown) {
-            threshold -= FACING_THRESHOLD_OFFSET;
+            threshold -= GdxFor.FACING_THRESHOLD_OFFSET;
         }
 
         this._facingUp = this._peripheral.getAccelerationZ() > threshold;
         this._facingDown = this._peripheral.getAccelerationZ() < threshold * -1;
 
         switch (direction) {
-        case GestureValues.TURNED_FACE_UP:
+        case Scratch3GdxForBlocks.GestureValues.TURNED_FACE_UP:
             return this._facingUp;
-        case GestureValues.TURNED_FACE_DOWN:
+        case Scratch3GdxForBlocks.GestureValues.TURNED_FACE_DOWN:
             return this._facingDown;
         default:
             return false;
@@ -868,13 +871,13 @@ class Scratch3GdxForBlocks {
 
     _isTilted (direction) {
         switch (direction) {
-        case TiltAxisValues.ANY:
-            return this._getTiltAngle(TiltAxisValues.FRONT) > TILT_THRESHOLD ||
-                this._getTiltAngle(TiltAxisValues.BACK) > TILT_THRESHOLD ||
-                this._getTiltAngle(TiltAxisValues.LEFT) > TILT_THRESHOLD ||
-                this._getTiltAngle(TiltAxisValues.RIGHT) > TILT_THRESHOLD;
+        case Scratch3GdxForBlocks.TiltAxisValues.ANY:
+            return this._getTiltAngle(Scratch3GdxForBlocks.TiltAxisValues.FRONT) > GdxFor.TILT_THRESHOLD ||
+                this._getTiltAngle(Scratch3GdxForBlocks.TiltAxisValues.BACK) > GdxFor.TILT_THRESHOLD ||
+                this._getTiltAngle(Scratch3GdxForBlocks.TiltAxisValues.LEFT) > GdxFor.TILT_THRESHOLD ||
+                this._getTiltAngle(Scratch3GdxForBlocks.TiltAxisValues.RIGHT) > GdxFor.TILT_THRESHOLD;
         default:
-            return this._getTiltAngle(direction) > TILT_THRESHOLD;
+            return this._getTiltAngle(direction) > GdxFor.TILT_THRESHOLD;
         }
     }
 
@@ -886,13 +889,13 @@ class Scratch3GdxForBlocks {
         }
 
         switch (direction) {
-        case TiltAxisValues.FRONT:
+        case Scratch3GdxForBlocks.TiltAxisValues.FRONT:
             return Math.round(this._peripheral.getTiltFrontBack(true));
-        case TiltAxisValues.BACK:
+        case Scratch3GdxForBlocks.TiltAxisValues.BACK:
             return Math.round(this._peripheral.getTiltFrontBack(false));
-        case TiltAxisValues.LEFT:
+        case Scratch3GdxForBlocks.TiltAxisValues.LEFT:
             return Math.round(this._peripheral.getTiltLeftRight(true));
-        case TiltAxisValues.RIGHT:
+        case Scratch3GdxForBlocks.TiltAxisValues.RIGHT:
             return Math.round(this._peripheral.getTiltLeftRight(false));
         default:
             log.warn(`Unknown direction in getTilt: ${direction}`);
@@ -901,11 +904,11 @@ class Scratch3GdxForBlocks {
 
     getSpinSpeed (args) {
         switch (args.DIRECTION) {
-        case AxisValues.X:
+        case Scratch3GdxForBlocks.AxisValues.X:
             return Math.round(this._peripheral.getSpinSpeedX());
-        case AxisValues.Y:
+        case Scratch3GdxForBlocks.AxisValues.Y:
             return Math.round(this._peripheral.getSpinSpeedY());
-        case AxisValues.Z:
+        case Scratch3GdxForBlocks.AxisValues.Z:
             return Math.round(this._peripheral.getSpinSpeedZ());
         default:
             log.warn(`Unknown direction in getSpinSpeed: ${args.DIRECTION}`);
@@ -914,11 +917,11 @@ class Scratch3GdxForBlocks {
 
     getAcceleration (args) {
         switch (args.DIRECTION) {
-        case AxisValues.X:
+        case Scratch3GdxForBlocks.AxisValues.X:
             return Math.round(this._peripheral.getAccelerationX());
-        case AxisValues.Y:
+        case Scratch3GdxForBlocks.AxisValues.Y:
             return Math.round(this._peripheral.getAccelerationY());
-        case AxisValues.Z:
+        case Scratch3GdxForBlocks.AxisValues.Z:
             return Math.round(this._peripheral.getAccelerationZ());
         default:
             log.warn(`Unknown direction in getAcceleration: ${args.DIRECTION}`);
@@ -944,7 +947,7 @@ class Scratch3GdxForBlocks {
     }
 
     gestureMagnitude () {
-        return this.accelMagnitude() - GRAVITY;
+        return this.accelMagnitude() - GdxFor.GRAVITY;
     }
 
     spinMagnitude () {
@@ -972,7 +975,7 @@ class Scratch3GdxForBlocks {
         // gyro measurements and convert them to radians/second.
         // So, we compare our accel magnitude against:
         // FREEFALL_THRESHOLD + (some_scaled_magnitude_of_rotation).
-        const ffThresh = FREEFALL_THRESHOLD + (FREEFALL_ROTATION_FACTOR * spinMag);
+        const ffThresh = GdxFor.FREEFALL_THRESHOLD + (GdxFor.FREEFALL_ROTATION_FACTOR * spinMag);
 
         return accelMag < ffThresh;
     }

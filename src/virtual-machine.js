@@ -13,6 +13,7 @@ const ExtensionManager = require('./extension-support/extension-manager');
 const log = require('./util/log');
 const MathUtil = require('./util/math-util');
 const Runtime = require('./engine/runtime');
+const Resolvers = require('./util/resolvers');
 const RenderedTarget = require('./sprites/rendered-target');
 const Sprite = require('./sprites/sprite');
 const StringUtil = require('./util/string-util');
@@ -50,29 +51,45 @@ formatMessage.setup({
     missingTranslation: 'ignore'
 });
 
-const createRuntimeService = runtime => {
-    const service = {};
-    service._refreshExtensionPrimitives = runtime._refreshExtensionPrimitives.bind(runtime);
-    service._registerExtensionPrimitives = runtime._registerExtensionPrimitives.bind(runtime);
-    return service;
-};
-
 /**
  * Handles connections between blocks, stage, and extensions.
  * @constructor
  */
 class VirtualMachine extends EventEmitter {
+    static createRuntimeService = runtime => {
+        const service = {};
+        service._refreshExtensionPrimitives = runtime._refreshExtensionPrimitives.bind(runtime);
+        service._registerExtensionPrimitives = runtime._registerExtensionPrimitives.bind(runtime);
+        return service;
+    };
+
+    get runtime () {
+        return this._runtime;
+    }
+    set runtime (runtime) {
+        if (runtime && runtime instanceof Runtime) {
+            runtime.vm = this;
+        }
+        this._runtime = runtime;
+    }
+
     constructor () {
         super();
+
+        this.$ = VirtualMachine.$;
 
         /**
          * VM runtime, to store blocks, I/O devices, sprites/targets, etc.
          * @type {!Runtime}
          */
-        this.runtime = new Runtime();
-        centralDispatch.setService('runtime', createRuntimeService(this.runtime)).catch(e => {
+        this._runtime = new Runtime(this);
+
+        centralDispatch.setService('runtime', VirtualMachine.createRuntimeService(this.runtime)).catch(e => {
             log.error(`Failed to register runtime service: ${JSON.stringify(e)}`);
         });
+
+        this.resolversTool = new Resolvers(this);
+        this.resolversTool._Resolvers = Resolvers;
 
         this.io = {
             BLE,
@@ -251,6 +268,8 @@ class VirtualMachine extends EventEmitter {
             JSON5: require('json5'),
 
             these_broke_before_and_will_break_again: () => {
+                console.error('Please use vm.$');
+
                 console.warn('You are using unsupported APIs. WHEN your code breaks, do not expect help.');
                 return {
                     JSGenerator: require('./compiler/jsgen.js'),
@@ -270,6 +289,8 @@ class VirtualMachine extends EventEmitter {
             },
 
             i_will_not_ask_for_help_when_these_break: () => {
+                console.error('Please use vm.$');
+
                 this.emit('LEGACY_EXTENSION_API', 'i_will_not_ask_for_help_when_these_break');
 
                 const oldCompilerCompatibility = require('./compiler/old-compiler-compatibility.js');
@@ -1972,5 +1993,8 @@ class VirtualMachine extends EventEmitter {
         return true;
     }
 }
+
+VirtualMachine.CORE_EXTENSIONS = CORE_EXTENSIONS;
+VirtualMachine.RESERVED_NAMES = RESERVED_NAMES;
 
 module.exports = VirtualMachine;

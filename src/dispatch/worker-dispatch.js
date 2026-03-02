@@ -111,3 +111,5 @@ class WorkerDispatch extends SharedDispatch {
 }
 
 module.exports = new WorkerDispatch();
+
+module.exports._WorkerDispatch = WorkerDispatch;

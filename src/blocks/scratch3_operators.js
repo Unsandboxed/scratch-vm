@@ -36,8 +36,13 @@ class Scratch3OperatorsBlocks {
             operator_min: this.min,
             operator_max: this.max,
             operator_round: this.round,
-            operator_mathop: this.mathop
+            operator_mathop: this.mathop,
+            checkbox: this.checkbox
         };
+    }
+
+    checkbox () {
+        return true;
     }
 
     add (args) {

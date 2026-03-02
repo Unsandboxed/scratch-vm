@@ -3,37 +3,37 @@
 // Instead we must add a small amount of extra information to the end of exported SVGs
 // that can be read on import.
 
+const E = {};
+
 // Adding this comment in scratch-paint is not a viable approach because the user can
 // open projects not made with TurboWarp and we want costumes exported from there to
 // have their center saved even if they haven't been edited.
 
-let _TextEncoder;
-let _TextDecoder;
 if (typeof TextEncoder === 'undefined') {
-    _TextEncoder = require('text-encoding').TextEncoder;
-    _TextDecoder = require('text-encoding').TextDecoder;
+    E._TextEncoder = require('text-encoding').TextEncoder;
+    E._TextDecoder = require('text-encoding').TextDecoder;
 } else {
-    _TextEncoder = TextEncoder;
-    _TextDecoder = TextDecoder;
+    E._TextEncoder = TextEncoder;
+    E._TextDecoder = TextDecoder;
 }
 
 // Using literal HTML comments tokens will cause this script to be very hard to inline in
 // a <script> element, so we'll instead do this terrible hack which the minifier probably
 // won't be able to optimize away.
-const HTML_COMMENT_START = `<!${'-'.repeat(2)}`;
-const HTML_COMMENT_END = `${'-'.repeat(2)}>`;
+E.HTML_COMMENT_START = `<!${'-'.repeat(2)}`;
+E.HTML_COMMENT_END = `${'-'.repeat(2)}>`;
 
-const regex = new RegExp(
-    `${HTML_COMMENT_START}rotationCenter:(-?[\\d\\.]+):(-?[\\d\\.]+)${HTML_COMMENT_END}$`
+E.regex = new RegExp(
+    `${E.HTML_COMMENT_START}rotationCenter:(-?[\\d\\.]+):(-?[\\d\\.]+)${E.HTML_COMMENT_END}$`
 );
 
 /**
  * @param {string} svgString SVG source
  * @returns {[number, number]|null} The detected rotation center of the SVG, if any.
  */
-const parseVectorMetadata = svgString => {
+E.parseVectorMetadata = svgString => {
     // TODO: see if this is slow on large strings
-    const match = svgString.match(regex);
+    const match = svgString.match(E.regex);
     if (!match) {
         return null;
     }
@@ -51,7 +51,7 @@ const parseVectorMetadata = svgString => {
  * @param {Costume} costume scratch-vm costume object
  * @returns {Uint8Array} Binary data to export
  */
-const exportCostume = costume => {
+E.exportCostume = costume => {
     /** @type {Uint8Array} */
     const originalData = costume.asset.data;
 
@@ -59,20 +59,17 @@ const exportCostume = costume => {
         return originalData;
     }
 
-    let decodedData = new _TextDecoder().decode(originalData);
+    let decodedData = new (E._TextDecoder()).decode(originalData);
 
     // It's okay that the regex isn't global because it can only match one item anyways.
-    decodedData = decodedData.replace(regex, '');
+    decodedData = decodedData.replace(E.regex, '');
 
     const centerX = costume.rotationCenterX;
     const centerY = costume.rotationCenterY;
-    const extraData = `${HTML_COMMENT_START}rotationCenter:${centerX}:${centerY}${HTML_COMMENT_END}`;
+    const extraData = `${E.HTML_COMMENT_START}rotationCenter:${centerX}:${centerY}${E.HTML_COMMENT_END}`;
     decodedData += extraData;
 
-    return new _TextEncoder().encode(decodedData);
+    return new (E._TextEncoder()).encode(decodedData);
 };
 
-module.exports = {
-    parseVectorMetadata,
-    exportCostume
-};
+module.exports = E;

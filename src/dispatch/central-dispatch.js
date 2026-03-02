@@ -141,3 +141,5 @@ class CentralDispatch extends SharedDispatch {
 }
 
 module.exports = new CentralDispatch();
+
+module.exports._CentralDispatch = CentralDispatch;
