@@ -42,8 +42,8 @@ class Scratch3ProcedureBlocks {
 
     call (args, util) {
         const stackFrame = util.stackFrame;
-        const isReporter = !!JSON.parse(args.mutation.return || 0);
-        const isHat = !!JSON.parse(args.mutation.hat || false);
+        const isReporter = Cast.toBooleanSimple(args.mutation.return);
+        const isHat = Cast.toBooleanSimple(args.mutation.hat);
 
         if (stackFrame.executed) {
             if (isReporter || isHat) {
@@ -157,8 +157,11 @@ class Scratch3ProcedureBlocks {
         const value = util.getParam(args.VALUE);
         if (value === null) {
             // tw: support legacy block
-            if (String(args.VALUE).toLowerCase() === 'last key pressed') {
+            const param = String(args.VALUE).toLowerCase();
+            if (param === 'last key pressed') {
                 return util.ioQuery('keyboard', 'getLastKeyPressed');
+            } else if (Object.prototype.hasOwnProperty.call(this.runtime.spoofedProcedureParamValues, param)) {
+                return this.runtime.spoofedProcedureParamValues[param](1);
             }
             // When the parameter is not found in the most recent procedure
             // call, the default is always 0.
@@ -174,9 +177,10 @@ class Scratch3ProcedureBlocks {
             const lowercaseValue = String(args.VALUE).toLowerCase();
             if (util.target.runtime.compilerOptions.enabled && lowercaseValue === 'is compiled?') {
                 return true;
-            }
-            if (lowercaseValue === 'is unsandboxed?') {
+            } else if (lowercaseValue === 'is unsandboxed?') {
                 return true;
+            } else if (Object.prototype.hasOwnProperty.call(this.runtime.spoofedProcedureParamValues, lowercaseValue)) {
+                return this.runtime.spoofedProcedureParamValues[lowercaseValue](2);
             }
             // When the parameter is not found in the most recent procedure
             // call, the default is always 0.
@@ -186,10 +190,14 @@ class Scratch3ProcedureBlocks {
     }
 
     argumentStatement (args, util) {
+
         const branchInfo = util.getParam(args.VALUE) || {};
         if (!branchInfo.fieldId) return;
 
-        const block = util.target.blocks.getBlock(branchInfo.blockId);
+        const target = util.thread.target;
+
+        // In global procedures the blockContainer might not be the one for the target.
+        const block = target.blocks.getBlock(branchInfo.blockId);
         if (!block) return;
 
         const branch = block.inputs[branchInfo.fieldId];
@@ -211,7 +219,8 @@ class Scratch3ProcedureBlocks {
             }
         });
 
-        util.thread.pushStack(branch.block);
+        util.thread.pushStack(branch.block, target);
+        util.thread.peekStackFrame().polluteLocals = true;
     }
 }
 

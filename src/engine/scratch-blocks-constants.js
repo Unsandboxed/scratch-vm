@@ -27,7 +27,9 @@ const ScratchBlocksConstants = {
      * ENUM for output shape: object (objects).
      * @const
      */
-    OUTPUT_SHAPE_OBJECT: 4
+    OUTPUT_SHAPE_OBJECT: 4,
+
+    RETURN_TYPE_HAT: 3
 };
 
 module.exports = ScratchBlocksConstants;

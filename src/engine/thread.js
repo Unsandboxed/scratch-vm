@@ -87,6 +87,12 @@ class _StackFrame {
         this.executionContext = null;
 
         /**
+         * A context passed to block implementations.
+         * @type {Object}
+         */
+        this.targetContext = null;
+
+        /**
          * Internal block object being executed. This is *not* the same as the object found
          * in target.blocks.
          * @type {object}
@@ -105,6 +111,8 @@ class _StackFrame {
          * @type {boolean}
          */
         this.isIterable = false;
+
+        this.polluteLocals = 0; // 0 means ignore this frame, false means disable, true means enable.
     }
 
     /**
@@ -124,6 +132,7 @@ class _StackFrame {
         this.op = null;
         this.isBreakable = false;
         this.isIterable = false;
+        this.polluteLocals = 0;
 
         for (let i = 0; i < this.onBranchEnd.length; i++) {
             this.onBranchEnd[i]();
@@ -141,9 +150,10 @@ class _StackFrame {
      * @param {?boolean} warpMode defaults to current warpMode
      * @returns {_StackFrame} this
      */
-    reuse (warpMode = this.warpMode) {
+    reuse (warpMode = this.warpMode, polluteLocals = this.polluteLocals) {
         this.reset();
         this.warpMode = Boolean(warpMode);
+        this.polluteLocals = polluteLocals;
         return this;
     }
 
@@ -374,14 +384,27 @@ class Thread {
     /**
      * Push stack and update stack frames appropriately.
      * @param {string} blockId Block ID to push to stack.
+     * @param {Target} target The target running the thread.
      */
-    pushStack (blockId) {
+    pushStack (blockId, target) {
         this.stack.push(blockId);
         // Push an empty stack frame, if we need one.
         // Might not, if we just popped the stack.
         if (this.stack.length > this.stackFrames.length) {
             const parent = this.stackFrames[this.stackFrames.length - 1];
-            this.stackFrames.push(_StackFrame.create(typeof parent !== 'undefined' && parent.warpMode));
+            const stackFrame = _StackFrame.create(typeof parent !== 'undefined' && parent.warpMode);
+            if (typeof parent !== 'undefined') {
+                stackFrame.polluteLocals = parent.polluteLocals;
+            }
+
+            if (target) {
+                stackFrame.targetContext = target;
+                this.blockContainer = target.blocks;
+            } else {
+                stackFrame.targetContext = parent ? parent.targetContext : this.target;
+            }
+
+            this.stackFrames.push(stackFrame);
         }
     }
 
@@ -401,6 +424,12 @@ class Thread {
      */
     popStack () {
         _StackFrame.release(this.stackFrames.pop());
+
+        const stackFrame = this.peekStackFrame();
+        if (stackFrame) {
+            this.blockContainer = stackFrame.targetContext.blocks;
+        }
+
         return this.stack.pop();
     }
 
@@ -410,7 +439,7 @@ class Thread {
     stopThisScript () {
         let blockID = this.peekStack();
         while (blockID !== null) {
-            const block = this.target.blocks.getBlock(blockID);
+            const block = this.blockContainer.getBlock(blockID);
 
             // Reporter form of procedures_call
             if (this.peekStackFrame().waitingReporter) {
@@ -632,7 +661,7 @@ class Thread {
      * where execution proceeds from one block to the next.
      */
     goToNextBlock () {
-        const nextBlockId = this.target.blocks.getNextBlock(this.peekStack());
+        const nextBlockId = this.blockContainer.getNextBlock(this.peekStack());
         this.reuseStackForNextBlock(nextBlockId);
     }
 
@@ -646,8 +675,8 @@ class Thread {
         let callCount = 5; // Max number of enclosing procedure calls to examine.
         const sp = this.stackFrames.length - 1;
         for (let i = sp - 1; i >= 0; i--) {
-            const block = this.target.blocks.getBlock(this.stackFrames[i].op.id) ||
-                this.target.runtime.flyoutBlocks.getBlock(this.stackFrames[i].op.id);
+            const blockId = this.stack[i];
+            const block = this.stackFrames[i].targetContext.blocks.getBlock(blockId);
             if (block.opcode === 'procedures_call' &&
                 block.mutation.proccode === procedureCode) {
                 return true;

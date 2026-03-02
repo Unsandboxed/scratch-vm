@@ -4,7 +4,9 @@ module.exports = function (compilerData, {
     IntermediateStackBlock,
     Frame,
     InputType,
-    sanitize
+    sanitize,
+    Cast,
+    runtime
 }) {
     /* eslint-disable no-invalid-this,prefer-arrow-callback,arrow-parens */
     // @ts-ignore
@@ -30,7 +32,7 @@ module.exports = function (compilerData, {
             return new IntermediateInput(procedureInfo.opcode, this.type, procedureInfo.inputs, this.yields);
         }
         const procedureCode = block.mutation.proccode;
-        if (!!JSON.parse(block.mutation.return) && !JSON.parse(block.mutation.hat || false)) {
+        if (Cast.toBooleanSimple(block.mutation.return) && !Cast.toBooleanSimple(block.mutation.hat)) {
             const visualReport = stg.descendVisualReport(block);
             if (visualReport) {
                 return visualReport;
@@ -48,6 +50,7 @@ module.exports = function (compilerData, {
         const procedureVariant = node.variant;
         const procedureData = jsg.ir.procedures[procedureVariant];
         if (procedureData.stack === null) {
+            console.warn('TODO still need to evaluate arguments for side effects');
             // TODO still need to evaluate arguments for side effects
             return '""';
         }
@@ -67,7 +70,7 @@ module.exports = function (compilerData, {
                 const oldIsProcedureBranch = jsg.isProcedureBranch;
                 jsg.isWarp = procedureData.isWarp;
                 jsg.isProcedureBranch = true;
-                args.push(`(function*(returnProcedure){;${
+                args.push(`(function*(returnProcedure, thread, target, deftarget){;${
                     jsg.descendStackForSource(input, new Frame(false))
                 };})`);
                 jsg.isWarp = oldWarp;
@@ -104,7 +107,7 @@ module.exports = function (compilerData, {
             const oldIsProcedureBranch = jsg.isProcedureBranch;
             jsg.isWarp = procedureData.isWarp;
             jsg.isProcedureBranch = true;
-            args.push(`(function*(returnProcedure){;${
+            args.push(`(function*(returnProcedure, thread, target, deftarget){;${
                 jsg.descendStackForSource(input, new Frame(false))
             };})`);
             jsg.isWarp = oldWarp;
@@ -162,13 +165,14 @@ module.exports = function (compilerData, {
             return;
         }
         // eslint-disable-next-line max-len
-        jsg.source += `void(yield* p${block.inputs.index}(function(v) {procedureReturnV[0]=true;procedureReturnV[1]=v}));`;
+        jsg.source += `void(yield* p${block.inputs.index}(function(v) {procedureReturnV[0]=true;procedureReturnV[1]=v}, thread, target, (deftarget, target) ));`;
         jsg.source += `if (procedureReturnV[0]) {`;
         jsg.stopScriptAndReturn(`procedureReturnV[1]`);
         jsg.source += `};`;
     }, {
         input: false,
-        yields: true
+        yields: true,
+        dynamicChanges: false
     });
     // Inputs
     compilerData.inputs.set('procedures_call', compilerData.stacks.get('procedures_call'));
@@ -178,8 +182,11 @@ module.exports = function (compilerData, {
         const index = stg.script.arguments.lastIndexOf(name);
         if (index === -1) {
             // Legacy support
-            if (name.toLowerCase() === 'last key pressed') {
+            const param = name.toLowerCase();
+            if (param === 'last key pressed') {
                 return new IntermediateInput('tw.getLastKeyPressed', this.type);
+            } else if (Object.prototype.hasOwnProperty.call(runtime.spoofedProcedureParamValues, param)) {
+                return stg.createConstantInput(runtime.spoofedProcedureParamValues[param](1), true);
             }
             return new IntermediateInput('procedures.paramater', this.type, {name});
         }
@@ -203,8 +210,11 @@ module.exports = function (compilerData, {
         const name = block.fields.VALUE.value;
         const index = stg.script.arguments.lastIndexOf(name);
         if (index === -1) {
-            if (name.toLowerCase() === 'is compiled?' || name.toLowerCase() === 'is unsandboxed?') {
+            const param = name.toLowerCase();
+            if (param === 'is compiled?' || param === 'is unsandboxed?') {
                 return stg.createConstantInput(true).toType(InputType.BOOLEAN);
+            } else if (Object.prototype.hasOwnProperty.call(runtime.spoofedProcedureParamValues, param)) {
+                return stg.createConstantInput(runtime.spoofedProcedureParamValues[param](2), true);
             }
             return stg.createConstantInput(0);
         }

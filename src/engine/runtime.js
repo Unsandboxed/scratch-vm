@@ -303,6 +303,12 @@ class Runtime extends EventEmitter {
         this.monitorBlocks = new Blocks(this, true /* force no glow */);
 
         /**
+         * Map to look up a global custom block's target.
+         * @type {Object.<string, string>}
+         */
+        this._globalProcedures = {};
+
+        /**
          * Currently known editing target for the VM.
          * @type {?Target}
          */
@@ -367,6 +373,30 @@ class Runtime extends EventEmitter {
          * @type {boolean}
          */
         this._refreshTargets = false;
+
+        /**
+         * Flag to tell the runtime to refresh global procedures on the next step call.
+         * When a procedure is created, deleted or some other event
+         * this flag is set to true.
+         * @type {boolean}
+         */
+        this._refreshGlobalProcedures = false;
+
+        /**
+         * Map of old global procedure proccodes to their new ones. (used if a global procedure is updated)
+         *
+         * @type {Record<string, string>}
+         * @protected
+         */
+        this._dirtyGlobalProcedures = Object.create(null);
+
+        /**
+         * Map of global procedure proccodes to their new mutations. (used if a global procedure mutation is updated)
+         *
+         * @type {Record<string, object>}
+         * @protected
+         */
+        this._dirtyGlobalProceduresMutations = Object.create(null);
 
         /**
          * Map to look up all monitor block information by opcode.
@@ -542,6 +572,11 @@ class Runtime extends EventEmitter {
         this._defaultStoredSettings = this._generateAllProjectOptions();
 
         /**
+         * Map of spoofed param values (all lowercase) to values they should return.
+         */
+        this.spoofedProcedureParamValues = Object.create(null);
+
+        /**
          * TW: We support a "packaged runtime" mode. This can be used when:
          *  - there will never be an editor attached such as scratch-gui or scratch-blocks
          *  - the project will never be exported with saveProjectSb3()
@@ -645,10 +680,25 @@ class Runtime extends EventEmitter {
             }
         });
 
+        this._triggerByRequestOfGlobalProcedures = false;
+        this.on(Runtime.PROJECT_CHANGED, () => {
+            if (this._triggerByRequestOfGlobalProcedures) {
+                this._triggerByRequestOfGlobalProcedures = false;
+                return;
+            }
+            this.requestGlobalProceduresMutationsRefresh();
+            this.requestGlobalProceduresRefresh();
+        });
+        this.on(Runtime.PROJECT_LOADED, () => {
+            this.requestGlobalProceduresMutationsRefresh();
+            this.requestGlobalProceduresRefresh();
+        });
+
         /**
          * Export some internal values for extensions.
          */
         this.exports = {
+            Cast,
             ExtendedJSON,
             i_will_not_ask_for_help_when_these_break: () => {
                 log.warn('You are using unsupported APIs. WHEN your code breaks, do not expect help.');
@@ -3052,6 +3102,15 @@ class Runtime extends EventEmitter {
      * inactive threads after each iteration.
      */
     _step () {
+        if (this._refreshGlobalProceduresMutations) {
+            this._refreshGlobalProceduresMutations = false;
+            this._updateGlobalProceduresMutations();
+        }
+        if (this._refreshGlobalProcedures) {
+            this._refreshGlobalProcedures = false;
+            this._updateGlobalProcedures();
+        }
+
         let targetHasInterpolation = false;
         for (const target of this.targets) {
             if (target.interpolation) targetHasInterpolation = true;
@@ -4148,6 +4207,274 @@ class Runtime extends EventEmitter {
         };
 
         return callback().then(onSuccess, onError);
+    }
+
+    /**
+     * ScratchBlocks hook callback to tell it if it can delete a specific procedure.
+     *
+     * This is used to make sure global procedures that are still in use cannot be deleted.
+     */
+    sbCanDeleteDefinitionCallback_ (procCode, skipGlobalExistsCheck = false) {
+        if (!skipGlobalExistsCheck && !this._globalProcedures[procCode]) {
+            return true;
+        }
+
+        for (let i = 0; i < this.targets.length; i++) {
+            if (this.targets[i].blocks.isProcedureInUse(procCode)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Gets the global procedures for the selected target.
+     * @param {string} target The target (by id) to check.
+     * @returns {string[]}
+     */
+    getGlobalProceduresFromTarget (target) {
+        return Object.entries(this._globalProcedures).flatMap(([proccode, targetId]) => {
+            if (targetId !== target) return [];
+            return [proccode];
+        });
+    }
+
+    /**
+     * Gets the global procedure target based on proccode.
+     * @param {string} proccode The procedure proccode.
+     * @returns {?string} The target ID.
+     */
+    getGlobalProcedureTarget (proccode) {
+        return this._globalProcedures[proccode];
+    }
+
+    markDirtyGlobalProcedure (oldProccode, newProccode) {
+        this._dirtyGlobalProcedures[oldProccode] = newProccode;
+    }
+
+    markDirtyGlobalProcedureMutation (dirtyProccode, newMutation) {
+        this._dirtyGlobalProceduresMutations[dirtyProccode] = newMutation;
+    }
+
+    /**
+     * Refreshes the global procedures for the runtime. (used by the sequencer and scratch-blocks)
+     * @param {?Target|Target[]} targets Optional target(s) to refresh the global's of
+     * @returns {boolean} Did any changes occur?
+     */
+    _updateGlobalProcedures (targets) {
+        // get a list of targets to refresh, if we dont get any then just refresh them all
+        if (targets === (void 0) || targets === null) targets = this.targets;
+        else targets = [].concat(targets);
+        targets = new Set(targets.map(t => t.id));
+
+        const deadTargets = (new Set(Object.values(this._globalProcedures)))
+            .difference(new Set(this.targets.map(t => t.id)));
+
+        // keep track of what procedures used to exist and exist now
+        // (this is used for cleanup)
+        const Pold = new Set(Object.keys(this._globalProcedures));
+        const Pnew = new Set();
+        const Pexists = new Set();
+        let Premoved = new Set();
+        const globalProcedures = {};
+
+        for (let i = 0; i < this.targets.length; i++) {
+            const target = this.targets[i];
+            if (!targets.has(target.id)) continue;
+            // hack: use the cache to get an easy list of currently existing procedure definitions.
+            target.blocks.populateProcedureCache();
+            const proccodes = Object.keys(target.blocks._cache.procedureDefinitions);
+            for (let j = 0; j < proccodes.length; j++) {
+                const proccode = proccodes[j];
+                const mutation = target.blocks.getProcedureMutation(proccode);
+                if (!mutation) {
+                    if (Pold.has(proccode)) Premoved.add(proccode);
+                    continue;
+                }
+                // Add the proccode to the list of existing procedures if it is global
+                if (!Cast.toBooleanSimple(mutation.global)) {
+                    if (Pold.has(proccode)) Premoved.add(proccode);
+                    continue;
+                }
+                if (Pold.has(proccode)) {
+                    Pexists.add(proccode);
+                } else {
+                    Pnew.add(proccode);
+                    globalProcedures[proccode] = target.id;
+                }
+            }
+            target.blocks.resetCache(); // Reset the cache because the procedures might be dirty now.
+        }
+
+        Premoved = Premoved.union(Pold.difference(Pexists));
+
+        let res = false;
+        const changed = Array.from(Pnew.union(Premoved));
+
+        if (deadTargets.size > 0) {
+            changed.push(...Object.keys(this._globalProcedures).flatMap(proccode => {
+                if (!deadTargets.has(this._globalProcedures[proccode])) return [];
+                return [proccode];
+            }));
+        }
+
+        if (changed.length > 0) {
+            // if any procedures are missing or new then go through them
+            for (let i = 0; i < changed.length; i++) {
+                const proccode = changed[i];
+                // add the procedure if it is new
+                if (Pnew.has(proccode)) {
+                    this._globalProcedures[proccode] = globalProcedures[proccode];
+                    continue;
+                }
+                if (Premoved.has(proccode)) {
+                    // otherwise delete it (this can happen for a variety of reasons)
+                    this.emit('GLOBAL_PROCEDURE_REMOVED', proccode);
+                    delete this._globalProcedures[proccode];
+                }
+            }
+
+            for (const proccode in this._dirtyGlobalProcedures) {
+                if (Pnew.has(proccode) || Premoved.has(this._dirtyGlobalProcedures[proccode])) {
+                    delete this._dirtyGlobalProcedures[proccode];
+                }
+            }
+
+            res = true;
+        }
+
+        const dirtyGlobalProcedures = Object.keys(this._dirtyGlobalProcedures);
+        if (dirtyGlobalProcedures.length > 0) {
+            for (let i = 0; i < this.targets.length; i++) {
+                const target = this.targets[i];
+                if (!targets.has(target.id)) continue;
+                for (const dirtyProccode of dirtyGlobalProcedures) {
+                    // If this target defines the dirty procedure then its not going to be dirty here, as
+                    // dirty procedures only effect procedures that are not where the procedure was defined.
+                    if (target.blocks.getBlock(
+                        this._globalProcedures[this._dirtyGlobalProcedures[dirtyProccode]]
+                    )) continue;
+
+                    target.blocks.updateDirtyGlobalProcedures(
+                        true,
+                        dirtyProccode,
+                        this._dirtyGlobalProcedures[dirtyProccode],
+                        this.getGlobalProcedureParamNamesIdsAndDefaults(
+                            this._dirtyGlobalProcedures[dirtyProccode]
+                        )
+                    );
+                }
+            }
+            this._dirtyGlobalProcedures = {};
+
+            res = true;
+        }
+
+        if (res) {
+            this._triggerByRequestOfGlobalProcedures = true;
+            this.emitProjectChanged();
+        }
+
+        return res;
+    }
+
+    _updateGlobalProceduresMutations () {
+        const dirtyGlobalProcedures = Object.keys(this._dirtyGlobalProceduresMutations);
+        if (dirtyGlobalProcedures.length === 0) return;
+        for (let i = 0; i < this.targets.length; i++) {
+            const target = this.targets[i];
+            for (const dirtyProccode of dirtyGlobalProcedures) {
+                if (target.blocks.getProcedureDefinition(dirtyProccode)) {
+                    continue;
+                }
+                target.blocks.updateDirtyGlobalProceduresMutations(
+                    true,
+                    dirtyProccode,
+                    this._dirtyGlobalProceduresMutations[dirtyProccode]
+                );
+            }
+        }
+        this._dirtyGlobalProceduresMutations = {};
+
+        this._triggerByRequestOfGlobalProcedures = true;
+        this.emitProjectChanged();
+    }
+
+    /**
+     * Requests the global procedures to be refreshed.
+     */
+    requestGlobalProceduresRefresh (force) {
+        this._refreshGlobalProcedures = true;
+
+        if (force) {
+            this._updateGlobalProcedures();
+        }
+    }
+
+    /**
+     * Requests the global procedures mutations to be refreshed.
+     */
+    requestGlobalProceduresMutationsRefresh (force) {
+        this._refreshGlobalProceduresMutations = true;
+
+        if (force) {
+            this._updateGlobalProceduresMutations();
+        }
+    }
+
+    // Implement global methods for the procedure utilitys
+
+    /**
+     * Get the procedure definition for a given name.
+     * @param {?string} procedureCode Procedure to query.
+     * @return {[?Target, ?string]} ID of procedure definition.
+     */
+    getGlobalProcedureDefinition (procedureCode) {
+        const target = this.getTargetById(this._globalProcedures[procedureCode]);
+        if (!target) return [null, null];
+        const definition = target.blocks.getProcedureDefinition(procedureCode);
+        if (!definition) return [null, null];
+        return [target, definition];
+    }
+
+    /**
+     * Get names, ids, and defaults of parameters for the given procedure.
+     * @param {string} procedureCode Procedure code for procedure to query.
+     * @return {?Array.<string>} List of param names for a procedure.
+     */
+    getGlobalProcedureParamNamesIdsAndDefaults (procedureCode) {
+        const def = this.getGlobalProcedureDefinition(procedureCode);
+        if (!def[0]) {
+            for (const target of this.targets) {
+                const mutation = target.blocks.getProcedureMutation(procedureCode);
+                if (!mutation) continue;
+                if (Cast.toBooleanSimple(mutation.global)) continue;
+
+                return target.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
+            }
+            return null;
+        }
+        return def[0].blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
+    }
+
+    /**
+     * Get names and ids of parameters for the given procedure.
+     * @param {string} procedureCode Procedure code for procedure to query.
+     * @return {?Array.<string>} List of param names for a procedure.
+     */
+    getGlobalProcedureParamNamesAndIds (procedureCode) {
+        const def = this.getGlobalProcedureDefinition(procedureCode);
+        if (!def[0]) {
+            for (const target of this.targets) {
+                const mutation = target.blocks.getProcedureMutation(procedureCode);
+                if (!mutation) continue;
+                if (Cast.toBooleanSimple(mutation.global)) continue;
+
+                return target.blocks.getProcedureParamNamesAndIds(procedureCode);
+            }
+            return null;
+        }
+        return def[0].blocks.getProcedureParamNamesAndIds(procedureCode);
     }
 }
 

@@ -890,6 +890,8 @@ class VirtualMachine extends EventEmitter {
 
             // Update the VM user's knowledge of targets and blocks on the workspace.
             this.emitTargetsUpdate(false /* Don't emit project change */);
+            this.runtime.requestGlobalProceduresMutationsRefresh(true);
+            this.runtime.requestGlobalProceduresRefresh(true);
             this.emitWorkspaceUpdate();
             this.runtime.setEditingTarget(this.editingTarget);
             this.runtime.ioDevices.cloud.setStage(this.runtime.getTargetForStage());
@@ -1425,6 +1427,8 @@ class VirtualMachine extends EventEmitter {
                 const clone = sprite.clones[i];
                 this.runtime.stopForTarget(sprite.clones[i]);
                 this.runtime.disposeTarget(sprite.clones[i]);
+                this.runtime.requestGlobalProceduresMutationsRefresh(true);
+                this.runtime.requestGlobalProceduresRefresh(true);
                 // Ensure editing target is switched if we are deleting it.
                 if (clone === currentEditingTarget) {
                     const nextTargetIndex = Math.min(this.runtime.targets.length - 1, targetIndexBeforeDelete);
@@ -1785,11 +1789,30 @@ class VirtualMachine extends EventEmitter {
             .map(k => this.editingTarget.comments[k])
             .filter(c => c.blockId === null);
 
+        const globalProcedureMutations = [];
+        const localProcedureMutations = this.editingTarget.blocks.getLocalProcedureMutationXMLs();
+        const globalProcedures = this.runtime._globalProcedures;
+
+        for (const globalProcedure of Object.keys(globalProcedures)) {
+            const target = this.runtime.getTargetById(globalProcedures[globalProcedure]);
+            const blocks = target.blocks;
+
+            // this could be an email
+            const mutation = blocks.getProcedureMutation(globalProcedure);
+            const mutationXML = blocks.mutationToXML(mutation);
+
+            globalProcedureMutations.push(mutationXML);
+        }
+
         const xmlString = `<xml xmlns="http://www.w3.org/1999/xhtml">
                             <variables>
                                 ${globalVariables.map(v => v.toXML()).join()}
                                 ${localVariables.map(v => v.toXML(true)).join()}
                             </variables>
+                            <procedures>
+                                ${globalProcedureMutations.join()}
+                                ${localProcedureMutations.join()}
+                            </procedures>
                             ${workspaceComments.map(c => c.toXML()).join()}
                             ${this.editingTarget.blocks.toXML(this.editingTarget.comments)}
                         </xml>`;
@@ -1961,6 +1984,13 @@ class VirtualMachine extends EventEmitter {
      */
     configureScratchLinkSocketFactory (factory) {
         this.runtime.configureScratchLinkSocketFactory(factory);
+    }
+
+    sbCanDeleteDefinitionCallback_ (procCode, skipGlobalExistsCheck) {
+        if (this.runtime) {
+            return this.runtime.sbCanDeleteDefinitionCallback_(procCode, skipGlobalExistsCheck);
+        }
+        return true;
     }
 }
 

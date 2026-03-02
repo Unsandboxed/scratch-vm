@@ -15,6 +15,7 @@ const SetupCompiler = function (runtime) {
     const exports = require('./exports.js');
     exports.runtime = runtime;
     // CORE
+    exports.runtime = runtime;
     require('./setup-compiler/motion')(compilerData, exports);
     require('./setup-compiler/looks')(compilerData, exports);
     require('./setup-compiler/sound')(compilerData, exports);

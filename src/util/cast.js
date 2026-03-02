@@ -61,6 +61,16 @@ class Cast {
     }
 
     /**
+     * Simpler to boolean used internally.
+     * @throws {SyntaxError}
+     */
+    static toBooleanSimple (value) {
+        if (typeof value === 'boolean') return value;
+        if (typeof value === 'string') value = JSON.parse(value);
+        return Boolean(value);
+    }
+
+    /**
      * Scratch cast to boolean.
      * In Scratch 2.0, this is captured by `interp.boolArg.`
      * Treats some string values differently from JavaScript.

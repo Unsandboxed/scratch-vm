@@ -1,6 +1,7 @@
 // @ts-check
 
 const StringUtil = require('../util/string-util');
+const Cast = require('../util/cast');
 const BlockType = require('../extension-support/block-type');
 const Variable = require('../engine/variable');
 const log = require('../util/log');
@@ -27,6 +28,7 @@ const oldCompilerCompatiblity = require('./old-compiler-compatibility.js');
  * @property {string | null} id
  * @property {string} name
  * @property {boolean} isCloud
+ * @property {boolean} deftarget
  */
 
 /**
@@ -54,13 +56,19 @@ const parseProcedureCode = variant => variant.substring(1);
 const parseIsWarp = variant => variant.charAt(0) === 'W';
 
 class ScriptTreeGenerator {
-    constructor (thread) {
+    constructor (thread, targetId) {
         /** @private */
         this.thread = thread;
         /** @private */
         this.target = thread.target;
         /** @private */
-        this.blocks = thread.blockContainer;
+        this.globalTarget = this.target.runtime.getTargetById(targetId) || this.target;
+        /** @private */
+        this.targetId = targetId;
+        /** @private */
+        this.blocks = this.globalTarget.blocks;
+        /** @private */
+        this.localBlocks = this.target.blocks;
         /** @private */
         this.runtime = this.target.runtime;
         /** @private */
@@ -82,6 +90,7 @@ class ScriptTreeGenerator {
         this.usesTimer = false;
 
         this.namesOfCostumesAndSounds = new Set();
+        // eslint-disable-next-line no-shadow
         for (const target of this.runtime.targets) {
             if (target.isOriginal) {
                 const sprite = target.sprite;
@@ -323,9 +332,12 @@ class ScriptTreeGenerator {
      *  yields: boolean
      * }}
      */
-    getProcedureInfo (block) {
+    getProcedureInfo (block, dontDepend = false) {
         const procedureCode = block.mutation.proccode;
-        const paramNamesIdsAndDefaults = this.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
+        let paramNamesIdsAndDefaults = this.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
+        if (!paramNamesIdsAndDefaults) {
+            paramNamesIdsAndDefaults = this.runtime.getGlobalProcedureParamNamesIdsAndDefaults(procedureCode);
+        }
 
         if (paramNamesIdsAndDefaults === null) {
             return {opcode: StackOpcode.NOP, yields: false};
@@ -357,56 +369,64 @@ class ScriptTreeGenerator {
             };
         }
 
-        const definitionId = this.blocks.getProcedureDefinition(procedureCode);
+        const oldBlocks = this.blocks;
+
+        let definitionId = this.blocks.getProcedureDefinition(procedureCode);
+        if (!definitionId) {
+            [{blocks: this.blocks}, definitionId] = this.runtime.getGlobalProcedureDefinition(procedureCode);
+        }
+
         const definitionBlock = this.blocks.getBlock(definitionId);
         if (!definitionBlock) {
             return {opcode: StackOpcode.NOP, yields: false};
         }
         const innerDefinition = this.blocks.getBlock(definitionBlock.inputs.custom_block.block);
 
+        this.blocks = oldBlocks;
+
         let isWarp = this.script.isWarp;
         if (!isWarp) {
             if (innerDefinition && innerDefinition.mutation) {
-                const warp = innerDefinition.mutation.warp;
-                if (typeof warp === 'boolean') {
-                    isWarp = warp;
-                } else if (typeof warp === 'string') {
-                    isWarp = JSON.parse(warp);
-                }
+                isWarp = Cast.toBooleanSimple(innerDefinition.mutation.warp);
             }
         }
 
         const variant = generateProcedureVariant(procedureCode, isWarp);
 
-        if (!this.script.dependedProcedures.includes(variant)) {
+        if (!this.script.dependedProcedures.includes(variant) && !dontDepend) {
             this.script.dependedProcedures.push(variant);
         }
 
         const args = [];
-        for (let i = 0; i < paramIds.length; i++) {
-            let value;
-            if (block.inputs[paramIds[i]] && block.inputs[paramIds[i]].block) {
-                if (paramIds[i].startsWith('SUBSTACK')) {
-                    value = this.descendSubstack(block, paramIds[i]);
+        if (!dontDepend) {
+            for (let i = 0; i < paramIds.length; i++) {
+                let value;
+                if (block.inputs[paramIds[i]] && block.inputs[paramIds[i]].block) {
+                    if (paramIds[i].startsWith('SUBSTACK')) {
+                        value = this.descendSubstack(block, paramIds[i]);
+                    } else {
+                        value = this.descendInputOfBlock(block, paramIds[i], true);
+                    }
+                } else if (paramIds[i].startsWith('SUBSTACK')) {
+                    value = new IntermediateStack();
                 } else {
-                    value = this.descendInputOfBlock(block, paramIds[i], true);
+                    value = this.createConstantInput(paramDefaults[i], true);
                 }
-            } else if (paramIds[i].startsWith('SUBSTACK')) {
-                value = new IntermediateStack();
-            } else {
-                value = this.createConstantInput(paramDefaults[i], true);
+                args.push(value);
             }
-            args.push(value);
         }
+
+        this.blocks = oldBlocks;
 
         return {
             opcode: 'procedures.call',
             inputs: {
                 code: procedureCode,
                 variant,
-                arguments: args
+                arguments: args,
+                mutation: block.mutation
             },
-            yields: !this.script.isWarp && procedureCode === this.script.procedureCode
+            yields: !this.script.isWarp && procedureCode === this.script.procedureCode,
         };
     }
 
@@ -458,8 +478,19 @@ class ScriptTreeGenerator {
      * @returns {DescendedVariable} A parsed variable object.
      */
     _descendVariable (id, name, type) {
-        const target = this.target;
+        // eslint-disable-next-line no-shadow
+        const target = (
+            this.script.procedurePrototype ?
+                (
+                    Cast.toBooleanSimple(this.script.procedurePrototype.inputs.mutation.pollutelocals) ?
+                        this.target :
+                        this.globalTarget
+                ) :
+                this.globalTarget
+        );
         const stage = this.stage;
+
+        const deftargetq = target.id === this.globalTarget.id;
 
         // Look for by ID in target...
         if (Object.prototype.hasOwnProperty.call(target.variables, id)) {
@@ -468,7 +499,8 @@ class ScriptTreeGenerator {
                 scope: 'target',
                 id: currVar.id,
                 name: currVar.name,
-                isCloud: currVar.isCloud
+                isCloud: currVar.isCloud,
+                deftarget: deftargetq
             };
         }
 
@@ -480,7 +512,8 @@ class ScriptTreeGenerator {
                     scope: 'stage',
                     id: currVar.id,
                     name: currVar.name,
-                    isCloud: currVar.isCloud
+                    isCloud: currVar.isCloud,
+                    deftarget: deftargetq
                 };
             }
         }
@@ -494,7 +527,8 @@ class ScriptTreeGenerator {
                         scope: 'target',
                         id: currVar.id,
                         name: currVar.name,
-                        isCloud: currVar.isCloud
+                        isCloud: currVar.isCloud,
+                        deftarget: deftargetq
                     };
                 }
             }
@@ -510,7 +544,8 @@ class ScriptTreeGenerator {
                             scope: 'stage',
                             id: currVar.id,
                             name: currVar.name,
-                            isCloud: currVar.isCloud
+                            isCloud: currVar.isCloud,
+                            deftarget: deftargetq
                         };
                     }
                 }
@@ -541,7 +576,8 @@ class ScriptTreeGenerator {
             // This is intentional to match vanilla Scratch quirks.
             id,
             name: newVariable.name,
-            isCloud: newVariable.isCloud
+            isCloud: newVariable.isCloud,
+            deftarget: deftargetq
         };
     }
 
@@ -752,6 +788,8 @@ class ScriptTreeGenerator {
             let entryBlock;
             if (topBlock.opcode === 'procedures_definition') {
                 entryBlock = topBlock.next;
+
+                this.script.procedurePrototype = this.getProcedureInfo(this.getBlockById(topBlock.inputs.custom_block.block), true);
             } else {
                 entryBlock = topBlockId;
             }
@@ -760,6 +798,8 @@ class ScriptTreeGenerator {
                 this.script.stack = this.walkStack(entryBlock);
             }
         }
+
+        this.script.targetId = this.targetId;
 
         return this.script;
     }
@@ -790,8 +830,13 @@ class IRGenerator {
                 continue;
             }
             const procedureCode = parseProcedureCode(procedureVariant);
-            const definition = this.blocks.getProcedureDefinition(procedureCode);
-            this.proceduresToCompile.set(procedureVariant, definition);
+            // eslint-disable-next-line no-shadow
+            let target = this.thread.target;
+            let definition = this.blocks.getProcedureDefinition(procedureCode);
+            if (!definition) {
+                [target, definition] = this.blocks.runtime.getGlobalProcedureDefinition(procedureCode);
+            }
+            this.proceduresToCompile.set(procedureVariant, [target, definition]);
         }
     }
 
@@ -837,7 +882,7 @@ class IRGenerator {
      * @returns {IntermediateRepresentation} Intermediate representation.
      */
     generate () {
-        const entry = this.generateScriptTree(new ScriptTreeGenerator(this.thread), this.thread.topBlock);
+        const entry = this.generateScriptTree(new ScriptTreeGenerator(this.thread, this.thread.target.id), this.thread.topBlock);
 
         // Compile any required procedures.
         // As procedures can depend on other procedures, this process may take several iterations.
@@ -846,14 +891,15 @@ class IRGenerator {
             this.compilingProcedures = this.proceduresToCompile;
             this.proceduresToCompile = new Map();
 
-            for (const [procedureVariant, definitionId] of this.compilingProcedures.entries()) {
+            // eslint-disable-next-line no-shadow
+            for (const [procedureVariant, [target, definitionId]] of this.compilingProcedures.entries()) {
                 if (procedureTreeCache[procedureVariant]) {
                     const result = procedureTreeCache[procedureVariant];
                     this.procedures[procedureVariant] = result;
                     this.addProcedureDependencies(result.dependedProcedures);
                 } else {
                     const isWarp = parseIsWarp(procedureVariant);
-                    const generator = new ScriptTreeGenerator(this.thread);
+                    const generator = new ScriptTreeGenerator(this.thread, target.id);
                     generator.setProcedureVariant(procedureVariant);
                     if (isWarp) generator.enableWarp();
                     const compiledProcedure = this.generateScriptTree(generator, definitionId);

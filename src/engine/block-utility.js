@@ -29,6 +29,10 @@ class BlockUtility {
         };
     }
 
+    get defTarget_ () {
+        return this.thread.defTarget_;
+    }
+
     /**
      * @returns {Resolvers}
      */
@@ -74,6 +78,39 @@ class BlockUtility {
             frame.executionContext = {};
         }
         return frame.executionContext;
+    }
+
+    lookupOrCreateVariable (id, name) {
+        let psfi = null;
+        for (let i = this.thread.stackFrames.length - 1, sf; i >= 0; i--) {
+            sf = this.thread.stackFrames[i];
+
+            if (sf.polluteLocals === false) {
+                psfi = null;
+                break;
+            }
+            if (sf.polluteLocals) {
+                psfi = sf;
+                break;
+            }
+        }
+        let v;
+        if (psfi) {
+            v = this.target.lookupVariableById(id);
+            if (!v) {
+                v = Object.values(this.target.variables).find(vr => vr.name === name);
+            }
+        }
+        if (!v) {
+            const defTargetSf = this.thread.peekStackFrame();
+            if (defTargetSf && defTargetSf.targetContext) {
+                v = defTargetSf.targetContext.lookupOrCreateVariable(id, name);
+            } else if (psfi) {
+                console.warn('polluting local variable', name, 'because the target context could not be found.');
+                v = this.target.lookupOrCreateVariable(id, name);
+            }
+        }
+        return v;
     }
 
     /**
@@ -170,7 +207,9 @@ class BlockUtility {
      * @return {Array.<string>} List of param names for a procedure.
      */
     getProcedureParamNamesAndIds (procedureCode) {
-        return this.thread.target.blocks.getProcedureParamNamesAndIds(procedureCode);
+        const paramNamesAndIds = this.thread.blockContainer.getProcedureParamNamesAndIds(procedureCode);
+        if (!paramNamesAndIds) return this.sequencer.runtime.getGlobalProcedureParamNamesAndIds(procedureCode);
+        return paramNamesAndIds;
     }
 
     /**
@@ -179,7 +218,9 @@ class BlockUtility {
      * @return {Array.<string>} List of param names for a procedure.
      */
     getProcedureParamNamesIdsAndDefaults (procedureCode) {
-        return this.thread.target.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode);
+        const paramNamesIdsAndDefaults = this.thread.blockContainer.getProcedureParamNamesIdsAndDefaults(procedureCode);
+        if (!paramNamesIdsAndDefaults) return this.sequencer.runtime.getGlobalProcedureParamNamesIdsAndDefaults(procedureCode);
+        return paramNamesIdsAndDefaults;
     }
 
     /**

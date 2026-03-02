@@ -3,11 +3,14 @@ const mutationAdapter = require('./mutation-adapter');
 const xmlEscape = require('../util/xml-escape');
 const MonitorRecord = require('./monitor-record');
 const Clone = require('../util/clone');
+const Cast = require('../util/cast');
 const BlocksExecuteCache = require('./blocks-execute-cache');
 const BlocksRuntimeCache = require('./blocks-runtime-cache');
 const log = require('../util/log');
 const Variable = require('./variable');
 const getMonitorIdForBlockWithArgs = require('../util/get-monitor-id');
+const uid = require('../util/uid');
+const ScratchBlocksConstants = require('./scratch-blocks-constants');
 
 /**
  * @fileoverview
@@ -305,6 +308,7 @@ class Blocks {
      * @return {?Array.<string>} List of param names for a procedure.
      */
     getProcedureParamNamesAndIds (name) {
+        // slice(names, ids, defaults)
         return this.getProcedureParamNamesIdsAndDefaults(name).slice(0, 2);
     }
 
@@ -342,6 +346,43 @@ class Blocks {
 
         this._cache.procedureParamNames[name] = null;
         return null;
+    }
+
+    /**
+     * TODO: cache?
+     * Get mutation for the given procedure.
+     * @param {?string} name Name of procedure to query.
+     * @return {?Array.<string>} Mutation for a procedure.
+     */
+    getProcedureMutation (name) {
+        for (const id in this._blocks) {
+            if (!Object.prototype.hasOwnProperty.call(this._blocks, id)) continue;
+            const block = this._blocks[id];
+            if (block.opcode === 'procedures_prototype' &&
+                block.mutation.proccode === name) {
+                return block.mutation;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Get all the mutation XMLs for all local procedures.
+     */
+    getLocalProcedureMutationXMLs () {
+        const mutations = [];
+        for (const id in this._blocks) {
+            const block = this._blocks[id];
+
+            if (block.opcode === 'procedures_prototype') {
+                const global = Cast.toBooleanSimple(block.mutation.global);
+                if (global) continue;
+
+                const mutation = this.mutationToXML(block.mutation);
+                mutations.push(mutation);
+            }
+        }
+        return mutations;
     }
 
     /**
@@ -685,6 +726,10 @@ class Blocks {
         // A new block was actually added to the block container,
         // emit a project changed event
         this.emitProjectChanged();
+
+        if (block.opcode === 'procedures_prototype') {
+            this.runtime.requestGlobalProceduresRefresh();
+        }
     }
 
     /**
@@ -742,9 +787,30 @@ class Blocks {
                 }
             }
             break;
-        case 'mutation':
-            block.mutation = mutationAdapter(args.value);
+        case 'mutation': {
+            const adapter = mutationAdapter(args.value);
+            if (block.opcode === 'procedures_prototype') {
+                if (
+                    Cast.toBooleanSimple(block.mutation.global) !==
+                    Cast.toBooleanSimple(adapter.global)
+                ) this.runtime.requestGlobalProceduresRefresh();
+                if (block.mutation.proccode !== adapter.proccode) {
+                    this.runtime.markDirtyGlobalProcedure(block.mutation.proccode, adapter.proccode);
+                    this.runtime.requestGlobalProceduresMutationsRefresh();
+                    this.runtime.requestGlobalProceduresRefresh();
+                }
+                if (
+                    (block.mutation.return !== adapter.return) ||
+                    (block.mutation.hat !== adapter.hat) ||
+                    (block.mutation.hatalwaysactivated !== adapter.hatalwaysactivated)
+                ) {
+                    this.runtime.markDirtyGlobalProcedureMutation(block.mutation.proccode, adapter);
+                    this.runtime.requestGlobalProceduresMutationsRefresh();
+                }
+            }
+            block.mutation = adapter;
             break;
+        }
         case 'shadow':
             block.shadow = args.value;
             break;
@@ -942,6 +1008,15 @@ class Blocks {
         if (!block) {
             // No block with the given ID exists
             return;
+        }
+
+        // Make sure we remove ourself from the global procedures if we are one.
+        if (
+            block.opcode === 'procedures_prototype' &&
+            block.mutation &&
+            Cast.toBooleanSimple(block.mutation.global)
+        ) {
+            this.runtime.requestGlobalProceduresRefresh();
         }
 
         // Delete children
@@ -1406,6 +1481,208 @@ class Blocks {
         if (i > -1) this._scripts.splice(i, 1);
         // Update `topLevel` property on the top block.
         if (this._blocks[topBlockId]) this._blocks[topBlockId].topLevel = false;
+    }
+
+    getAllProcedureCallersByProccode (procCode) {
+        return Object.values(this._blocks).filter(block => (
+            block.opcode === 'procedures_call' && (
+                block.mutation && block.mutation.proccode === procCode
+            )
+        ));
+    }
+
+    isProcedureInUse (procCode) {
+        return this.getAllProcedureCallersByProccode(procCode).length > 0;
+    }
+
+    /**
+     * Remakes a procedure based towards a new proccode.
+     */
+    _updateDirtyCaller (block, newProccode, pniad) {
+        // If pniad is null then the procedure could not be found,
+        // which usually means it was deleted.
+        if (pniad === null) {
+            if (typeof block.mutation.global === 'string') {
+                block.mutation.global = 'false';
+            } else {
+                block.mutation.global = false;
+            }
+            return;
+        }
+
+        const inputTypes = newProccode.split(/%(?=[nsb])/g).flatMap((v, i) => {
+            if (i === 0) {
+                return [];
+            }
+
+            switch (v.at(0)) {
+            case 'n':
+                return 'number';
+            case 's':
+                return 'string';
+            case 'b':
+                return 'boolean';
+            default:
+                return [];
+            }
+        });
+
+        const [paramNames, paramIds, paramDefaults] = pniad;
+        const _ompIds = JSON.parse(block.mutation.argumentids || '[]');
+
+        const exists = new Set();
+
+        // Delete any params that do not exist.
+        for (let i = 0; i < _ompIds.length; i++) {
+            if (paramIds.includes(_ompIds[i])) {
+                exists.add(_ompIds[i]);
+                continue;
+            }
+            delete block.fields[_ompIds[i]];
+            const input = block.inputs[_ompIds[i]];
+            if (input) {
+                if (input.shadow) this.deleteBlock(input.shadow);
+                // TODO: Disconnect the block instead of deleting it.
+                if (input.block) this.deleteBlock(input.block);
+                continue;
+            }
+        }
+
+        const updateInput = (name, blocki, shadowi) => {
+            if (!block.inputs[name]) {
+                block.inputs[name] = {
+                    name: name
+                };
+            }
+            block.inputs[name].block = blocki;
+            block.inputs[name].shadow = shadowi;
+        };
+
+        // Create the new procedure inputs.
+        for (let i = 0; i < paramIds.length; i++) {
+            if (exists.has(paramIds[i])) continue; // The input already exists.
+
+            const newBlockId = uid();
+            switch (inputTypes[i]) {
+            case 'string':
+                updateInput(paramIds[i], null, newBlockId);
+                this.createBlock({
+                    id: newBlockId,
+                    opcode: 'text',
+                    inputs: {},
+                    fields: {
+                        TEXT: {
+                            name: 'TEXT',
+                            value: paramDefaults[i],
+                            id: (void 0)
+                        }
+                    },
+                    next: null,
+                    topLevel: false,
+                    parent: block.id,
+                    shadow: true
+                });
+                break;
+            case 'number':
+                updateInput(paramIds[i], null, newBlockId);
+                this.createBlock({
+                    id: newBlockId,
+                    opcode: 'math_number',
+                    inputs: {},
+                    fields: {
+                        NUM: {
+                            name: 'NUM',
+                            value: paramDefaults[i],
+                            id: (void 0)
+                        }
+                    },
+                    next: null,
+                    topLevel: false,
+                    parent: block.id,
+                    shadow: true
+                });
+                break;
+            // Booleans don't get blocks.
+            // eslint-disable-next-line no-fallthrough
+            case 'boolean':
+            default:
+                break;
+            }
+        }
+
+        block.mutation.proccode = newProccode;
+        block.mutation.argumentnames = JSON.stringify(paramNames);
+        block.mutation.argumentids = JSON.stringify(paramIds);
+        block.mutation.argumentdefaults = JSON.stringify(paramDefaults);
+    }
+
+    _updateDirtyCallerMutation (block, newMutation) {
+        const orphaned = !block.next && !block.parent;
+
+        // Update the mutation data.
+        // eslint-disable-next-line curly
+        if (orphaned && block.mutation.hat === newMutation.hat) udcm1:{
+            if (block.mutation.return === newMutation.return) break udcm1;
+
+            if (Cast.toBooleanSimple(newMutation.hat)) {
+                newMutation.return = ScratchBlocksConstants.RETURN_TYPE_HAT;
+            }
+            block.mutation.return = newMutation.return;
+        // eslint-disable-next-line curly
+        } else if (orphaned) udcm2:{
+            block.mutation.hat = newMutation.hat;
+
+            if (block.mutation.return !== '0' && block.mutation.return) break udcm2;
+            if (Cast.toBooleanSimple(newMutation.hat)) {
+                newMutation.return = ScratchBlocksConstants.RETURN_TYPE_HAT;
+            }
+            block.mutation.return = newMutation.return;
+        }
+        if (block.mutation.hatalwaysactivated !== newMutation.hatalwaysactivated) {
+            block.mutation.hatalwaysactivated = newMutation.hatalwaysactivated;
+        }
+        if (block.mutation.warp !== newMutation.warp) {
+            block.mutation.warp = newMutation.warp;
+        }
+        if (block.mutation.pollutelocals !== newMutation.pollutelocals) {
+            block.mutation.pollutelocals = newMutation.pollutelocals;
+        }
+    }
+
+    /**
+     * Updates dirty global procedures in this block container.
+     */
+    updateDirtyGlobalProcedures (nop, dirtyProccode, newProccode, pniad) {
+        const dirtyCallers = this.getAllProcedureCallersByProccode(dirtyProccode);
+
+        if (dirtyCallers.length === 0) return;
+
+        for (const dirtyCaller of dirtyCallers) {
+            this._updateDirtyCaller(dirtyCaller, newProccode, pniad);
+        }
+
+        this.resetCache();
+        if (!nop) {
+            this.emitProjectChanged();
+        }
+    }
+
+    /**
+     * Updates dirty global procedure mutations in this block container.
+     */
+    updateDirtyGlobalProceduresMutations (nop, dirtyProccode, newMutation) {
+        const dirtyCallers = this.getAllProcedureCallersByProccode(dirtyProccode);
+
+        if (dirtyCallers.length === 0) return;
+
+        for (const dirtyCaller of dirtyCallers) {
+            this._updateDirtyCallerMutation(dirtyCaller, newMutation);
+        }
+
+        this.resetCache();
+        if (!nop) {
+            this.emitProjectChanged();
+        }
     }
 }
 

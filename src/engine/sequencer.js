@@ -1,5 +1,6 @@
 const Timer = require('../util/timer');
 const Thread = require('./thread');
+const Cast = require('../util/cast');
 const execute = require('./execute.js');
 const compilerExecute = require('../compiler/jsexecute');
 
@@ -328,7 +329,7 @@ class Sequencer {
             branchNum = 1;
         }
         const currentBlockId = thread.peekStack();
-        const branchId = thread.target.blocks.getBranch(
+        const branchId = thread.blockContainer.getBranch(
             currentBlockId,
             branchNum
         );
@@ -359,10 +360,13 @@ class Sequencer {
      * @param {!string} procedureCode Procedure code of procedure to step to.
      */
     stepToProcedure (thread, procedureCode) {
-        const definition = thread.target.blocks.getProcedureDefinition(procedureCode);
+        let target = null;
+        let definition = thread.blockContainer.getProcedureDefinition(procedureCode);
         if (!definition) {
-            return;
+            [target, definition] = this.runtime.getGlobalProcedureDefinition(procedureCode);
         }
+        if (!definition) return;
+
         // Check if the call is recursive.
         // If so, set the thread to yield after pushing.
         const isRecursive = thread.isRecursiveCall(procedureCode);
@@ -371,7 +375,17 @@ class Sequencer {
         // and on to the main definition of the procedure.
         // When that set of blocks finishes executing, it will be popped
         // from the stack by the sequencer, returning control to the caller.
-        thread.pushStack(definition);
+        thread.pushStack(definition, target);
+
+        const blocks = target ? target.blocks : thread.blockContainer;
+        const definitionBlock = blocks.getBlock(definition);
+        const innerBlock = blocks.getBlock(
+            definitionBlock.inputs.custom_block.block);
+
+        if (innerBlock && innerBlock.mutation) {
+            thread.peekStackFrame().polluteLocals = Cast.toBooleanSimple(innerBlock.mutation.pollutelocals);
+        }
+
         // In known warp-mode threads, only yield when time is up.
         if (thread.peekStackFrame().warpMode &&
             thread.warpTimer.timeElapsed() > Sequencer.WARP_TIME) {
@@ -379,17 +393,19 @@ class Sequencer {
         } else {
             // Look for warp-mode flag on definition, and set the thread
             // to warp-mode if needed.
-            const definitionBlock = thread.target.blocks.getBlock(definition);
-            const innerBlock = thread.target.blocks.getBlock(
-                definitionBlock.inputs.custom_block.block);
             let doWarp = false;
             if (innerBlock && innerBlock.mutation) {
-                const warp = innerBlock.mutation.warp;
-                if (typeof warp === 'boolean') {
-                    doWarp = warp;
-                } else if (typeof warp === 'string') {
-                    doWarp = JSON.parse(warp);
-                }
+                doWarp = Cast.toBooleanSimple(innerBlock.mutation.warp);
+
+                // by this stage, if the procedure isn't global,
+                // it would've been skipped in the search.
+
+                // const global = Cast.toBooleanSimple(innerBlock.mutation.global);
+
+                // console.log(global, target);
+                // if (!!target && !global) {
+                //     return;
+                // }
             }
             if (doWarp) {
                 thread.peekStackFrame().warpMode = true;

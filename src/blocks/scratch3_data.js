@@ -39,13 +39,13 @@ class Scratch3DataBlocks {
     }
 
     getVariable (args, util) {
-        const variable = util.target.lookupOrCreateVariable(
+        const variable = util.lookupOrCreateVariable(
             args.VARIABLE.id, args.VARIABLE.name);
         return variable.value;
     }
 
     setVariableTo (args, util) {
-        const variable = util.target.lookupOrCreateVariable(
+        const variable = util.lookupOrCreateVariable(
             args.VARIABLE.id, args.VARIABLE.name);
         variable.value = args.VALUE;
 
@@ -55,7 +55,7 @@ class Scratch3DataBlocks {
     }
 
     changeVariableBy (args, util) {
-        const variable = util.target.lookupOrCreateVariable(
+        const variable = util.lookupOrCreateVariable(
             args.VARIABLE.id, args.VARIABLE.name);
         const castedValue = Cast.toNumber(variable.value);
         const dValue = Cast.toNumber(args.VALUE);

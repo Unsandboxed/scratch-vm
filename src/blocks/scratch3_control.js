@@ -86,7 +86,7 @@ class Scratch3ControlBlocks {
     }
 
     forEach (args, util) {
-        const variable = util.target.lookupOrCreateVariable(
+        const variable = util.lookupOrCreateVariable(
             args.VARIABLE.id, args.VARIABLE.name);
 
         if (typeof util.stackFrame.index === 'undefined') {
