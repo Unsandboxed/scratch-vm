@@ -198,6 +198,8 @@ class JSGenerator {
                     }
                 }
                 return `[${node.value[0]},${node.value[1]},${node.value[2]}]`;
+            } else if (block.isAlwaysType(InputType.ARRAY) || block.isAlwaysType(InputType.OBJECT)) {
+                return node.value;
             } else if (block.isSometimesType(InputType.STRING)) {
                 return `"${sanitize(node.value.toString())}"`;
             } throw new Error(`JS: Unknown constant input type '${block.type}'.`);

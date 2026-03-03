@@ -134,7 +134,9 @@ module.exports = function (compilerData, {
             const input = stg.blocks.getBlock(block.inputs.PARAM.block);
             if (input && (
                 input.opcode === 'argument_reporter_string_number' ||
-                input.opcode === 'argument_reporter_boolean'
+                input.opcode === 'argument_reporter_boolean' ||
+                input.opcode === 'argument_reporter_array' ||
+                input.opcode === 'argument_reporter_object'
             ) && input.fields.VALUE) {
                 index = stg.script.arguments.lastIndexOf(input.fields.VALUE.value);
             }
@@ -186,7 +188,7 @@ module.exports = function (compilerData, {
             if (param === 'last key pressed') {
                 return new IntermediateInput('tw.getLastKeyPressed', this.type);
             } else if (Object.prototype.hasOwnProperty.call(runtime.spoofedProcedureParamValues, param)) {
-                return stg.createConstantInput(runtime.spoofedProcedureParamValues[param](1), true);
+                return stg.createConstantInput(runtime.spoofedProcedureParamValues[param](1) ?? 0, true);
             }
             return new IntermediateInput('procedures.paramater', this.type, {name});
         }
@@ -214,7 +216,7 @@ module.exports = function (compilerData, {
             if (param === 'is compiled?' || param === 'is unsandboxed?') {
                 return stg.createConstantInput(true).toType(InputType.BOOLEAN);
             } else if (Object.prototype.hasOwnProperty.call(runtime.spoofedProcedureParamValues, param)) {
-                return stg.createConstantInput(runtime.spoofedProcedureParamValues[param](2), true);
+                return stg.createConstantInput(runtime.spoofedProcedureParamValues[param](2) ?? false, true);
             }
             return stg.createConstantInput(0);
         }
@@ -225,5 +227,41 @@ module.exports = function (compilerData, {
     }, {
         input: true,
         type: InputType.BOOLEAN
+    });
+    compilerData.registerBlock('argument_reporter_array', function (stg, block) {
+        const name = block.fields.VALUE.value;
+        const index = stg.script.arguments.lastIndexOf(name);
+        if (index === -1) {
+            const param = name.toLowerCase();
+            if (Object.prototype.hasOwnProperty.call(runtime.spoofedProcedureParamValues, param)) {
+                return stg.createConstantInput(runtime.spoofedProcedureParamValues[param](3) ?? [], true);
+            }
+            return stg.createConstantInput([]);
+        }
+        return new IntermediateInput(this.ir_opcode, this.type, {index});
+        // eslint-disable-next-line no-unused-vars
+    }, function (_, block) {
+        return `asArray(p${block.inputs.index})`;
+    }, {
+        input: true,
+        type: InputType.ARRAY
+    });
+    compilerData.registerBlock('argument_reporter_object', function (stg, block) {
+        const name = block.fields.VALUE.value;
+        const index = stg.script.arguments.lastIndexOf(name);
+        if (index === -1) {
+            const param = name.toLowerCase();
+            if (Object.prototype.hasOwnProperty.call(runtime.spoofedProcedureParamValues, param)) {
+                return stg.createConstantInput(runtime.spoofedProcedureParamValues[param](4) ?? {}, true);
+            }
+            return stg.createConstantInput({});
+        }
+        return new IntermediateInput(this.ir_opcode, this.type, {index});
+        // eslint-disable-next-line no-unused-vars
+    }, function (_, block) {
+        return `asObject(p${block.inputs.index}, false)`;
+    }, {
+        input: true,
+        type: InputType.ARRAY
     });
 };

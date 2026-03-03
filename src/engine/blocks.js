@@ -1510,18 +1510,25 @@ class Blocks {
             return;
         }
 
-        const inputTypes = newProccode.split(/%(?=[nsb])/g).flatMap((v, i) => {
-            if (i === 0) {
+        const inputTypes = newProccode.split(/(?=[^\\]%[nbsfoa])/).flatMap(v => {
+            if (v.at(0) !== '%') {
                 return [];
             }
 
-            switch (v.at(0)) {
+            switch (v.at(1)) {
             case 'n':
                 return 'number';
             case 's':
                 return 'string';
             case 'b':
                 return 'boolean';
+            case 'a':
+                return 'array';
+            case 'o':
+                return 'object';
+            case 'f':
+            //     return 'branch';
+            // eslint-disable-next-line no-fallthrough
             default:
                 return [];
             }
@@ -1602,9 +1609,11 @@ class Blocks {
                     shadow: true
                 });
                 break;
-            // Booleans don't get blocks.
+            // Booleans, arrays and objects don't get blocks.
             // eslint-disable-next-line no-fallthrough
             case 'boolean':
+            case 'array':
+            case 'object':
             default:
                 break;
             }

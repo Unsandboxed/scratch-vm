@@ -21,7 +21,9 @@ class Scratch3ProcedureBlocks {
             procedures_return: this.return,
             argument_statement: this.argumentStatement,
             argument_reporter_string_number: this.argumentReporterStringNumber,
-            argument_reporter_boolean: this.argumentReporterBoolean
+            argument_reporter_boolean: this.argumentReporterBoolean,
+            argument_reporter_array: this.argumentReporterArray,
+            argument_reporter_object: this.argumentReporterObject
         };
     }
 
@@ -131,7 +133,9 @@ class Scratch3ProcedureBlocks {
 
         if (
             param.opcode !== 'argument_reporter_string_number' &&
-            param.opcode !== 'argument_reporter_boolean'
+            param.opcode !== 'argument_reporter_boolean' &&
+            param.opcode !== 'argument_reporter_array' &&
+            param.opcode !== 'argument_reporter_object'
         ) return;
 
         const field = param.fields.VALUE;
@@ -168,6 +172,10 @@ class Scratch3ProcedureBlocks {
             return 0;
         }
         return value;
+        // if (typeof value === 'number') {
+        //     return value;
+        // }
+        // return Cast.toString(value);
     }
 
     argumentReporterBoolean (args, util) {
@@ -186,7 +194,35 @@ class Scratch3ProcedureBlocks {
             // call, the default is always 0.
             return 0;
         }
-        return value;
+        return Cast.toBoolean(value);
+    }
+
+    argumentReporterArray (args, util) {
+        const value = util.getParam(args.VALUE);
+        if (value === null) {
+            const lowercaseValue = String(args.VALUE).toLowerCase();
+            if (Object.prototype.hasOwnProperty.call(this.runtime.spoofedProcedureParamValues, lowercaseValue)) {
+                return this.runtime.spoofedProcedureParamValues[lowercaseValue](2);
+            }
+            // When the parameter is not found in the most recent procedure
+            // call, the default is always [].
+            return [];
+        }
+        return Cast.toArray(value);
+    }
+
+    argumentReporterObject (args, util) {
+        const value = util.getParam(args.VALUE);
+        if (value === null) {
+            const lowercaseValue = String(args.VALUE).toLowerCase();
+            if (Object.prototype.hasOwnProperty.call(this.runtime.spoofedProcedureParamValues, lowercaseValue)) {
+                return this.runtime.spoofedProcedureParamValues[lowercaseValue](2);
+            }
+            // When the parameter is not found in the most recent procedure
+            // call, the default is always {}.
+            return Object.create(null);
+        }
+        return Cast.toObject(value);
     }
 
     argumentStatement (args, util) {
