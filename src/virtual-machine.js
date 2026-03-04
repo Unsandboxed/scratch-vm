@@ -28,6 +28,7 @@ const BT = require('./io/bt');
 const {loadCostume} = require('./import/load-costume.js');
 const {loadSound} = require('./import/load-sound.js');
 const {serializeSounds, serializeCostumes} = require('./serialization/serialize-assets');
+const customDataTypes = require('./engine/custom-datatype-registry.js');
 require('canvas-toBlob');
 const {exportCostume} = require('./serialization/tw-costume-import-export');
 const Base64Util = require('./util/base64-util');
@@ -797,7 +798,7 @@ class VirtualMachine extends EventEmitter {
             return Promise.reject('Unable to verify Scratch Project version.');
         };
         return deserializePromise()
-            .then(({targets, extensions}) => {
+            .then(({targets, extensions, lazyObjects}) => {
                 if (typeof performance !== 'undefined') {
                     performance.mark('scratch-vm-deserialize-end');
                     try {
@@ -811,7 +812,7 @@ class VirtualMachine extends EventEmitter {
                         log.error(e);
                     }
                 }
-                return this.installTargets(targets, extensions, true);
+                return this.installTargets(targets, extensions, true, lazyObjects);
             });
     }
 
@@ -854,48 +855,94 @@ class VirtualMachine extends EventEmitter {
      * @param {boolean} wholeProject - set to true if installing a whole project, as opposed to a single sprite.
      * @returns {Promise} resolved once targets have been installed
      */
-    async installTargets (targets, extensions, wholeProject) {
+    async installTargets (targets, extensions, wholeProject, lazyObjects) {
         await this.extensionManager.allAsyncExtensionsLoaded();
 
         targets = targets.filter(target => !!target);
 
-        return this._loadExtensions(extensions.extensionIDs, extensions.extensionURLs).then(() => {
+        return this._loadExtensions(extensions.extensionIDs, extensions.extensionURLs).then(async () => {
+            const requiredTypes = new Set();
+
+            console.log(lazyObjects);
+            const ctypeKey = require('./serialization/sb3.js').ctypeKey;
             targets.forEach(target => {
-                this.runtime.addTarget(target);
-                (/** @type RenderedTarget */ target).updateAllDrawableProperties();
-                // Ensure unique sprite name
-                if (target.isSprite()) this.renameSprite(target.id, target.getName());
-            });
-            // Sort the executable targets by layerOrder.
-            // Remove layerOrder property after use.
-            this.runtime.executableTargets.sort((a, b) => a.layerOrder - b.layerOrder);
-            targets.forEach(target => {
-                delete target.layerOrder;
+                if (!lazyObjects.has(target)) return;
+                lazyObjects.get(target).forEach(([{[ctypeKey]: t}]) => {
+                    requiredTypes.add(t);
+                });
             });
 
-            // Select the first target for editing, e.g., the first sprite.
-            if (wholeProject && (targets.length > 1)) {
-                this.editingTarget = targets[1];
-            } else {
-                this.editingTarget = targets[0];
+            if (requiredTypes.size > 0) {
+                await new Promise(resolve => {
+                    let timeout = -1;
+
+                    const onType = t => {
+                        requiredTypes.delete(t);
+
+                        if (requiredTypes.size > 0) {
+                            for (const ty of requiredTypes) {
+                                if (customDataTypes.hasType(ty)) requiredTypes.delete(ty);
+                            }
+                        }
+
+                        if (requiredTypes.size === 0) {
+                            clearTimeout(timeout);
+                            customDataTypes.removeListener(customDataTypes._CustomDataTypes.EVENT_TYPEADD, onType);
+                            resolve();
+                        }
+                    };
+                    timeout = setTimeout(() => {
+                        customDataTypes.removeListener(customDataTypes._CustomDataTypes.EVENT_TYPEADD, onType);
+                        resolve();
+                    }, 10_000);
+                    customDataTypes.addListener(customDataTypes._CustomDataTypes.EVENT_TYPEADD, onType);
+
+                    onType(null);
+                });
             }
 
-            if (!wholeProject) {
-                this.editingTarget.fixUpVariableReferences();
-            }
+            targets.forEach(target => {
+                if (!lazyObjects.has(target)) return;
+                require('./serialization/sb3.js').deserializeLazyObjects(target, lazyObjects.get(target));
+            });
+        })
+            .then(() => {
+                targets.forEach(target => {
+                    this.runtime.addTarget(target);
+                    (/** @type RenderedTarget */ target).updateAllDrawableProperties();
+                    // Ensure unique sprite name
+                    if (target.isSprite()) this.renameSprite(target.id, target.getName());
+                });
+                // Sort the executable targets by layerOrder.
+                // Remove layerOrder property after use.
+                this.runtime.executableTargets.sort((a, b) => a.layerOrder - b.layerOrder);
+                targets.forEach(target => {
+                    delete target.layerOrder;
+                });
 
-            if (wholeProject) {
-                this.runtime.parseProjectOptions();
-            }
+                // Select the first target for editing, e.g., the first sprite.
+                if (wholeProject && (targets.length > 1)) {
+                    this.editingTarget = targets[1];
+                } else {
+                    this.editingTarget = targets[0];
+                }
 
-            // Update the VM user's knowledge of targets and blocks on the workspace.
-            this.emitTargetsUpdate(false /* Don't emit project change */);
-            this.runtime.requestGlobalProceduresMutationsRefresh(true);
-            this.runtime.requestGlobalProceduresRefresh(true);
-            this.emitWorkspaceUpdate();
-            this.runtime.setEditingTarget(this.editingTarget);
-            this.runtime.ioDevices.cloud.setStage(this.runtime.getTargetForStage());
-        });
+                if (!wholeProject) {
+                    this.editingTarget.fixUpVariableReferences();
+                }
+
+                if (wholeProject) {
+                    this.runtime.parseProjectOptions();
+                }
+
+                // Update the VM user's knowledge of targets and blocks on the workspace.
+                this.emitTargetsUpdate(false /* Don't emit project change */);
+                this.runtime.requestGlobalProceduresMutationsRefresh(true);
+                this.runtime.requestGlobalProceduresRefresh(true);
+                this.emitWorkspaceUpdate();
+                this.runtime.setEditingTarget(this.editingTarget);
+                this.runtime.ioDevices.cloud.setStage(this.runtime.getTargetForStage());
+            });
     }
 
     /**
@@ -965,7 +1012,7 @@ class VirtualMachine extends EventEmitter {
         const sb2 = require('./serialization/sb2');
         return sb2.deserialize(sprite, this.runtime, true, zip)
             .then(({targets, extensions}) =>
-                this.installTargets(targets, extensions, false));
+                this.installTargets(targets, extensions, false, new Map()));
     }
 
     /**
@@ -979,7 +1026,7 @@ class VirtualMachine extends EventEmitter {
         const sb3 = require('./serialization/sb3');
         return sb3
             .deserialize(sprite, this.runtime, zip, true)
-            .then(({targets, extensions}) => this.installTargets(targets, extensions, false));
+            .then(({targets, extensions, lazyObjects}) => this.installTargets(targets, extensions, false, lazyObjects));
     }
 
     /**

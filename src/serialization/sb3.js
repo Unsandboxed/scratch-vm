@@ -18,6 +18,7 @@ const MathUtil = require('../util/math-util');
 const StringUtil = require('../util/string-util');
 const VariableUtil = require('../util/variable-util');
 const compress = require('./tw-compress-sb3');
+const customDataTypes = require('../engine/custom-datatype-registry.js');
 
 const {loadCostume} = require('../import/load-costume.js');
 const {loadSound} = require('../import/load-sound.js');
@@ -40,12 +41,14 @@ const hasOwnProperty = Object.prototype.hasOwnProperty;
 const E = {};
 
 // Constants used during serialization and deserialization
+E.ctypeKey = '@type__';
 E.INPUT_SAME_BLOCK_SHADOW = 1; // unobscured shadow
 E.INPUT_BLOCK_NO_SHADOW = 2; // no shadow
 E.INPUT_DIFF_BLOCK_SHADOW = 3; // obscured shadow
 // There shouldn't be a case where block is null, but shadow is present...
 
 // Constants used during deserialization of an SB3 file
+E.lazyObject = Symbol('SB3Deserialization_LazyObject.Symbol');
 E.CORE_EXTENSIONS = [
     'argument',
     'camera',
@@ -490,6 +493,46 @@ E.serializeSound = function (sound) {
     return obj;
 };
 
+E.serializePossibleCustomType = function (value) {
+    switch (typeof value) {
+    case 'string':
+    case 'number':
+    case 'boolean':
+        return value;
+    case 'function':
+        return String(value); // This is on purpose, dont even try...
+    case 'undefined':
+        return {[E.ctypeKey]: 'undefined'};
+    case 'symbol':
+        return {[E.ctypeKey]: 'symbol', value: value.description ?? ''};
+    case 'bigint':
+        return {[E.ctypeKey]: 'bigint', value: String(value)};
+    case 'object': {
+        if (value === null) {
+            return {[E.ctypeKey]: 'null'};
+        }
+        if (Array.isArray(value)) {
+            return {[E.ctypeKey]: 'array', value: value.map(E.serializePossibleCustomType)};
+        }
+        if (customDataTypes.hasTCof(value)) {
+            return {
+                [E.ctypeKey]: customDataTypes.reverseTypeNameLookup(customDataTypes.getTCof(value)),
+                value: customDataTypes.serializeType(value, E)
+            };
+        }
+        const data = {
+            [E.ctypeKey]: 'object',
+            value: Object.fromEntries(Object.entries(value).flatMap(o => (typeof o[0] === 'symbol' ? [] : [[
+                o[0],
+                E.serializePossibleCustomType(o[1])
+            ]])))
+        };
+        return data;
+    }
+    }
+};
+
+// NOTE: the following comment is incorrect now, but is kept for historical purposes.
 // Using some bugs, it can be possible to get values like undefined, null, or complex objects into
 // variables or lists. This will cause make the project unusable after exporting without JSON editing
 // as it will fail validation in scratch-parser.
@@ -531,7 +574,7 @@ E.makeSafeForJSON = value => {
  * separated by type to compress the representation of each given variable and
  * reduce duplicate information.
  */
-E.serializeVariables = function (variables) {
+E.serializeVariables = function (variables, customTypes) {
     const obj = Object.create(null);
     // separate out variables into types at the top level so we don't have
     // keep track of a type for each
@@ -545,12 +588,19 @@ E.serializeVariables = function (variables) {
             continue;
         }
         if (v.type === Variable.LIST_TYPE) {
-            obj.lists[varId] = [v.name, E.makeSafeForJSON(v.value), v.locked];
+            obj.lists[varId] = [
+                v.name,
+                customTypes ? E.serializePossibleCustomType(v.value) : E.makeSafeForJSON(v.value),
+                v.locked
+            ];
             continue;
         }
 
         // otherwise should be a scalar type
-        obj.variables[varId] = [v.name, E.makeSafeForJSON(v.value)];
+        obj.variables[varId] = [
+            v.name,
+            customTypes ? E.serializePossibleCustomType(v.value) : E.makeSafeForJSON(v.value)
+        ];
         // only scalar vars have the potential to be cloud vars
         if (v.isCloud) obj.variables[varId].push(true);
     }
@@ -595,10 +645,15 @@ E.serializeComments = function (comments) {
  */
 E.serializeTarget = function (target, extensions) {
     const obj = Object.create(null);
+
+    // USB: This key wont be true on any mod besides ours, and any older version also
+    //      wont have it so it can be used to represent that custom types can be used.
+    obj.uct = true;
+
     let targetExtensions = [];
     obj.isStage = target.isStage;
     obj.name = obj.isStage ? 'Stage' : target.name;
-    const vars = E.serializeVariables(target.variables);
+    const vars = E.serializeVariables(target.variables, true);
     obj.variables = vars.variables;
     obj.lists = vars.lists;
     obj.broadcasts = vars.broadcasts;
@@ -820,6 +875,10 @@ E.serialize = function (runtime, targetId, {allowOptimization = true} = {}) {
     if (allowOptimization) {
         compress(obj);
     }
+
+    // USB: This key wont be true on any mod besides ours, and any older version also
+    //      wont have it so it can be used to represent that custom types can be used.
+    obj.uct = true;
 
     return obj;
 };
@@ -1165,6 +1224,51 @@ E.parseScratchAssets = function (object, runtime, zip) {
     return assets;
 };
 
+E.deserializePossibleCustomType = function (unknown, lazyObjects, lazyPath) {
+    if (typeof unknown !== 'object') return unknown;
+    if (unknown === null) return unknown;
+
+    if (Array.isArray(unknown)) {
+        return unknown.map((v, i) => E.deserializePossibleCustomType(v, lazyObjects, lazyPath.concat(i)));
+    }
+
+    switch (unknown[E.ctypeKey]) {
+    case 'null':
+        return null;
+    case 'undefined':
+        return (void 0);
+    case 'string':
+        return String(unknown.value);
+    case 'number':
+        return Number(unknown.value);
+    case 'boolean':
+        return Boolean(unknown.value);
+    case 'symbol':
+        return Symbol(String(unknown.value));
+    case 'bigint':
+        // eslint-disable-next-line no-undef
+        return BigInt(unknown.value) || 0n;
+    case 'array':
+    case 'object':
+        if (Array.isArray(unknown.value)) {
+            return unknown.value.map((v, i) =>
+                E.deserializePossibleCustomType(v, lazyObjects, lazyPath.concat(i))
+            );
+        }
+        return Object.fromEntries(
+            Object.entries(unknown.value).map(o =>
+                [o[0], E.deserializePossibleCustomType(o[1], lazyObjects, lazyPath.concat(o[0]))]
+            )
+        );
+    default:
+        if (!customDataTypes.hasType(unknown[E.ctypeKey])) {
+            lazyObjects.push([unknown, lazyPath]);
+            return E.lazyObject;
+        }
+        return customDataTypes.deserializeType(unknown[E.ctypeKey], unknown.value, E);
+    }
+};
+
 /**
  * Parse a single "Scratch object" and create all its in-memory VM objects.
  * @param {!object} object From-JSON "Scratch object:" sprite, stage, watcher.
@@ -1173,14 +1277,16 @@ E.parseScratchAssets = function (object, runtime, zip) {
  * @param {JSZip} zip Sb3 file describing this project (to load assets from)
  * @param {object} assets - Promises for assets of this scratch object grouped
  *   into costumes and sounds
- * @return {!Promise.<Target>} Promise for the target created (stage or sprite), or null for unsupported objects.
+ * @return {!Promise.<[Target, []]>} Promise for the target created (stage or sprite), or null for unsupported objects.
  */
-E.parseScratchObject = function (object, runtime, extensions, zip, assets) {
+E.parseScratchObject = function (object, runtime, extensions, zip, assets, customTypes) {
     if (!Object.prototype.hasOwnProperty.call(object, 'name')) {
         // Watcher/monitor - skip this object until those are implemented in VM.
         // @todo
-        return Promise.resolve(null);
+        return Promise.resolve([null, []]);
     }
+
+    const lazyObjects = [];
 
     // Global proccodes found in the second pass that need to be added
     const globalProccodes = [];
@@ -1254,7 +1360,10 @@ E.parseScratchObject = function (object, runtime, extensions, zip, assets) {
                 isCloud
             );
             if (isCloud) runtime.addCloudVariable();
-            newVariable.value = variable[1];
+            newVariable.value =
+                customTypes ?
+                    E.deserializePossibleCustomType(variable[1], lazyObjects, ['variables', newVariable.id, 'value']) :
+                    variable[1];
             target.variables[newVariable.id] = newVariable;
         }
     }
@@ -1267,7 +1376,10 @@ E.parseScratchObject = function (object, runtime, extensions, zip, assets) {
                 Variable.LIST_TYPE,
                 false
             );
-            newList.value = list[1];
+            newList.value =
+                customTypes ?
+                    E.deserializePossibleCustomType(list[1], lazyObjects, ['variables', newList.id]) :
+                    list[1];
             newList.locked = list[2] || false;
             target.variables[newList.id] = newList;
         }
@@ -1358,7 +1470,9 @@ E.parseScratchObject = function (object, runtime, extensions, zip, assets) {
         }
         runtime._globalProcedures[procCode] = target.id;
     }
-    return Promise.all(costumePromises.concat(soundPromises)).then(() => target);
+    return Promise.all(costumePromises.concat(soundPromises)).then(() =>
+        [target, lazyObjects]
+    );
 };
 
 E.deserializeMonitor = function (monitorData, runtime, targets, extensions) {
@@ -1580,6 +1694,8 @@ E.deserialize = async function (json, runtime, zip, isSingleSprite) {
         runtime.origin = null;
     }
 
+    const customTypes = json.uct === true;
+
     // Extract custom extension IDs, if they exist.
     if (json.extensionURLs) {
         for (const [id, url] of Object.entries(json.extensionURLs)) {
@@ -1604,16 +1720,18 @@ E.deserialize = async function (json, runtime, zip, isSingleSprite) {
         .sort((a, b) => a.layerOrder - b.layerOrder);
 
     const monitorObjects = json.monitors || [];
+    const lazyObjects = new Map();
 
     return fontPromise.then(() => targetObjects.map(target => E.parseScratchAssets(target, runtime, zip)))
         // Force this promise to wait for the next loop in the js tick. Let
         // storage have some time to send off asset requests.
         .then(assets => Promise.resolve(assets))
-        .then(assets => Promise.all(targetObjects
-            .map((target, index) =>
-                E.parseScratchObject(target, runtime, extensions, zip, assets[index]))))
-        .then(targets => targets // Re-sort targets back into original sprite-pane ordering
-            .map((t, i) => {
+        .then(assets => Promise.all(targetObjects.map((target, index) =>
+            E.parseScratchObject(target, runtime, extensions, zip, assets[index], customTypes)
+        )))
+        .then(targets => targets // Re-sort targets back into original sprite-pane ordering and setup lazy objects.
+            .map(([t, l], i) => {
+                lazyObjects.set(t, l);
                 // Add layer order property to deserialized targets.
                 // This property is used to initialize executable targets in
                 // the correct order and is deleted in VM's installTargets function
@@ -1629,7 +1747,9 @@ E.deserialize = async function (json, runtime, zip, isSingleSprite) {
             }))
         .then(targets => E.replaceUnsafeCharsInVariableIds(targets))
         .then(targets => {
-            monitorObjects.map(monitorDesc => E.deserializeMonitor(monitorDesc, runtime, targets, extensions));
+            monitorObjects.map(monitorDesc =>
+                E.deserializeMonitor(monitorDesc, runtime, targets, extensions, customTypes)
+            );
             if (Object.prototype.hasOwnProperty.call(json, 'extensionStorage')) {
                 runtime.store.unsafe$setProjectStorage(Object.assign(Object.create(null), json.extensionStorage));
             }
@@ -1637,8 +1757,32 @@ E.deserialize = async function (json, runtime, zip, isSingleSprite) {
         })
         .then(targets => ({
             targets,
-            extensions
+            extensions,
+            lazyObjects
         }));
+};
+
+E.deserializeLazyObjects = function (target, lazyObjects) {
+    const setFromPath = (path, v) => {
+        let o = target;
+        for (const k of path.slice(0, -1)) o = o[k];
+        o[path.at(-1)] = v;
+    };
+    const getFromPath = path => {
+        let o = target;
+        for (const k of path) o = o[k];
+        return o;
+    };
+
+    const fakeLazyObjects = [];
+    for (const [o, path] of lazyObjects) {
+        if (getFromPath(path) !== E.lazyObject) continue;
+        setFromPath(path, E.deserializePossibleCustomType(o, fakeLazyObjects, path));
+    }
+    if (fakeLazyObjects.length > 0) {
+        console.error('lazy objects:', fakeLazyObjects);
+        throw new Error('Failed to deserialize lazy objects because more were added.');
+    }
 };
 
 module.exports = E;

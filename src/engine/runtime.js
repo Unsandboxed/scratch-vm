@@ -56,6 +56,7 @@ const FrameLoop = require('./tw-frame-loop');
 const MonitorRecord = require('./monitor-record.js');
 const Camera = require('./camera');
 const Cast = require('../util/cast.js');
+const customDataTypes = require('./custom-datatype-registry.js');
 
 const RuntimeInternals = {
     CORE_BLOCKS: [],
@@ -263,6 +264,8 @@ class Runtime extends EventEmitter {
          * @type {?VirtualMachine}
          */
         this.vm = vm;
+
+        this.customDataTypes = customDataTypes;
 
         /**
          * Target management and storage.

@@ -262,6 +262,6 @@ module.exports = function (compilerData, {
         return `asObject(p${block.inputs.index}, false)`;
     }, {
         input: true,
-        type: InputType.ARRAY
+        type: InputType.OBJECT
     });
 };
