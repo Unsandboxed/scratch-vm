@@ -83,6 +83,11 @@ class CustomDataTypes extends EventEmitter {
         if (!type[2]) type.push({});
         type[2][m] = f;
     }
+    getExtraMode (t, m) {
+        const type = this._types.get(this._typesMap[t]);
+        if (!type[2]) type.push({});
+        return type[2][m] ?? null;
+    }
     callExtraMode (t, m, ...args) {
         const typeExtras = this._types.get(this._typesMap[t])[2];
         if (!typeExtras || !typeExtras[m]) return null;
