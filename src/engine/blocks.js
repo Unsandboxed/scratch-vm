@@ -788,27 +788,27 @@ class Blocks {
             }
             break;
         case 'mutation': {
-            const adapter = mutationAdapter(args.value);
+            const adaptedMutation = mutationAdapter(args.value);
             if (block.opcode === 'procedures_prototype') {
                 if (
                     Cast.toBooleanSimple(block.mutation.global) !==
-                    Cast.toBooleanSimple(adapter.global)
+                    Cast.toBooleanSimple(adaptedMutation.global)
                 ) this.runtime.requestGlobalProceduresRefresh();
-                if (block.mutation.proccode !== adapter.proccode) {
-                    this.runtime.markDirtyGlobalProcedure(block.mutation.proccode, adapter.proccode);
+                if (block.mutation.proccode !== adaptedMutation.proccode) {
+                    this.runtime.markDirtyGlobalProcedure(block.mutation.proccode, adaptedMutation.proccode);
                     this.runtime.requestGlobalProceduresMutationsRefresh();
                     this.runtime.requestGlobalProceduresRefresh();
                 }
                 if (
-                    (block.mutation.return !== adapter.return) ||
-                    (block.mutation.hat !== adapter.hat) ||
-                    (block.mutation.hatalwaysactivated !== adapter.hatalwaysactivated)
+                    (block.mutation.return !== adaptedMutation.return) ||
+                    (block.mutation.hat !== adaptedMutation.hat) ||
+                    (block.mutation.hatalwaysactivated !== adaptedMutation.hatalwaysactivated)
                 ) {
-                    this.runtime.markDirtyGlobalProcedureMutation(block.mutation.proccode, adapter);
+                    this.runtime.markDirtyGlobalProcedureMutation(block.mutation.proccode, adaptedMutation);
                     this.runtime.requestGlobalProceduresMutationsRefresh();
                 }
             }
-            block.mutation = adapter;
+            block.mutation = adaptedMutation;
             break;
         }
         case 'shadow':

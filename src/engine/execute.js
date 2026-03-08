@@ -142,7 +142,6 @@ ExecuteInternals.handlePromiseResolution = (resolvedValue, sequencer, thread, bl
                 return;
             }
             nextBlockId = thread.blockContainer.getNextBlock(popped);
-            target = thread.peekStackFrame().targetContext;
             if (nextBlockId !== null) {
                 // A next block exists so break out this loop
                 break;

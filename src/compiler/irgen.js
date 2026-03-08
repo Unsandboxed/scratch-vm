@@ -158,14 +158,14 @@ class ScriptTreeGenerator {
         if (Array.isArray(constant)) {
             try {
                 constant = Cast.toString(constant);
-            } catch(_error) {
+            } catch (_error) {
                 constant = '[]';
             }
             return new IntermediateInput(InputOpcode.CONSTANT, InputType.ARRAY, {value: constant});
         } else if (typeof constant === 'object') {
             try {
                 constant = Cast.toString(constant);
-            } catch(_error) {
+            } catch (_error) {
                 constant = '{}';
             }
             return new IntermediateInput(InputOpcode.CONSTANT, InputType.OBJECT, {value: constant});
@@ -442,7 +442,7 @@ class ScriptTreeGenerator {
                 arguments: args,
                 mutation: block.mutation
             },
-            yields: !this.script.isWarp && procedureCode === this.script.procedureCode,
+            yields: !this.script.isWarp && procedureCode === this.script.procedureCode
         };
     }
 
