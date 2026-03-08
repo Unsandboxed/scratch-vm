@@ -354,9 +354,8 @@ class Scratch3SensingBlocks {
     }
 
     isOnline () {
-        // USB: This does diviate from TurboWarp to allow for it to match scratch.
+        // USB: This does deviate from TurboWarp to allow for it to match scratch.
         // But it WILL still work in NodeJS
-
         if (typeof navigator === 'object' && typeof navigator.onLine === 'boolean') {
             return navigator.onLine;
         }
