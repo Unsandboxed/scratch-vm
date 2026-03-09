@@ -72,26 +72,44 @@ class Target extends EventEmitter {
         this._edgeActivatedHatValues = {};
 
         this.store = new StorageProvider(runtime, this);
+        /**
+         * @deprecated
+         */
         Object.defineProperty(this, 'temporaryStorage', {
             enumerable: true,
             configurable: true,
+            /**
+             * @deprecated
+             */
             get: () => {
                 // eslint-disable-next-line max-len
-                throw new ReferenceError('DEPRICATED: Cannot get the temporaryStorage object, please use the .store temporary API instead.');
+                throw new ReferenceError('DEPRECATED: Cannot get the temporaryStorage object, please use the .store temporary API instead.');
             },
+            /**
+             * @deprecated
+             */
             set: () => {
-                throw new ReferenceError('DEPRICATED: Cannot set the temporaryStorage object.');
+                throw new ReferenceError('DEPRECATED: Cannot set the temporaryStorage object.');
             }
         });
+        /**
+         * @deprecated
+         */
         Object.defineProperty(this, 'extensionStorage', {
             enumerable: true,
             configurable: true,
+            /**
+             * @deprecated
+             */
             get: () => {
-                log.warn('DEPRICATED API WAS USED: (extensionStorage) Please use the .store extension API instead.');
+                log.warn('DEPRECATED API WAS USED: (extensionStorage) Please use the .store extension API instead.');
                 return this.store.unsafe$getExtensionStorage();
             },
+            /**
+             * @deprecated
+             */
             set: () => {
-                throw new ReferenceError('DEPRICATED: Cannot set the extensionStorage object.');
+                throw new ReferenceError('DEPRECATED: Cannot set the extensionStorage object.');
             }
         });
 

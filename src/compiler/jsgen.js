@@ -636,11 +636,17 @@ class JSGenerator {
         return fn;
     }
 
+    /**
+     * @deprecated
+     */
     static get exports () {
-        throw new Error('Depricated syntax, please use the new exports.');
+        throw new Error('Deprecated syntax, please use the new exports.');
     }
+    /**
+     * @deprecated
+     */
     static get unstable_exports () {
-        throw new Error('Depricated syntax, please use the new exports.');
+        throw new Error('Deprecated syntax, please use the new exports.');
     }
 }
 

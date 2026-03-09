@@ -657,26 +657,44 @@ class Runtime extends EventEmitter {
         };
 
         this.store = new StorageProvider(this, this);
+        /**
+         * @deprecated
+         */
         Object.defineProperty(this, 'temporaryStorage', {
             enumerable: true,
             configurable: true,
+            /**
+             * @deprecated
+             */
             get: () => {
-                log.warn('DEPRICATED API WAS USED: Please use the .store temporary API instead.');
+                log.warn('DEPRECATED API WAS USED: Please use the .store temporary API instead.');
                 return this.store.unsafe$getTemporaryStorage();
             },
+            /**
+             * @deprecated
+             */
             set: () => {
-                throw new ReferenceError('DEPRICATED: Cannot set the temporaryStorage object.');
+                throw new ReferenceError('DEPRECATED: Cannot set the temporaryStorage object.');
             }
         });
+        /**
+         * @deprecated
+         */
         Object.defineProperty(this, 'extensionStorage', {
             enumerable: true,
             configurable: true,
+            /**
+             * @deprecated
+             */
             get: () => {
-                log.warn('DEPRICATED API WAS USED: (extensionStorage) Please use the .store extension API instead.');
+                log.warn('DEPRECATED API WAS USED: (extensionStorage) Please use the .store extension API instead.');
                 return this.store.unsafe$getExtensionStorage();
             },
+            /**
+             * @deprecated
+             */
             set: () => {
-                throw new ReferenceError('DEPRICATED: Cannot set the extensionStorage object.');
+                throw new ReferenceError('DEPRECATED: Cannot set the extensionStorage object.');
             }
         });
 
@@ -890,7 +908,7 @@ class Runtime extends EventEmitter {
     /**
      * Event name when the project is paused
      * @const {string}
-     * @depricated
+     * @deprecated
      */
     static get RUNTIME_PAUSED () {
         return 'RUNTIME_PAUSED';
@@ -899,7 +917,7 @@ class Runtime extends EventEmitter {
     /**
      * Event name when the project is unpaused
      * @const {string}
-     * @depricated
+     * @deprecated
      */
     static get RUNTIME_UNPAUSED () {
         return 'RUNTIME_UNPAUSED';

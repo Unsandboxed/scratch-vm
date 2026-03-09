@@ -42,14 +42,20 @@ E.setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
     const Scratch = Object.assign({}, global.Scratch || {}, ScratchCommon);
     Scratch.UnsandboxedMod = createUnsandboxed(vm, pre);
     Scratch.extensions = {
+        /**
+         * @deprecated
+         */
         get isUSB () {
             // eslint-disable-next-line max-len
-            console.warn('Depricated "Scratch.extensions.isUSB" API was used, please use "Scratch.UnsandboxedMod" instead.');
+            console.warn('Deprecated "Scratch.extensions.isUSB" API was used, please use "Scratch.UnsandboxedMod" instead.');
             return !!Scratch.UnsandboxedMod; // Always true.
         },
+        /**
+         * @deprecated
+         */
         get isPremature () {
             // eslint-disable-next-line max-len
-            console.warn('Depricated "Scratch.extensions.isPremature" API was used, please use "Scratch.UnsandboxedMod.isAprematureLoad" instead.');
+            console.warn('Deprecated "Scratch.extensions.isPremature" API was used, please use "Scratch.UnsandboxedMod.isAprematureLoad" instead.');
             return Scratch.UnsandboxedMod.isAprematureLoad;
         },
 
@@ -191,14 +197,23 @@ E.setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
 
         delete global.Unsandboxed;
         const binder = {Unsandboxed: Scratch.UnsandboxedMod};
+        /**
+         * @deprecated
+         */
         Object.defineProperty(global, 'Unsandboxed', {
             configurable: true,
             enumerable: true,
+            /**
+             * @deprecated
+             */
             get: (function () {
                 // eslint-disable-next-line max-len
-                console.warn('Depricated global "Unsandboxed" API was used, please use global "Scratch.UnsandboxedMod" instead.');
+                console.warn('Deprecated global "Unsandboxed" API was used, please use global "Scratch.UnsandboxedMod" instead.');
                 return this.Unsandboxed;
             }).bind(binder),
+            /**
+             * @deprecated
+             */
             set: (function (v) {
                 this.Unsandboxed = v;
                 return true;
