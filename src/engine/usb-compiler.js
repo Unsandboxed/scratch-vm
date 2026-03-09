@@ -162,7 +162,8 @@ class Compiler {
          */
         this.bt_branchables = new Set([
             BlockType.CONDITIONAL,
-            BlockType.LOOP
+            BlockType.LOOP,
+            BlockType.INLINE
         ]);
 
         /**

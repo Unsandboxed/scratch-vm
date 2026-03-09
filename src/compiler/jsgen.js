@@ -153,24 +153,30 @@ class JSGenerator {
 
         case InputOpcode.COMPATIBILITY_LAYER:
             if (this.target.runtime.compilerData.bt_inlines.has(node.blockType)) {
-                const branchVariable = this.localVariables.next();
-                const returnVariable = this.localVariables.next();
                 let source = '(yield* (function*() {\n';
+                const returnVariable = this.localVariables.next();
+                const branchVariable = this.localVariables.next();
+                source += `const ${branchVariable} = createBranchInfo(${this.target.runtime.compilerData.bt_loops.has(node.blockType)});\n`;
                 source += `let ${returnVariable} = undefined;\n`;
-                source += `const ${branchVariable} = createBranchInfo(false);\n`;
-                source += `${returnVariable} = (${this.generateCompatibilityLayerCall(node, false, branchVariable)});\n`;
-                source += `${branchVariable}.branch = globalState.blockUtility._startedBranch[0];\n`;
+                source += `while (true) {\n`;
+                source += `${returnVariable} = ${this.generateCompatibilityLayerCall(node, false, branchVariable)};\n`;
+                source += `${branchVariable}.branch = +(globalState.blockUtility._startedBranch[0]);\n`;
+                source += `${branchVariable}.isLoop = globalState.blockUtility._startedBranch[1];\n`;
                 source += `switch (${branchVariable}.branch) {\n`;
                 for (const index in node.substacks) {
                     source += `case ${+index}: {\n`;
                     const _frame = new Frame(false, node.breakable);
                     _frame.isIterable = node.iterable;
                     _frame.isCompat = true;
+                    source += this.descendStackForSource(node.substacks[index], _frame);
                     source += `break;\n`;
                     source += `}\n`; // close case
                 }
                 source += '}\n'; // close switch
                 source += `if (${branchVariable}.onEnd[0]) yield ${branchVariable}.onEnd.shift()(${branchVariable});\n`;
+                source += `if (!${branchVariable}.isLoop) break;\n`;
+                this.yieldLoop();
+                source += '}\n'; // close while
                 source += `return ${returnVariable};\n`;
                 source += '})())'; // close function and yield
                 return source;

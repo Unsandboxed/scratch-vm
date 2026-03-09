@@ -283,7 +283,7 @@ class ScriptTreeGenerator {
                 if (this.runtime.compilerData.bt_stacks.has(type)) {
                     return this.descendCompatLayerStack(block);
                 }
-                if (this.runtime.compilerData.bt_branchables.has(type)) {
+                if (this.runtime.compilerData.bt_branchables.has(type) && !this.runtime.compilerData.bt_inlines.has(type)) {
                     return this.descendCompatLayerStack(block);
                 }
             }
@@ -459,6 +459,7 @@ class ScriptTreeGenerator {
                 input: this.descendInput(block)
             });
         } catch (e) {
+            console.error('Failed to descend visual report.', e);
             return null;
         }
     }
@@ -607,19 +608,37 @@ class ScriptTreeGenerator {
         const inputs = {};
         const fields = {};
         for (const name of Object.keys(block.inputs)) {
-            inputs[name] = this.descendInputOfBlock(block, name, true);
+            if (!name.startsWith('SUBSTACK')) {
+                inputs[name] = this.descendInputOfBlock(block, name, true);
+            }
         }
         for (const name of Object.keys(block.fields)) {
             fields[name] = block.fields[name].value;
         }
+
+        const blockInfo = this.getBlockInfo(block.opcode);
+        const blockType = (blockInfo && blockInfo.info && blockInfo.info.blockType) || BlockType.COMMAND;
+        const substacks = {};
+        if (this.runtime.compilerData.bt_branchables.has(blockType)) {
+            for (const inputName in block.inputs) {
+                if (!inputName.startsWith('SUBSTACK')) continue;
+                const branchNum = inputName === 'SUBSTACK' ? 1 : +inputName.substring('SUBSTACK'.length);
+                if (!isNaN(branchNum)) {
+                    substacks[branchNum] = this.descendSubstack(block, inputName);
+                }
+            }
+        }
+
         return new IntermediateInput(InputOpcode.COMPATIBILITY_LAYER, InputType.ANY, {
             opcode: block.opcode,
             id: block.id,
+            blockType,
             inputs,
             fields,
+            substacks,
             mutation: block.mutation ?? null,
-            breakable: false,
-            iterable: false
+            breakable: block.isBreakable ?? false,
+            iterable: block.isIterable ?? false
         }, true);
     }
 
@@ -645,7 +664,7 @@ class ScriptTreeGenerator {
         const blockInfo = this.getBlockInfo(block.opcode);
         const blockType = (blockInfo && blockInfo.info && blockInfo.info.blockType) || BlockType.COMMAND;
         const substacks = {};
-        if (blockType === BlockType.CONDITIONAL || blockType === BlockType.LOOP || blockType === BlockType.INLINE) {
+        if (this.runtime.compilerData.bt_branchables.has(blockType)) {
             for (const inputName in block.inputs) {
                 if (!inputName.startsWith('SUBSTACK')) continue;
                 const branchNum = inputName === 'SUBSTACK' ? 1 : +inputName.substring('SUBSTACK'.length);
