@@ -665,7 +665,7 @@ class VirtualMachine extends EventEmitter {
         const projectJson = this.toJSON();
 
         const files = {
-            'project.json': new _TextEncoder().encode(projectJson)
+            'project.json': (new _TextEncoder()).encode(projectJson)
         };
         for (const fileDesc of this.serializeAssets()) {
             files[fileDesc.fileName] = fileDesc.fileContent;

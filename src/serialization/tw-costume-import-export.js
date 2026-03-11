@@ -59,7 +59,7 @@ E.exportCostume = costume => {
         return originalData;
     }
 
-    let decodedData = new (E._TextDecoder()).decode(originalData);
+    let decodedData = new (E._TextDecoder)().decode(originalData);
 
     // It's okay that the regex isn't global because it can only match one item anyways.
     decodedData = decodedData.replace(E.regex, '');
@@ -69,7 +69,7 @@ E.exportCostume = costume => {
     const extraData = `${E.HTML_COMMENT_START}rotationCenter:${centerX}:${centerY}${E.HTML_COMMENT_END}`;
     decodedData += extraData;
 
-    return new (E._TextEncoder()).encode(decodedData);
+    return new (E._TextEncoder)().encode(decodedData);
 };
 
 module.exports = E;
