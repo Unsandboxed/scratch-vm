@@ -277,42 +277,8 @@ runtimeFunctions.asString = `;const asString = value => {
     return "" + value;
 };`;
 
-baseRuntime += `;const asArray = (value) => {
-    if (Array.isArray(value)) return value;
-    try {
-        if (typeof value === 'string') {
-            value = JSON.parse(value);
-        } else {
-            value = Array.from(value);
-        }
-    } catch {
-        value = 0;
-    }
-    if (!Array.isArray(value)) return [];
-    return value;
-};`;
-
-/**
- * Scratch cast to object
- * Similar to Cast.toObject()
- * @param {*} value The value to cast
- * @param {boolean?} nonstrict Allow arrays and null?
- * @returns {object} The value cast to a object
- */
-runtimeFunctions.asObject = `;const asObject = (value, nonstrict) => {
-    if (typeof value === 'object') return value;
-    try {
-        value = JSON.parse(value);
-    } catch {
-        value = 0;
-    }
-    if (typeof value === 'object') {
-        if (nonstrict) return value;
-    } else {
-        value = {};
-    }
-    return Object.setPrototypeOf(value, null);
-};`;
+baseRuntime += `;const asArray = globalState.Cast.toArray.bind(globalState.Cast);`;
+baseRuntime += `;const asObject = globalState.Cast.toObject.bind(globalState.Cast);`;
 
 /**
  * If a number is very close to a whole number, round to that whole number.

@@ -157,9 +157,6 @@ class IntermediateInput {
         case InputType.COLOR:
             castOpcode = InputOpcode.CAST_COLOR;
             break;
-        case InputType.OBJECTLIKE:
-            castOpcode = InputOpcode.CAST_OBJECTLIKE;
-            break;
         case InputType.OBJECT:
             castOpcode = InputOpcode.CAST_OBJECT;
             break;
@@ -210,7 +207,14 @@ class IntermediateInput {
                 this.inputs.value = Cast.toRgbColorList(this.inputs.value);
                 this.type = InputType.COLOR;
                 break;
-            // we dont cast objects or arrays at compile time
+            case InputOpcode.CAST_OBJECT:
+                this.inputs.value = Cast.toString(Cast.toObject(this.inputs.value));
+                this.type = InputType.OBJECT;
+                break;
+            case InputOpcode.CAST_ARRAY:
+                this.inputs.value = Cast.toString(Cast.toArray(this.inputs.value));
+                this.type = InputType.ARRAY;
+                break;
             }
             return this;
         }

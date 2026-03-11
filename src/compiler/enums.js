@@ -134,7 +134,6 @@ const InputOpcode = {
     CAST_COLOR: 'cast.toColor',
     CAST_ARRAY: 'cast.toArray',
     CAST_OBJECT: 'cast.toObject',
-    CAST_OBJECTLIKE: 'cast.toObjectLike',
 
     COMPATIBILITY_LAYER: 'compat',
     OLD_COMPILER_COMPATIBILITY_LAYER: 'oldCompiler',

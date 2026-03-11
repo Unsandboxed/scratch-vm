@@ -147,9 +147,7 @@ class JSGenerator {
         case InputOpcode.CAST_ARRAY:
             return `asArray(${this.descendInput(node.target)})`;
         case InputOpcode.CAST_OBJECT:
-            return `asObject(${this.descendInput(node.target)}, false)`;
-        case InputOpcode.CAST_OBJECTLIKE:
-            return `asObject(${this.descendInput(node.target)}, true)`;
+            return `asObject(${this.descendInput(node.target)})`;
 
         case InputOpcode.COMPATIBILITY_LAYER:
             if (this.target.runtime.compilerData.bt_inlines.has(node.blockType)) {
