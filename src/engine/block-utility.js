@@ -189,8 +189,8 @@ class BlockUtility {
     /**
      * Stop this thread.
      */
-    stopThisScript () {
-        this.thread.stopThisScript();
+    stopThisScript (includeWeakBoundarys) {
+        this.thread.stopThisScript(includeWeakBoundarys);
     }
 
     /**

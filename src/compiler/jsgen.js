@@ -552,7 +552,7 @@ class JSGenerator {
     stopScriptAndReturn (valueJS) {
         if (this.isProcedureBranch) {
             this.source += `return returnProcedure(${valueJS});\n`;
-        } else if (this.isProcedure) {
+        } else if (this.isProcedure || this.frames.find(f => f.isReturnable)) {
             this.source += `return ${valueJS};\n`;
         } else {
             this.retire();

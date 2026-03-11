@@ -260,7 +260,8 @@ class Sequencer {
             if (
                 thread.stack.length === initialStackSize &&
                 thread.peekStack() === currentBlockId &&
-                !thread.peekStackFrame().waitingReporter
+                !thread.peekStackFrame().waitingReporter &&
+                !thread.peekStackFrame().sleepingReporter
             ) {
                 thread.goToNextBlock();
             }
@@ -298,7 +299,7 @@ class Sequencer {
                     // since loops need to be re-executed.
                     continue;
 
-                } else if (stackFrame.waitingReporter) {
+                } else if (stackFrame.waitingReporter || stackFrame.sleepingReporter) {
                     // This level of the stack was waiting for a value.
                     // This means a reporter has just returned - so don't go
                     // to the next block for this level of the stack.

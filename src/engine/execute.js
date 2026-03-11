@@ -553,7 +553,7 @@ ExecuteInternals.execute = function (sequencer, thread) {
         const primitiveReportedValue = blockFunction(argValues, ExecuteInternals.blockUtility);
 
         const primitiveIsPromise = ExecuteInternals.isPromise(primitiveReportedValue);
-        if (primitiveIsPromise || currentStackFrame.waitingReporter) {
+        if (primitiveIsPromise || currentStackFrame.waitingReporter || currentStackFrame.sleepingReporter) {
             if (primitiveIsPromise) {
                 ExecuteInternals.handlePromise(primitiveReportedValue, sequencer, thread, opCached, lastOperation);
             }

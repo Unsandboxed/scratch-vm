@@ -149,7 +149,7 @@ class Scratch3ProcedureBlocks {
     }
 
     return (args, util) {
-        util.stopThisScript();
+        util.stopThisScript(true);
 
         // If used outside of a custom block, there may be no stackframe.
         if (util.thread.peekStackFrame()) {

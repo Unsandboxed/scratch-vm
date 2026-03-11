@@ -75,10 +75,22 @@ class _StackFrame {
         this.waitingReporter = null;
 
         /**
+         * Name of sleeping reporter.
+         * @type {string}
+         */
+        this.sleepingReporter = null;
+
+        /**
          * Should this stackFrame act like the end point for "stopThisScript"?
          * @type {boolean}
          */
         this.fakeScriptTop = false;
+
+        /**
+         * Should this stackFrame act like the end point for weak stoppers like "return"?
+         * @type {boolean}
+         */
+        this.weakScriptTop = false;
 
         /**
          * Procedure parameters.
@@ -139,7 +151,9 @@ class _StackFrame {
         this.justReported = null;
         this.reported = null;
         this.waitingReporter = null;
+        this.sleepingReporter = null;
         this.fakeScriptTop = false;
+        this.weakScriptTop = false;
         this.params = null;
         this.executionContext = null;
         this.op = null;
@@ -483,13 +497,14 @@ class Thread {
     /**
      * Pop back down the stack frame until we hit a procedure call or the stack frame is emptied
      */
-    stopThisScript () {
+    stopThisScript (includeWeakBoundarys) {
         let blockID = this.peekStack();
         while (blockID !== null) {
             const block = this.blockContainer.getBlock(blockID);
 
-            // Reporter form of procedures_call
-            if (this.peekStackFrame().waitingReporter || this.peekStackFrame().fakeScriptTop) {
+            if (this.peekStackFrame().waitingReporter || this.peekStackFrame().fakeScriptTop || (
+                includeWeakBoundarys && this.peekStackFrame().weakScriptTop
+            )) {
                 break;
             }
 
