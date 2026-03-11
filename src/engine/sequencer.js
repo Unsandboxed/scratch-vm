@@ -277,16 +277,10 @@ class Sequencer {
                 const stackFrame = thread.peekStackFrame();
                 isWarpMode = stackFrame.warpMode;
 
-                // NOTE: At this point whatever black and its substacks it may have had, have been ran.
-
                 if (stackFrame.isBranch) {
                     stackFrame.branchDepth = stackFrame.branchDepth - 1;
 
-                    for (let i = 0; i < stackFrame.onBranchEnd.length; i++) {
-                        stackFrame.onBranchEnd[i]();
-                    }
-
-                    stackFrame.onBranchEnd.length = 0;
+                    thread.exitBranch();
                 }
 
                 if (stackFrame.isLoop) {
@@ -328,20 +322,24 @@ class Sequencer {
         if (!branchNum) {
             branchNum = 1;
         }
-        const currentBlockId = thread.peekStack();
+        const stackFrame = thread.peekStackFrame();
+        const currentBlockId = stackFrame.op.id;
         const branchId = thread.blockContainer.getBranch(
             currentBlockId,
             branchNum
         );
 
-        const stackFrame = thread.peekStackFrame();
-
         stackFrame.isBranch = true;
         stackFrame.isLoop = isLoop;
+        stackFrame.isInline = currentBlockId !== thread.peekStack();
 
-        if (branchId) {
-            stackFrame.branchDepth = stackFrame.branchDepth + 1;
-        }
+        // TODO: Remove this or make a flag out of it.
+        stackFrame.__branch_debug__ = [
+            currentBlockId, branchNum, branchId, thread.blockContainer.getNextBlock(currentBlockId) ?? null
+        ];
+        // console.log(stackFrame.__branch_debug__);
+
+        stackFrame.branchDepth = stackFrame.branchDepth + 1;
         if (onEnd) {
             stackFrame.onBranchEnd.push(onEnd);
         }
@@ -421,10 +419,10 @@ class Sequencer {
      * @param {!Thread} thread Thread object to retire.
      */
     retireThread (thread) {
-        thread.stack = [];
-        thread.stackFrame = [];
-        thread.requestScriptGlowInFrame = false;
         thread.setStatus(Thread.STATUS_DONE);
+        thread.stack = [];
+        thread.stackFrames = [];
+        thread.requestScriptGlowInFrame = false;
         if (thread.isCompiled) {
             thread.procedures = null;
             thread.generator = null;

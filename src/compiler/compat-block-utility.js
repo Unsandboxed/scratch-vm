@@ -6,7 +6,8 @@ class CompatibilityLayerBlockUtility extends BlockUtility {
     constructor () {
         super();
         this._stackFrame = {};
-        this._startedBranch = [-1, false];
+        this._startedBranch = [];
+        this._branchInfo = [];
     }
 
     get stackFrame () {
@@ -14,8 +15,8 @@ class CompatibilityLayerBlockUtility extends BlockUtility {
     }
 
     startBranch (branchNumber, isLoop, onEnd) {
-        if (this._branchInfo && onEnd) this._branchInfo.onEnd.push(onEnd);
-        this._startedBranch = [branchNumber, isLoop];
+        if (this._branchInfo[0] && onEnd) this._branchInfo[0].onEnd.push(onEnd);
+        this._startedBranch.unshift([branchNumber, isLoop]);
     }
 
     startProcedure () {
@@ -35,8 +36,11 @@ class CompatibilityLayerBlockUtility extends BlockUtility {
 
     init (thread, fakeBlockId, stackFrame, branchInfo) {
         super.init(thread, thread.target.runtime.sequencer);
-        this._startedBranch = [-1, false];
-        this._branchInfo = branchInfo;
+        this._startedBranch.length = 0;
+        this._branchInfo.length = 0;
+        if (branchInfo) {
+            this._branchInfo.unshift(branchInfo);
+        }
         thread.stack[0] = fakeBlockId;
         thread.compatibilityStackFrame = stackFrame;
     }

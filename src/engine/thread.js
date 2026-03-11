@@ -75,6 +75,12 @@ class _StackFrame {
         this.waitingReporter = null;
 
         /**
+         * Should this stackFrame act like the end point for "stopThisScript"?
+         * @type {boolean}
+         */
+        this.fakeScriptTop = false;
+
+        /**
          * Procedure parameters.
          * @type {Object}
          */
@@ -112,6 +118,12 @@ class _StackFrame {
          */
         this.isIterable = false;
 
+        /**
+         * Whether or not this frame belongs to an inline reporter when it calls a branch
+         * @type {boolean}
+         */
+        this.isInline = false;
+
         this.polluteLocals = 0; // 0 means ignore this frame, false means disable, true means enable.
     }
 
@@ -127,6 +139,7 @@ class _StackFrame {
         this.justReported = null;
         this.reported = null;
         this.waitingReporter = null;
+        this.fakeScriptTop = false;
         this.params = null;
         this.executionContext = null;
         this.op = null;
@@ -134,13 +147,9 @@ class _StackFrame {
         this.isIterable = false;
         this.polluteLocals = 0;
 
-        for (let i = 0; i < this.onBranchEnd.length; i++) {
-            this.onBranchEnd[i]();
-        }
-
-        this.onBranchEnd = [];
+        _StackFrame.exitBranch(this, true);
         this.isBranch = false;
-        this.branchDepth = 0;
+        this.isInline = false;
 
         return this;
     }
@@ -178,6 +187,29 @@ class _StackFrame {
     static release (stackFrame) {
         if (typeof stackFrame !== 'undefined') {
             _stackFrameFreeList.push(stackFrame.reset());
+        }
+    }
+
+    /**
+     * Emptys a stack frame objects branch end callbacks.
+     * @param {_StackFrame} stackFrame The frame to empty.
+     */
+    static exitBranch (stackFrame, clearDepth) {
+        if (!stackFrame) return;
+        // stackFrame.isBranch = false;
+        // stackFrame.isLoop = false;
+        // stackFrame.isBreakable = false;
+        // stackFrame.isIterable = false;
+        if (clearDepth) {
+            stackFrame.branchDepth = 0;
+        } else {
+            stackFrame.branchDepth--;
+        }
+        if (stackFrame.onBranchEnd) {
+            for (const callback of stackFrame.onBranchEnd) {
+                callback();
+            }
+            stackFrame.onBranchEnd.length = 0;
         }
     }
 }
@@ -362,6 +394,9 @@ class Thread {
         this.status = newStatus;
 
         if (newStatus === Thread.STATUS_DONE) {
+            for (const stackFrame of this.stackFrames) {
+                stackFrame.reset();
+            }
             this.store.clearStorage();
         }
         // todo: Possibly make an event?
@@ -428,9 +463,21 @@ class Thread {
         const stackFrame = this.peekStackFrame();
         if (stackFrame) {
             this.blockContainer = stackFrame.targetContext.blocks;
+
+            // Empty the on branch end callbacks if the stackFrame we return to is marked as a branch.
+            if (stackFrame.isBranch) {
+                this.exitBranch();
+            }
         }
 
         return this.stack.pop();
+    }
+
+    /**
+     * Emptys the on branch end callbacks for the current stack frame.
+     */
+    exitBranch () {
+        _StackFrame.exitBranch(this.peekStackFrame());
     }
 
     /**
@@ -442,7 +489,7 @@ class Thread {
             const block = this.blockContainer.getBlock(blockID);
 
             // Reporter form of procedures_call
-            if (this.peekStackFrame().waitingReporter) {
+            if (this.peekStackFrame().waitingReporter || this.peekStackFrame().fakeScriptTop) {
                 break;
             }
 

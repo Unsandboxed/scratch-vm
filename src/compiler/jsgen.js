@@ -158,8 +158,9 @@ class JSGenerator {
                 source += `let ${returnVariable} = undefined;\n`;
                 source += `while (true) {\n`;
                 source += `${returnVariable} = ${this.generateCompatibilityLayerCall(node, false, branchVariable)};\n`;
-                source += `${branchVariable}.branch = +(globalState.blockUtility._startedBranch[0]);\n`;
-                source += `${branchVariable}.isLoop = globalState.blockUtility._startedBranch[1];\n`;
+                source += `${branchVariable}.branch = +(globalState.blockUtility._startedBranch[0][0]);\n`;
+                source += `${branchVariable}.isLoop = globalState.blockUtility._startedBranch[0][1];\n`;
+                source += `globalState.blockUtility._startedBranch.shift();\n`;
                 source += `switch (${branchVariable}.branch) {\n`;
                 for (const index in node.substacks) {
                     source += `case ${+index}: {\n`;
@@ -175,6 +176,7 @@ class JSGenerator {
                 source += `if (!${branchVariable}.isLoop) break;\n`;
                 this.yieldLoop();
                 source += '}\n'; // close while
+                source += `globalState.blockUtility._branchInfo.shift();\n`;
                 source += `return ${returnVariable};\n`;
                 source += '})())'; // close function and yield
                 return source;
@@ -239,7 +241,14 @@ class JSGenerator {
             } else if (this.target.runtime.compilerData.bt_branchables.has(blockType)) {
                 const branchVariable = this.localVariables.next();
                 this.source += `const ${branchVariable} = createBranchInfo(${this.target.runtime.compilerData.bt_loops.has(blockType)});\n`;
-                this.source += `while (${branchVariable}.branch = +(${this.generateCompatibilityLayerCall(node, false, branchVariable)})) {\n`;
+                this.source += `while (true) {\n`;
+                this.source += `${branchVariable}.returnValue = ${this.generateCompatibilityLayerCall(node, false, branchVariable)};\n`;
+                this.source += `${this.target.runtime.compilerData.bt_inlines.has(blockType) ?
+                    `${`${branchVariable}.branch = +(globalState.blockUtility._startedBranch[0][0]);\n`}${
+                        `${branchVariable}.isLoop = globalState.blockUtility._startedBranch[0][1];\n`
+                    };globalState.blockUtility._startedBranch.shift();` :
+                    `${branchVariable}.branch = +(${branchVariable}.returnValue);\n`
+                };\n`;
                 this.source += `switch (${branchVariable}.branch) {\n`;
                 for (const index in node.substacks) {
                     this.source += `case ${+index}: {\n`;
@@ -255,6 +264,8 @@ class JSGenerator {
                 this.source += `if (!${branchVariable}.isLoop) break;\n`;
                 this.yieldLoop();
                 this.source += '}\n'; // close while
+                this.source += `globalState.blockUtility._branchInfo.shift();\n`;
+                this.source += `globalState.blockUtility._startedBranch.shift();\n`;
             } else {
                 throw new Error(`Unknown block type: ${blockType}`);
             }
