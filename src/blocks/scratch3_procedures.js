@@ -226,7 +226,6 @@ class Scratch3ProcedureBlocks {
     }
 
     argumentStatement (args, util) {
-
         const branchInfo = util.getParam(args.VALUE) || {};
         if (!branchInfo.fieldId) return;
 

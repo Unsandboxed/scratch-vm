@@ -102,6 +102,7 @@ class Scratch3StringBlocks {
 
         return this._slice(str, index1 - 1, index2 - 1);
     }
+
     _slice (str, a, b) { // used by compiler
         return str.slice(Math.max(a, 0), Math.min(str.length, b));
     }
