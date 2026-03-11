@@ -1318,17 +1318,29 @@ class Runtime extends EventEmitter {
         const defaultExtensionColors = RuntimeInternals.defaultExtensionColors;
         // this is an absurd function meant to generate every possible colour setup onto one object :P
         if (Array.isArray(fallbacks)) {
+            const fallbackColor1 = fallbacks[0] || defaultExtensionColors[0];
             fallbacks = {
-                color1: fallbacks[0] || defaultExtensionColors[0],
+                color1: fallbackColor1,
                 color2: fallbacks[1] || defaultExtensionColors[1],
                 color3: fallbacks[2] || defaultExtensionColors[2],
-                color4: (fallbacks[3] || defaultExtensionColors[3]) || defaultExtensionColors[2]
+                color4: (fallbacks[3] || defaultExtensionColors[3]) ||
+                        (fallbacks[2] ||
+                            (fallbackColor1 === defaultExtensionColors[0] ? defaultExtensionColors[2] : (void 0))
+                        )
             };
         } else if (fallbacks) {
-            fallbacks.color1 = fallbacks.color1 || defaultExtensionColors[0];
-            fallbacks.color2 = fallbacks.color2 || defaultExtensionColors[1];
-            fallbacks.color3 = fallbacks.color3 || defaultExtensionColors[2];
-            fallbacks.color4 = (fallbacks.color4 || defaultExtensionColors[3]) || defaultExtensionColors[2];
+            const fallbackColor1 = fallbacks.color1 || defaultExtensionColors[0];
+            fallbacks.color1 = fallbackColor1;
+            fallbacks.color2 = fallbacks.color2 || (
+                fallbackColor1 === defaultExtensionColors[0] ? defaultExtensionColors[1] : (void 0)
+            );
+            fallbacks.color3 = fallbacks.color3 || (
+                fallbackColor1 === defaultExtensionColors[0] ? defaultExtensionColors[2] : (void 0)
+            );
+            fallbacks.color4 = fallbacks.color4 || (
+                fallbackColor1 === defaultExtensionColors[0] ? (defaultExtensionColors[3] || fallbacks.color3) :
+                    (void 0)
+            );
         }
         // color1
         info.color1 =
@@ -1339,17 +1351,17 @@ class Runtime extends EventEmitter {
         info.colour = info.colour || info.color1;
         info.color = info.color || info.color1;
         // color2
-        info.color2 = (((info.color2 || info.colour2) || info.secondaryColour) || info.secondary) || info.color1;
+        info.color2 = ((info.color2 || info.colour2) || info.secondaryColour) || info.secondary;
         info.colour2 = info.colour2 || info.color2;
         info.secondaryColour = info.secondaryColour || info.color2;
         info.secondary = info.secondary || info.color2;
         // color3
-        info.color3 = (((info.color3 || info.colour3) || info.tertiaryColour) || info.tertiary) || info.color1;
+        info.color3 = ((info.color3 || info.colour3) || info.tertiaryColour) || info.tertiary;
         info.colour3 = info.colour3 || info.color3;
         info.tertiaryColour = info.tertiaryColour || info.color3;
         info.tertiary = info.tertiary || info.color3;
         // color4
-        info.color4 = (((info.color4 || info.colour4) || info.quaternaryColour) || info.quaternary) || info.color1;
+        info.color4 = ((info.color4 || info.colour4) || info.quaternaryColour) || info.quaternary;
         info.colour4 = info.colour4 || info.color4;
         info.quaternaryColour = info.quaternaryColour || info.color4;
         info.quaternary = info.quaternary || info.color4;
