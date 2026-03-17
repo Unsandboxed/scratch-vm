@@ -58,12 +58,12 @@ class Blocks {
              * Cache procedure Param Names by block id
              * @type {object.<string, ?Array.<string>>}
              */
-            procedureParamNames: {},
+            procedureParamNames: Object.create(null),
             /**
              * Cache procedure definitions by block id
              * @type {object.<string, ?string>}
              */
-            procedureDefinitions: {},
+            procedureDefinitions: Object.create(null),
 
             /**
              * A cache for execute to use and store on. Only available to
@@ -668,8 +668,8 @@ class Blocks {
      */
     resetCache () {
         this._cache.inputs = {};
-        this._cache.procedureParamNames = {};
-        this._cache.procedureDefinitions = {};
+        this._cache.procedureParamNames = Object.create(null);
+        this._cache.procedureDefinitions = Object.create(null);
         this._cache._executeCached = {};
         this._cache._monitored = null;
         this._cache.scripts = {};
