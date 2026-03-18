@@ -78,6 +78,8 @@ module.exports = {
         Asset: () => require('./util/tw-asset-util'),
 
         Cast: () => require('./util/cast'),
+        Clone: () => require('./util/cast').Clone,
+        Color: () => require('./util/cast').Color,
         Timer: () => require('./util/timer'),
         TaskQueue: () => require('./util/task-queue'),
 
