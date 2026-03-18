@@ -1571,6 +1571,7 @@ class Scratch3WeDo2Blocks {
             return this._peripheral.tiltX > 45 ? this._peripheral.tiltX - 256 : this._peripheral.tiltX;
         default:
             log.warn(`Unknown tilt direction in _getTiltAngle: ${direction}`);
+            return 0;
         }
     }
 

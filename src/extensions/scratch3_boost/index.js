@@ -2052,6 +2052,7 @@ class Scratch3BoostBlocks {
             return this._peripheral.tiltX > 90 ? 256 - this._peripheral.tiltX : -this._peripheral.tiltX;
         default:
             log.warn(`Unknown tilt direction in _getTiltAngle: ${direction}`);
+            return 0;
         }
     }
 
