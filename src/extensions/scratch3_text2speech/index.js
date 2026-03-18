@@ -669,7 +669,8 @@ class Scratch3Text2SpeechBlocks {
      * @param  {object} args Block arguments
      */
     setLanguage (args) {
-        this.setCurrentLanguage(args.LANGUAGE);
+        const language = Cast.toString(args.LANGUAGE);
+        this.setCurrentLanguage(language);
     }
 
     /**
