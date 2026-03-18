@@ -58,12 +58,14 @@ module.exports = function (vm, isAprematureLoad) {
             Clone: require('../util/cast').Clone
         },
 
-        base64: vmD.modules.base64_js,
+        base64: vmD.modules.base64_js(),
         immutable: vmD.modules.immutable(),
 
-        Clone: require('../util/cast').Clone,
-        Color: require('../util/cast').Color,
-        Cast: require('../util/cast'),
+        Math: vmD.util.Math(),
+        Strings: vmD.util.String(),
+        Clone: vm.$.util.Clone(),
+        Color: vm.$.util.Color(),
+        Cast: vm.$.util.Cast(),
 
         resolves: vm.resolversTool,
 
@@ -71,8 +73,9 @@ module.exports = function (vm, isAprematureLoad) {
             hasOwn: hasOwn_,
             catchError: catchError_,
 
-            uid: vmD.help.uid,
-            xmlEscape: vmD.help.xmlEscape
+            uid: vmD.help.uid(),
+            xmlEscape: vmD.help.xmlEscape(),
+            maybeFormatMessage: vmD.help.maybeFormatMessage()
         }, vmD.flow()),
 
         vmd: vmD,
