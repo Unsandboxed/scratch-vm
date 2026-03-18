@@ -646,12 +646,14 @@ class JSGenerator {
     }
 
     /**
+     * NOTE: Kept for compatibility with upstream TurboWarp.
      * @deprecated
      */
     static get exports () {
         throw new Error('Deprecated syntax, please use the new exports.');
     }
     /**
+     * NOTE: Kept for compatibility with upstream TurboWarp.
      * @deprecated
      */
     static get unstable_exports () {

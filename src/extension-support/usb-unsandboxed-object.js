@@ -27,31 +27,6 @@ module.exports = function (vm, isAprematureLoad) {
     const vmD = require('../exports');
 
     return {
-        /**
-         * @deprecated
-         */
-        get Util () {
-            // eslint-disable-next-line max-len
-            vmD.help.log.warn('Deprecated "Unsandboxed.Util" API was used, please switch :<');
-            return require('../util/usb-util');
-        },
-        /**
-         * @deprecated
-         */
-        get hasOwn () {
-            // eslint-disable-next-line max-len
-            vmD.help.log.warn('Deprecated "Unsandboxed.hasOwn" API was used, please switch to "Unsandboxed.helpers.hasOwn".');
-            return hasOwn_;
-        },
-        /**
-         * @deprecated
-         */
-        get catchError () {
-            // eslint-disable-next-line max-len
-            vmD.help.log.warn('Deprecated "Unsandboxed.catchError" API was used, please switch to "Unsandboxed.helpers.catchError".');
-            return catchError_;
-        },
-
         json: {
             five: vmD.modules.json5(),
             extendedjson: vmD.modules.tw_json(),

@@ -658,32 +658,14 @@ class Runtime extends EventEmitter {
 
         this.store = new StorageProvider(this, this);
         /**
-         * @deprecated
-         */
-        Object.defineProperty(this, 'temporaryStorage', {
-            enumerable: true,
-            configurable: true,
-            /**
-             * @deprecated
-             */
-            get: () => {
-                log.warn('DEPRECATED API WAS USED: Please use the .store temporary API instead.');
-                return this.store.unsafe$getTemporaryStorage();
-            },
-            /**
-             * @deprecated
-             */
-            set: () => {
-                throw new ReferenceError('DEPRECATED: Cannot set the temporaryStorage object.');
-            }
-        });
-        /**
+         * NOTE: Kept for compatibility with upstream TurboWarp.
          * @deprecated
          */
         Object.defineProperty(this, 'extensionStorage', {
             enumerable: true,
             configurable: true,
             /**
+             * NOTE: Kept for compatibility with upstream TurboWarp.
              * @deprecated
              */
             get: () => {
@@ -691,6 +673,7 @@ class Runtime extends EventEmitter {
                 return this.store.unsafe$getExtensionStorage();
             },
             /**
+             * NOTE: Kept for compatibility with upstream TurboWarp.
              * @deprecated
              */
             set: () => {
@@ -908,6 +891,7 @@ class Runtime extends EventEmitter {
     /**
      * Event name when the project is paused
      * @const {string}
+     * NOTE: Kept for compatibility with upstream TurboWarp.
      * @deprecated
      */
     static get RUNTIME_PAUSED () {
@@ -917,6 +901,7 @@ class Runtime extends EventEmitter {
     /**
      * Event name when the project is unpaused
      * @const {string}
+     * NOTE: Kept for compatibility with upstream TurboWarp.
      * @deprecated
      */
     static get RUNTIME_UNPAUSED () {
@@ -3957,6 +3942,7 @@ class Runtime extends EventEmitter {
      * @property {string} category - the category for this opcode
      * @property {Function} [labelFn] - function to generate the label for this opcode
      * @property {string} [label] - the label for this opcode if `labelFn` is absent
+     * NOTE: Kept for compatibility with upstream TurboWarp.
      * @deprecated
      */
     getLabelForOpcode (extendedOpcode) {
@@ -4129,6 +4115,7 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * NOTE: Kept for compatibility with upstream TurboWarp.
      * @deprecated Used by old versions of TurboWarp. Superceded by upstream's quit()
      */
     stop () {
