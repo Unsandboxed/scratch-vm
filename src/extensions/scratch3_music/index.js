@@ -731,7 +731,7 @@ class Scratch3MusicBlocks {
      */
     _stopAllPlayers(instr) {
         if (instr) {
-            for (const player for instr) {
+            for (const player of instr) {
                 if (!player || !player.stop) continue;
                 (player.stopImmediately || player.stop)();
             }
