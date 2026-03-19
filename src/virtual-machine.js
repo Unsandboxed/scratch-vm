@@ -12,6 +12,7 @@ const centralDispatch = require('./dispatch/central-dispatch');
 const ExtensionManager = require('./extension-support/extension-manager');
 const log = require('./util/log');
 const MathUtil = require('./util/math-util');
+const Clone = require('./util/clone');
 const Runtime = require('./engine/runtime');
 const Resolvers = require('./util/resolvers');
 const RenderedTarget = require('./sprites/rendered-target');
@@ -1036,7 +1037,7 @@ class VirtualMachine extends EventEmitter {
      */
     duplicateCostume (costumeIndex) {
         const originalCostume = this.editingTarget.getCostumes()[costumeIndex];
-        const clone = Object.assign({}, originalCostume);
+        const clone = Clone.structured(originalCostume);
         const md5ext = `${clone.assetId}.${clone.dataFormat}`;
         return loadCostume(md5ext, clone, this.runtime).then(() => {
             this.editingTarget.addCostume(clone, costumeIndex + 1);
