@@ -264,6 +264,11 @@ class Sequencer {
                 return;
             }
 
+            // Prevent large loops from hanging the page.
+            if (worksize++ >= Sequencer.MAX_WORKSIZE) {
+                return;
+            }
+            
             // If no control flow has happened, switch to next block.
             if (
                 thread.stack.length === initialStackSize &&
@@ -273,10 +278,6 @@ class Sequencer {
             ) {
                 thread.goToNextBlock();
             }
-            // Prevent large loops from hanging the page.
-            if (worksize++ >= Sequencer.MAX_WORKSIZE) {
-                return;
-            }
             // If no next block has been found at this point, look on the stack.
             while (!thread.peekStack()) {
                 thread.popStack();
@@ -284,6 +285,11 @@ class Sequencer {
                 if (thread.stack.length === 0) {
                     // No more stack to run!
                     thread.setStatus(Thread.STATUS_DONE);
+                    return;
+                }
+
+                // Prevent large loops from hanging the page.
+                if (worksize++ >= Sequencer.MAX_WORKSIZE) {
                     return;
                 }
 
