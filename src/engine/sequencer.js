@@ -80,18 +80,17 @@ class Sequencer {
         this.runtime.updateCurrentMSecs();
         // Start counting toward WORK_TIME.
         this.timer.start();
-        // Cache of the runtime threads array length.
-        let threadsLength = this.runtime.threads.length;
         // Count of active threads.
         let numActiveThreads = Infinity;
         // Whether `stepThreads` has run through a full single tick.
         let ranFirstTick = false;
+        // Count the number of added threads
         const doneThreads = [];
         // Conditions for continuing to stepping threads:
         // 1. We must have threads in the list, and some must be active.
         // 2. Time elapsed must be less than WORK_TIME.
         // 3. Either turbo mode, or no redraw has been requested by a primitive.
-        while (threadsLength > 0 &&
+        while (this.runtime.threads.length > 0 &&
                numActiveThreads > 0 &&
                this.timer.timeElapsed() < WORK_TIME &&
                (this.runtime.turboMode || !this.runtime.redrawRequested)) {
@@ -103,11 +102,12 @@ class Sequencer {
                 this.runtime.profiler.start(SequencerInternals.stepThreadsInnerProfilerId);
             }
 
+
             numActiveThreads = 0;
             let stoppedThread = false;
             // Attempt to run each thread one time.
             const threads = this.runtime.threads;
-            for (let i = 0; i < threadsLength; i++) {
+            for (let i = 0; i < this.runtime.threads.length; i++) {
                 const activeThread = this.activeThread = threads[i];
                 // Check if the thread is done so it is not executed.
                 if (activeThread.stack.length === 0 ||
@@ -137,6 +137,7 @@ class Sequencer {
                         // Increment the number of times stepThread is called.
                         this.runtime.profiler.increment(SequencerInternals.stepThreadProfilerId);
                     }
+                    const previousCount = this.runtime.threads.length;
                     this.stepThread(activeThread);
                     activeThread.warpTimer = null;
                 }
@@ -162,7 +163,7 @@ class Sequencer {
             // Filter inactive threads from `this.runtime.threads`.
             if (stoppedThread) {
                 let nextActiveThread = 0;
-                for (let i = 0; i < threadsLength; i++) {
+                for (let i = 0; i < this.runtime.threads.length; i++) {
                     const thread = this.runtime.threads[i];
                     if (thread.stack.length !== 0 &&
                         thread.status !== Thread.STATUS_DONE) {
@@ -174,9 +175,6 @@ class Sequencer {
                     }
                 }
                 this.runtime.threads.length = nextActiveThread;
-                threadsLength = nextActiveThread;
-            } else {
-              threadsLength = this.runtime.threads.length; // Update the cache because we may have removed a thread.
             }
         }
 
@@ -189,7 +187,7 @@ class Sequencer {
      * Limit on how many blocks should be ran in a single while loop.
      * @constant {number}
      */
-    static MAX_WORKSIZE = 5000;
+    static MAX_WORKSIZE = 15000;
 
     /**
      * Step the requested thread for as long as necessary.
