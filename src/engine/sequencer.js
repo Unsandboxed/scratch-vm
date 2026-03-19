@@ -181,6 +181,12 @@ class Sequencer {
     }
 
     /**
+     * Limit on how many blocks should be ran in a single while loop.
+     * @constant {number}
+     */
+    static MAX_WORKSIZE = 5000;
+
+    /**
      * Step the requested thread for as long as necessary.
      * @param {!Thread} thread Thread object to step.
      */
@@ -204,6 +210,8 @@ class Sequencer {
                 return;
             }
         }
+
+        let worksize = 0;
         // Save the current block ID to notice if we did control flow.
         while ((currentBlockId = thread.peekStack())) {
             const initialStackSize = thread.stack.length;
@@ -264,6 +272,10 @@ class Sequencer {
                 !thread.peekStackFrame().sleepingReporter
             ) {
                 thread.goToNextBlock();
+            }
+            // Prevent large loops from hanging the page.
+            if (worksize++ >= Sequencer.MAX_WORKSIZE) {
+                return;
             }
             // If no next block has been found at this point, look on the stack.
             while (!thread.peekStack()) {
