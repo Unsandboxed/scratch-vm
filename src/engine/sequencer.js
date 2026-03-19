@@ -178,6 +178,9 @@ class Sequencer {
             }
         }
 
+        // Execute the hat queue at the end of the frame.
+        this.runtime.executeHatQueue();
+
         this.activeThread = null;
 
         return doneThreads;
