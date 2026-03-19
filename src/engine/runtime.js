@@ -859,6 +859,14 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Event name for stopping sounds.
+     * @const {string}
+     */
+    static get STOP_ALL_SOUNDS () {
+        return 'STOP_ALL_SOUNDS';
+    }
+
+    /**
      * Event name for compiler errors.
      * @const {string}
      */
