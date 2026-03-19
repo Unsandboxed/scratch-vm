@@ -80,6 +80,8 @@ class Sequencer {
         this.runtime.updateCurrentMSecs();
         // Start counting toward WORK_TIME.
         this.timer.start();
+        // Cache of the runtime threads array length.
+        let threadsLength = this.runtime.threads.length;
         // Count of active threads.
         let numActiveThreads = Infinity;
         // Whether `stepThreads` has run through a full single tick.
@@ -89,7 +91,7 @@ class Sequencer {
         // 1. We must have threads in the list, and some must be active.
         // 2. Time elapsed must be less than WORK_TIME.
         // 3. Either turbo mode, or no redraw has been requested by a primitive.
-        while (this.runtime.threads.length > 0 &&
+        while (threadsLength > 0 &&
                numActiveThreads > 0 &&
                this.timer.timeElapsed() < WORK_TIME &&
                (this.runtime.turboMode || !this.runtime.redrawRequested)) {
@@ -105,7 +107,7 @@ class Sequencer {
             let stoppedThread = false;
             // Attempt to run each thread one time.
             const threads = this.runtime.threads;
-            for (let i = 0; i < threads.length; i++) {
+            for (let i = 0; i < threadsLength; i++) {
                 const activeThread = this.activeThread = threads[i];
                 // Check if the thread is done so it is not executed.
                 if (activeThread.stack.length === 0 ||
@@ -160,7 +162,7 @@ class Sequencer {
             // Filter inactive threads from `this.runtime.threads`.
             if (stoppedThread) {
                 let nextActiveThread = 0;
-                for (let i = 0; i < this.runtime.threads.length; i++) {
+                for (let i = 0; i < threadsLength; i++) {
                     const thread = this.runtime.threads[i];
                     if (thread.stack.length !== 0 &&
                         thread.status !== Thread.STATUS_DONE) {
@@ -172,6 +174,9 @@ class Sequencer {
                     }
                 }
                 this.runtime.threads.length = nextActiveThread;
+                threadsLength = nextActiveThread;
+            } else {
+              threadsLength = this.runtime.threads.length; // Update the cache because we may have removed a thread.
             }
         }
 
