@@ -17,9 +17,15 @@ class ReadonlyArray extends Array {
             writable: false,
             configurable: true,
             enumerable: false,
-            value: Object.assign({__proto__: null }, this[Symbol.unscopables], {
-                _length: true
-            }),
+            value: Object.assign(
+                {
+                    __proto__: null
+                }, 
+                this[Symbol.unscopables], 
+                {
+                    _length: true
+                }
+            )
         });
 
         for (const i in this) {
@@ -69,15 +75,33 @@ class ReadonlyArray extends Array {
     static get [Symbol.species]() {
         return Array;
     }
-    copyWithin () { return ReadonlyArray._proxy(this); }
-    fill () { return ReadonlyArray._proxy(this); }
-    pop () { return (void 0); }
-    push () { return this._length; }
-    reverse () { return ReadonlyArray._proxy(this); }
-    shift () { return (void 0); }
-    sort () { return ReadonlyArray._proxy(this); }
-    splice () { return new ReadonlyArray(); }
-    unshift () { return ReadonlyArray._length; }
+    copyWithin () {
+        return ReadonlyArray._proxy(this);
+    }
+    fill () {
+        return ReadonlyArray._proxy(this);
+    }
+    pop () {
+        return (void 0);
+    }
+    push () {
+        return this._length;
+    }
+    reverse () {
+        return ReadonlyArray._proxy(this);
+    }
+    shift () {
+        return (void 0);
+    }
+    sort () {
+        return ReadonlyArray._proxy(this);
+    }
+    splice () {
+        return new ReadonlyArray();
+    }
+    unshift () {
+        return ReadonlyArray._length;
+    }
 }
 
 module.exports = ReadonlyArray;
