@@ -3782,6 +3782,7 @@ class Runtime extends EventEmitter {
         if (!this.requestUpdateMonitor(monitor)) { // update monitor if it exists in the state
             // if the monitor did not exist in the state, add it
             this._monitorState.set(monitor.id, monitor);
+            this.emitProjectChanged();
         }
     }
 
@@ -3797,6 +3798,9 @@ class Runtime extends EventEmitter {
         const id = delta.id;
         if (this._monitorState.has(id)) {
             this._monitorState.set(id, delta);
+            if (this._monitorState.dirty) {
+                this.emitProjectChanged();
+            }
             return true;
         }
         return false;
@@ -3808,7 +3812,11 @@ class Runtime extends EventEmitter {
      * @param {!string} monitorId ID of the monitor to remove.
      */
     requestRemoveMonitor (monitorId) {
+        const hadMonitor = this._monitorState.has(monitorId);
         this._monitorState.delete(monitorId);
+        if (hadMonitor) {
+            this.emitProjectChanged();
+        }
     }
 
     /**
@@ -3843,6 +3851,9 @@ class Runtime extends EventEmitter {
      */
     requestRemoveMonitorByTargetId (targetId) {
         this._monitorState.filter(value => value.targetId !== targetId);
+        if (this._monitorState.dirty) {
+            this.emitProjectChanged();
+        }
     }
 
     /**
