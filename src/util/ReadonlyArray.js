@@ -20,8 +20,8 @@ class ReadonlyArray extends Array {
             value: Object.assign(
                 {
                     __proto__: null
-                }, 
-                this[Symbol.unscopables], 
+                },
+                this[Symbol.unscopables],
                 {
                     _length: true
                 }
@@ -57,7 +57,7 @@ class ReadonlyArray extends Array {
         return this._proxy(arr);
     }
     static fromAsync (items, mapFn, thisArg) {
-        return Array.fromAsync(items, mapFn, thisArg).then((arr) => {
+        return Array.fromAsync(items, mapFn, thisArg).then(arr => {
             Object.setPrototypeOf(arr, this.prototype);
             return this._proxy(arr);
         });
@@ -72,7 +72,7 @@ class ReadonlyArray extends Array {
         Object.setPrototypeOf(items, this.prototype);
         return this._proxy(args);
     }
-    static get [Symbol.species]() {
+    static get [Symbol.species] () {
         return Array;
     }
     copyWithin () {
@@ -105,5 +105,3 @@ class ReadonlyArray extends Array {
 }
 
 module.exports = ReadonlyArray;
-
-
