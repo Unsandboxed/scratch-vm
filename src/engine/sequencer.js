@@ -445,6 +445,7 @@ class Sequencer {
     retireThread (thread) {
         thread.setStatus(Thread.STATUS_DONE);
         thread.stack = [];
+        thread.stackFrames = [];
         thread.requestScriptGlowInFrame = false;
         if (thread.isCompiled) {
             thread.procedures = null;
