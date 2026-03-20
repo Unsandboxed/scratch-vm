@@ -2895,7 +2895,9 @@ class Runtime extends EventEmitter {
                 }
             } else {
                 execute(this.sequencer, thread);
-                thread.goToNextBlock();
+                if (thread.status !== Thread.STATUS_DONE) {
+                  thread.goToNextBlock();
+                }
             }
         });
 
