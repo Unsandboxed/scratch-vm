@@ -1,7 +1,7 @@
-const EventEmitter = require('events');
 const ExtendedJSON = require('@turbowarp/json');
 const uuid = require('uuid');
 
+const RuntimeConstants = require('./runtime-constants');
 const ArgumentType = require('../extension-support/argument-type');
 const Blocks = require('./blocks');
 const BlocksRuntimeCache = require('./blocks-runtime-cache');
@@ -32,7 +32,7 @@ const Mouse = require('../io/mouse');
 const MouseWheel = require('../io/mouseWheel');
 const UserData = require('../io/userData');
 const Video = require('../io/video');
-const {StorageProvider} = require('../io/storage');
+const Storage = require('../io/storage');
 
 const StringUtil = require('../util/string-util');
 const uid = require('../util/uid');
@@ -229,7 +229,7 @@ const RuntimeInternals = {
     },
 
     /**
-     * Numeric ID for Runtime._step in Profiler instances.
+     * Numeric ID for RuntimeConstants._step in Profiler instances.
      * @type {number}
      */
     stepProfilerId: -1,
@@ -252,7 +252,7 @@ const RuntimeInternals = {
  * Manages targets, scripts, and the sequencer.
  * @constructor
  */
-class Runtime extends EventEmitter {
+class Runtime extends RuntimeConstants {
     static exports = RuntimeInternals;
 
     constructor (vm) {
@@ -284,6 +284,8 @@ class Runtime extends EventEmitter {
         this.threads = [];
 
         this.threadMap = new Map();
+
+        this._hatQueue = [];
 
         /** @type {!Sequencer} */
         this.sequencer = new Sequencer(this);
@@ -541,13 +543,13 @@ class Runtime extends EventEmitter {
 
         this.addonBlocks = {};
 
-        this.stageWidth = Runtime.STAGE_WIDTH;
-        this.stageHeight = Runtime.STAGE_HEIGHT;
+        this.stageWidth = RuntimeConstants.STAGE_WIDTH;
+        this.stageHeight = RuntimeConstants.STAGE_HEIGHT;
 
         this.camera = new Camera(this);
 
         this.runtimeOptions = {
-            maxClones: Runtime.MAX_CLONES,
+            maxClones: RuntimeConstants.MAX_CLONES,
             miscLimits: false,
             fencing: false
         };
@@ -592,13 +594,13 @@ class Runtime extends EventEmitter {
         /**
          * Contains information about the external communication methods that the scripts inside the project
          * can use to send data from inside the project to an external server.
-         * Do not update this directly. Use Runtime.setExternalCommunicationMethod() instead.
+         * Do not update this directly. Use RuntimeConstants.setExternalCommunicationMethod() instead.
          */
         this.externalCommunicationMethods = {
             cloudVariables: false,
             customExtensions: false
         };
-        this.on(Runtime.HAS_CLOUD_DATA_UPDATE, enabled => {
+        this.on(RuntimeConstants.HAS_CLOUD_DATA_UPDATE, enabled => {
             this.setExternalCommunicationMethod('cloudVariables', enabled);
         });
 
@@ -656,7 +658,7 @@ class Runtime extends EventEmitter {
             volume: 1
         };
 
-        this.store = new StorageProvider(this, this);
+        this.store = new (Storage.StorageProvider)(this, this);
         /**
          * @deprecated
          */
@@ -699,7 +701,7 @@ class Runtime extends EventEmitter {
         });
 
         this._triggerByRequestOfGlobalProcedures = false;
-        this.on(Runtime.PROJECT_CHANGED, () => {
+        this.on(RuntimeConstants.PROJECT_CHANGED, () => {
             if (this._triggerByRequestOfGlobalProcedures) {
                 this._triggerByRequestOfGlobalProcedures = false;
                 return;
@@ -707,7 +709,7 @@ class Runtime extends EventEmitter {
             this.requestGlobalProceduresMutationsRefresh();
             this.requestGlobalProceduresRefresh();
         });
-        this.on(Runtime.PROJECT_LOADED, () => {
+        this.on(RuntimeConstants.PROJECT_LOADED, () => {
             this.requestGlobalProceduresMutationsRefresh();
             this.requestGlobalProceduresRefresh();
         });
@@ -729,488 +731,6 @@ class Runtime extends EventEmitter {
         };
     }
 
-    /**
-     * Width of the stage, in pixels.
-     * @const {number}
-     */
-    static get STAGE_WIDTH () {
-        // tw: stage size is set per-runtime, this is only the initial value
-        return 480;
-    }
-
-    /**
-     * Height of the stage, in pixels.
-     * @const {number}
-     */
-    static get STAGE_HEIGHT () {
-        // tw: stage size is set per-runtime, this is only the initial value
-        return 360;
-    }
-
-    /**
-     * Event name for glowing a script.
-     * @const {string}
-     */
-    static get SCRIPT_GLOW_ON () {
-        return 'SCRIPT_GLOW_ON';
-    }
-
-    /**
-     * Event name for unglowing a script.
-     * @const {string}
-     */
-    static get SCRIPT_GLOW_OFF () {
-        return 'SCRIPT_GLOW_OFF';
-    }
-
-    /**
-     * Event name for glowing a block.
-     * @const {string}
-     */
-    static get BLOCK_GLOW_ON () {
-        return 'BLOCK_GLOW_ON';
-    }
-
-    /**
-     * Event name for unglowing a block.
-     * @const {string}
-     */
-    static get BLOCK_GLOW_OFF () {
-        return 'BLOCK_GLOW_OFF';
-    }
-
-    /**
-     * Event name for a cloud data update
-     * to this project.
-     * @const {string}
-     */
-    static get HAS_CLOUD_DATA_UPDATE () {
-        return 'HAS_CLOUD_DATA_UPDATE';
-    }
-
-    /**
-     * Event name for turning on turbo mode.
-     * @const {string}
-     */
-    static get TURBO_MODE_ON () {
-        return 'TURBO_MODE_ON';
-    }
-
-    /**
-     * Event name for turning off turbo mode.
-     * @const {string}
-     */
-    static get TURBO_MODE_OFF () {
-        return 'TURBO_MODE_OFF';
-    }
-
-    /**
-     * Event name for runtime options changing.
-     * @const {string}
-     */
-    static get RUNTIME_OPTIONS_CHANGED () {
-        return 'RUNTIME_OPTIONS_CHANGED';
-    }
-
-    /**
-     * Event name for compiler options changing.
-     * @const {string}
-     */
-    static get COMPILER_OPTIONS_CHANGED () {
-        return 'COMPILER_OPTIONS_CHANGED';
-    }
-
-    /**
-     * Event name for framerate changing.
-     * @const {string}
-     */
-    static get FRAMERATE_CHANGED () {
-        return 'FRAMERATE_CHANGED';
-    }
-
-    /**
-     * Event name for interpolation changing.
-     * @const {string}
-     */
-    static get INTERPOLATION_CHANGED () {
-        return 'INTERPOLATION_CHANGED';
-    }
-
-    /**
-     * Event called before interpolation data is set.
-     */
-    static get BEFORE_INTERPOLATE () {
-        return 'BEFORE_INTERPOLATE';
-    }
-
-    /**
-     * Event called after interpolation data is set.
-     */
-    static get AFTER_INTERPOLATE () {
-        return 'AFTER_INTERPOLATE';
-    }
-
-    /**
-     * Event name for stage size changing.
-     * @const {string}
-     */
-    static get STAGE_SIZE_CHANGED () {
-        return 'STAGE_SIZE_CHANGED';
-    }
-
-    /**
-     * Event name for compiler errors.
-     * @const {string}
-     */
-    static get COMPILE_ERROR () {
-        return 'COMPILE_ERROR';
-    }
-
-    /**
-     * Event called before any block is executed.
-     */
-    static get BEFORE_EXECUTE () {
-        return 'BEFORE_EXECUTE';
-    }
-
-    /**
-     * Event called after every block in the project has been executed.
-     */
-    static get AFTER_EXECUTE () {
-        return 'AFTER_EXECUTE';
-    }
-
-    /**
-     * Event name for reporting asset download progress. Fired with finished, total
-     * @const {string}
-     */
-    static get ASSET_PROGRESS () {
-        return 'ASSET_PROGRESS';
-    }
-
-    /**
-     * Event name when the project is started (threads may not necessarily be
-     * running).
-     * @const {string}
-     */
-    static get PROJECT_START () {
-        return 'PROJECT_START';
-    }
-
-    /**
-     * Event name when the project is paused
-     * @const {string}
-     */
-    static get PROJECT_PAUSE () {
-        return 'PROJECT_PAUSE';
-    }
-
-    /**
-     * Event name when the project is paused
-     * @const {string}
-     * @deprecated
-     */
-    static get RUNTIME_PAUSED () {
-        return 'RUNTIME_PAUSED';
-    }
-
-    /**
-     * Event name when the project is unpaused
-     * @const {string}
-     * @deprecated
-     */
-    static get RUNTIME_UNPAUSED () {
-        return 'RUNTIME_UNPAUSED';
-    }
-
-    /**
-     * Event name when threads start running.
-     * Used by the UI to indicate running status.
-     * @const {string}
-     */
-    static get PROJECT_RUN_START () {
-        return 'PROJECT_RUN_START';
-    }
-
-    /**
-     * Event name when threads stop running
-     * Used by the UI to indicate not-running status.
-     * @const {string}
-     */
-    static get PROJECT_RUN_STOP () {
-        return 'PROJECT_RUN_STOP';
-    }
-
-    /**
-     * Event name for project being stopped or restarted by the user.
-     * Used by blocks that need to reset state.
-     * @const {string}
-     */
-    static get PROJECT_STOP_ALL () {
-        return 'PROJECT_STOP_ALL';
-    }
-
-    /**
-     * Event name for when the volume is changed
-     * @const {string}
-     */
-    static get VOLUME_CHANGE () {
-        return 'VOLUME_CHANGE';
-    }
-
-    /**
-     * Event name for target being stopped by a stop for target call.
-     * Used by blocks that need to stop individual targets.
-     * @const {string}
-     */
-    static get STOP_FOR_TARGET () {
-        return 'STOP_FOR_TARGET';
-    }
-
-    /**
-     * Event name for visual value report.
-     * @const {string}
-     */
-    static get VISUAL_REPORT () {
-        return 'VISUAL_REPORT';
-    }
-
-    /**
-     * Event name for project loaded report.
-     * @const {string}
-     */
-    static get PROJECT_LOADED () {
-        return 'PROJECT_LOADED';
-    }
-
-    /**
-     * Event name for report that a change was made that can be saved
-     * @const {string}
-     */
-    static get PROJECT_CHANGED () {
-        return 'PROJECT_CHANGED';
-    }
-
-    /**
-     * Event name for report that a change was made to an extension in the toolbox.
-     * @const {string}
-     */
-    static get TOOLBOX_EXTENSIONS_NEED_UPDATE () {
-        return 'TOOLBOX_EXTENSIONS_NEED_UPDATE';
-    }
-
-    /**
-     * Event name for camera update report.
-     * @const {string}
-     */
-    static get CAMERA_UPDATE () {
-        return 'CAMERA_UPDATE';
-    }
-
-    /**
-     * Event name for targets update report.
-     * @const {string}
-     */
-    static get TARGETS_UPDATE () {
-        return 'TARGETS_UPDATE';
-    }
-
-    /**
-     * Event name for monitors update.
-     * @const {string}
-     */
-    static get MONITORS_UPDATE () {
-        return 'MONITORS_UPDATE';
-    }
-
-    /**
-     * Event name for block drag update.
-     * @const {string}
-     */
-    static get BLOCK_DRAG_UPDATE () {
-        return 'BLOCK_DRAG_UPDATE';
-    }
-
-    /**
-     * Event name for block drag end.
-     * @const {string}
-     */
-    static get BLOCK_DRAG_END () {
-        return 'BLOCK_DRAG_END';
-    }
-
-    /**
-     * Event name for reporting that an extension was added.
-     * @const {string}
-     */
-    static get EXTENSION_ADDED () {
-        return 'EXTENSION_ADDED';
-    }
-
-    /**
-     * Event name for reporting that an extension has asked for a custom field to be added
-     * @const {string}
-     */
-    static get EXTENSION_FIELD_ADDED () {
-        return 'EXTENSION_FIELD_ADDED';
-    }
-
-    /**
-     * Event name for reporting that an extension has asked for a custom shape type to be added
-     * @const {string}
-     */
-    static get EXTENSION_SHAPE_ADDED () {
-        return 'EXTENSION_SHAPE_TYPE_ADDED';
-    }
-
-    /**
-     * Event name for updating the available set of peripheral devices.
-     * This causes the peripheral connection modal to update a list of
-     * available peripherals.
-     * @const {string}
-     */
-    static get PERIPHERAL_LIST_UPDATE () {
-        return 'PERIPHERAL_LIST_UPDATE';
-    }
-
-    /**
-     * Event name for when the user picks a bluetooth device to connect to
-     * via Companion Device Manager (CDM)
-     * @const {string}
-     */
-    static get USER_PICKED_PERIPHERAL () {
-        return 'USER_PICKED_PERIPHERAL';
-    }
-
-    /**
-     * Event name for reporting that a peripheral has connected.
-     * This causes the status button in the blocks menu to indicate 'connected'.
-     * @const {string}
-     */
-    static get PERIPHERAL_CONNECTED () {
-        return 'PERIPHERAL_CONNECTED';
-    }
-
-    /**
-     * Event name for reporting that a peripheral has been intentionally disconnected.
-     * This causes the status button in the blocks menu to indicate 'disconnected'.
-     * @const {string}
-     */
-    static get PERIPHERAL_DISCONNECTED () {
-        return 'PERIPHERAL_DISCONNECTED';
-    }
-
-    /**
-     * Event name for reporting that a peripheral has encountered a request error.
-     * This causes the peripheral connection modal to switch to an error state.
-     * @const {string}
-     */
-    static get PERIPHERAL_REQUEST_ERROR () {
-        return 'PERIPHERAL_REQUEST_ERROR';
-    }
-
-    /**
-     * Event name for reporting that a peripheral connection has been lost.
-     * This causes a 'peripheral connection lost' error alert to display.
-     * @const {string}
-     */
-    static get PERIPHERAL_CONNECTION_LOST_ERROR () {
-        return 'PERIPHERAL_CONNECTION_LOST_ERROR';
-    }
-
-    /**
-     * Event name for reporting that a peripheral has not been discovered.
-     * This causes the peripheral connection modal to show a timeout state.
-     * @const {string}
-     */
-    static get PERIPHERAL_SCAN_TIMEOUT () {
-        return 'PERIPHERAL_SCAN_TIMEOUT';
-    }
-
-    /**
-     * Event name to indicate that the microphone is being used to stream audio.
-     * @const {string}
-     */
-    static get MIC_LISTENING () {
-        return 'MIC_LISTENING';
-    }
-
-    /**
-     * Event name for reporting that blocksInfo was updated.
-     * @const {string}
-     */
-    static get BLOCKSINFO_UPDATE () {
-        return 'BLOCKSINFO_UPDATE';
-    }
-
-    static get BLOCK_UPDATE () {
-        return 'BLOCK_UPDATE';
-    }
-
-    /**
-     * Event name when the runtime tick loop has been started.
-     * @const {string}
-     */
-    static get RUNTIME_STARTED () {
-        return 'RUNTIME_STARTED';
-    }
-
-    /**
-     * Event name when the runtime tick loop has been stopped.
-     * @const {string}
-     */
-    static get RUNTIME_STOPPED () {
-        return 'RUNTIME_STOPPED';
-    }
-
-    /**
-     * Event name when the runtime dispose has been called.
-     * @const {string}
-     */
-    static get RUNTIME_DISPOSED () {
-        return 'RUNTIME_DISPOSED';
-    }
-
-    /**
-     * Event name for reporting that a block was updated and needs to be rerendered.
-     * @const {string}
-     */
-    static get BLOCKS_NEED_UPDATE () {
-        return 'BLOCKS_NEED_UPDATE';
-    }
-
-    /**
-     * Event name when platform name inside a project does not match the runtime.
-     */
-    static get PLATFORM_MISMATCH () {
-        return 'PLATFORM_MISMATCH';
-    }
-
-    /**
-     * How rapidly we try to step threads by default, in ms.
-     */
-    static get THREAD_STEP_INTERVAL () {
-        // tw: not used, only exists for compatibility
-        return 1000 / 60;
-    }
-
-    /**
-     * In compatibility mode, how rapidly we try to step threads, in ms.
-     */
-    static get THREAD_STEP_INTERVAL_COMPATIBILITY () {
-        // tw: not used, only exists for compatibility
-        return 1000 / 30;
-    }
-
-    /**
-     * How many clones can be created at a time.
-     * @const {number}
-     */
-    static get MAX_CLONES () {
-        // tw: clone limit is set per-runtime in runtimeOptions, this is only the initial value
-        return 300;
-    }
-
     // -----------------------------------------------------------------------------
     // -----------------------------------------------------------------------------
 
@@ -1221,7 +741,7 @@ class Runtime extends EventEmitter {
             const hadCloudVarsBefore = this.hasCloudData();
             newCloudDataManager.addCloudVariable();
             if (!hadCloudVarsBefore && this.hasCloudData()) {
-                this.emit(Runtime.HAS_CLOUD_DATA_UPDATE, true);
+                this.emit(RuntimeConstants.HAS_CLOUD_DATA_UPDATE, true);
             }
         });
     }
@@ -1232,7 +752,7 @@ class Runtime extends EventEmitter {
             const hadCloudVarsBefore = this.hasCloudData();
             newCloudDataManager.removeCloudVariable();
             if (hadCloudVarsBefore && !this.hasCloudData()) {
-                this.emit(Runtime.HAS_CLOUD_DATA_UPDATE, false);
+                this.emit(RuntimeConstants.HAS_CLOUD_DATA_UPDATE, false);
             }
         });
     }
@@ -1414,7 +934,7 @@ class Runtime extends EventEmitter {
                 const fieldTypeInfo = categoryInfo.customFieldTypes[fieldTypeName];
 
                 // Emit events for custom field types from extension
-                this.emit(Runtime.EXTENSION_FIELD_ADDED, {
+                this.emit(RuntimeConstants.EXTENSION_FIELD_ADDED, {
                     name: `field_${fieldTypeInfo.extendedName}`,
                     implementation: fieldTypeInfo.fieldImplementation
                 });
@@ -1427,7 +947,7 @@ class Runtime extends EventEmitter {
 
                 // Emit events for custom shape types from extension
                 this.compilerData.bt_inputs.add(blockShapeName);
-                this.emit(Runtime.EXTENSION_SHAPE_ADDED, {
+                this.emit(RuntimeConstants.EXTENSION_SHAPE_ADDED, {
                     name: blockShapeName,
                     implementation: blockShapeInfo,
                     categoryInfo
@@ -1435,7 +955,7 @@ class Runtime extends EventEmitter {
             }
         }
 
-        this.emit(Runtime.EXTENSION_ADDED, categoryInfo);
+        this.emit(RuntimeConstants.EXTENSION_ADDED, categoryInfo);
     }
 
     /**
@@ -1449,7 +969,7 @@ class Runtime extends EventEmitter {
             categoryInfo.name = maybeFormatMessage(extensionInfo.name);
             this._fillExtensionCategory(categoryInfo, extensionInfo);
 
-            this.emit(Runtime.BLOCKSINFO_UPDATE, categoryInfo);
+            this.emit(RuntimeConstants.BLOCKSINFO_UPDATE, categoryInfo);
         }
     }
 
@@ -2368,7 +1888,7 @@ class Runtime extends EventEmitter {
      * @param {boolean} listening - true if the microphone is currently listening.
      */
     emitMicListening (listening) {
-        this.emit(Runtime.MIC_LISTENING, listening);
+        this.emit(RuntimeConstants.MIC_LISTENING, listening);
     }
 
     /**
@@ -2525,12 +2045,12 @@ class Runtime extends EventEmitter {
             this.ioDevices.clock.resume();
         }
         if (!didChange) return;
-        this.emit(Runtime.PROJECT_PAUSE, status);
+        this.emit(RuntimeConstants.PROJECT_PAUSE, status);
         // https://github.com/Unsandboxed/addons/pull/2/commits/c237cfad6e88ea310dd163e9b8519d9939605d3f
         if (status) {
-            this.emit(Runtime.RUNTIME_PAUSED);
+            this.emit(RuntimeConstants.RUNTIME_PAUSED);
         } else {
-            this.emit(Runtime.RUNTIME_UNPAUSED);
+            this.emit(RuntimeConstants.RUNTIME_UNPAUSED);
         }
     }
 
@@ -2553,7 +2073,7 @@ class Runtime extends EventEmitter {
             this.audioSettings.volume = volume;
         }
         this.audioEngine.inputNode.gain.value = volume;
-        this.emit(Runtime.VOLUME_CHANGE, volume);
+        this.emit(RuntimeConstants.VOLUME_CHANGE, volume);
         return true;
     }
 
@@ -2655,7 +2175,7 @@ class Runtime extends EventEmitter {
     _;
 
     emitCompileError (target, error) {
-        this.emit(Runtime.COMPILE_ERROR, target, error);
+        this.emit(RuntimeConstants.COMPILE_ERROR, target, error);
     }
 
     /**
@@ -2772,6 +2292,19 @@ class Runtime extends EventEmitter {
         }
     }
 
+
+    executeHatQueue () {
+        // Copy the queue just in case more hats are added during execution.
+        const queue = this._hatQueue.slice(0, Infinity);
+        this._hatQueue.length = 0;
+        for (const args of queue) {
+            this.startHats(...args);
+        }
+    }
+    appendHatQueue (...args) {
+        this._hatQueue.push(args);
+    }
+
     /**
      * Start all relevant hats.
      * @param {!string} requestedHatOpcode Opcode of hats to start.
@@ -2860,7 +2393,7 @@ class Runtime extends EventEmitter {
         }, optTarget);
 
         // For compatibility with Scratch 2, edge triggered hats need to be processed before
-        // threads are stepped. See ScratchRuntime.as for original implementation
+        // threads are stepped. See ScratchRuntimeConstants.as for original implementation
         newThreads.forEach(thread => {
             if (thread.isCompiled) {
                 if (thread.executableHat) {
@@ -2872,7 +2405,10 @@ class Runtime extends EventEmitter {
                 }
             } else {
                 execute(this.sequencer, thread);
-                thread.goToNextBlock();
+                // Execute might have retired the thread, if so the stackFrames will be empty.
+                if (thread.status !== Thread.STATUS_DONE) {
+                    thread.goToNextBlock();
+                }
             }
         });
 
@@ -2908,9 +2444,9 @@ class Runtime extends EventEmitter {
         if (!this._monitorState.empty()) {
             this._monitorState = new MonitorState();
             this._pendingMonitors.clear();
-            this.emit(Runtime.MONITORS_UPDATE, this._monitorState.shallowClone());
+            this.emit(RuntimeConstants.MONITORS_UPDATE, this._monitorState.shallowClone());
         }
-        this.emit(Runtime.RUNTIME_DISPOSED);
+        this.emit(RuntimeConstants.RUNTIME_DISPOSED);
         this.ioDevices.clock.resetProjectTimer();
         this.fontManager.clear();
 
@@ -2923,7 +2459,7 @@ class Runtime extends EventEmitter {
         // emit a has cloud data update event resetting
         // it to false
         if (this.hasCloudData()) {
-            this.emit(Runtime.HAS_CLOUD_DATA_UPDATE, false);
+            this.emit(RuntimeConstants.HAS_CLOUD_DATA_UPDATE, false);
         }
 
         this.ioDevices.cloud.clear();
@@ -3031,7 +2567,7 @@ class Runtime extends EventEmitter {
      */
     stopForTarget (target, optThreadException) {
         // Emit stop event to allow blocks to clean up any state.
-        this.emit(Runtime.STOP_FOR_TARGET, target, optThreadException);
+        this.emit(RuntimeConstants.STOP_FOR_TARGET, target, optThreadException);
 
         // Stop any threads on the target.
         for (let i = 0; i < this.threads.length; i++) {
@@ -3063,7 +2599,7 @@ class Runtime extends EventEmitter {
     greenFlag () {
         // pausing is done in stopAll
         this.stopAll();
-        this.emit(Runtime.PROJECT_START);
+        this.emit(RuntimeConstants.PROJECT_START);
         this.updateCurrentMSecs();
         this.ioDevices.clock.resetProjectTimer();
         this.targets.forEach(target => target.clearEdgeActivatedValues());
@@ -3079,7 +2615,7 @@ class Runtime extends EventEmitter {
      */
     stopAll () {
         // Emit stop event to allow blocks to clean up any state.
-        this.emit(Runtime.PROJECT_STOP_ALL);
+        this.emit(RuntimeConstants.PROJECT_STOP_ALL);
 
         // Dispose all clones.
         const newTargets = [];
@@ -3152,7 +2688,7 @@ class Runtime extends EventEmitter {
 
         if (this.profiler !== null) {
             if (RuntimeInternals.stepProfilerId === -1) {
-                RuntimeInternals.stepProfilerId = this.profiler.idByName('Runtime._step');
+                RuntimeInternals.stepProfilerId = this.profiler.idByName('RuntimeConstants._step');
             }
             this.profiler.start(RuntimeInternals.stepProfilerId);
         }
@@ -3177,12 +2713,12 @@ class Runtime extends EventEmitter {
             }
             this.profiler.start(RuntimeInternals.stepThreadsProfilerId);
         }
-        this.emit(Runtime.BEFORE_EXECUTE);
+        this.emit(RuntimeConstants.BEFORE_EXECUTE);
         const doneThreads = this.sequencer.stepThreads();
         if (this.profiler !== null) {
             this.profiler.stop();
         }
-        this.emit(Runtime.AFTER_EXECUTE);
+        this.emit(RuntimeConstants.AFTER_EXECUTE);
         this._updateGlows(doneThreads);
         // Add done threads so that even if a thread finishes within 1 frame, the green
         // flag will still indicate that a script ran.
@@ -3212,12 +2748,12 @@ class Runtime extends EventEmitter {
         }
 
         if (this._refreshTargets) {
-            this.emit(Runtime.TARGETS_UPDATE, false /* Don't emit project changed */);
+            this.emit(RuntimeConstants.TARGETS_UPDATE, false /* Don't emit project changed */);
             this._refreshTargets = false;
         }
 
         if (this._monitorState.dirty) {
-            this.emit(Runtime.MONITORS_UPDATE, this._monitorState.shallowClone());
+            this.emit(RuntimeConstants.MONITORS_UPDATE, this._monitorState.shallowClone());
             this._monitorState.dirty = false;
         }
 
@@ -3294,7 +2830,7 @@ class Runtime extends EventEmitter {
         // Note that 0 is a special value which means "matching device screen refresh rate"
         if (framerate < 0) framerate = 1;
         this.frameLoop.setFramerate(framerate);
-        this.emit(Runtime.FRAMERATE_CHANGED, framerate);
+        this.emit(RuntimeConstants.FRAMERATE_CHANGED, framerate);
     }
 
     /**
@@ -3304,7 +2840,7 @@ class Runtime extends EventEmitter {
     setInterpolation (interpolationEnabled) {
         this.interpolationEnabled = interpolationEnabled;
         this.frameLoop.setInterpolation(this.interpolationEnabled);
-        this.emit(Runtime.INTERPOLATION_CHANGED, interpolationEnabled);
+        this.emit(RuntimeConstants.INTERPOLATION_CHANGED, interpolationEnabled);
     }
 
     /**
@@ -3313,7 +2849,7 @@ class Runtime extends EventEmitter {
      */
     setRuntimeOptions (runtimeOptions) {
         this.runtimeOptions = Object.assign({}, this.runtimeOptions, runtimeOptions);
-        this.emit(Runtime.RUNTIME_OPTIONS_CHANGED, this.runtimeOptions);
+        this.emit(RuntimeConstants.RUNTIME_OPTIONS_CHANGED, this.runtimeOptions);
         if (this.renderer) {
             this.renderer.offscreenTouching = !this.runtimeOptions.fencing;
         }
@@ -3326,7 +2862,7 @@ class Runtime extends EventEmitter {
     setCompilerOptions (compilerOptions) {
         this.compilerOptions = Object.assign({}, this.compilerOptions, compilerOptions);
         this.resetAllCaches();
-        this.emit(Runtime.COMPILER_OPTIONS_CHANGED, this.compilerOptions);
+        this.emit(RuntimeConstants.COMPILER_OPTIONS_CHANGED, this.compilerOptions);
     }
 
     /**
@@ -3351,7 +2887,7 @@ class Runtime extends EventEmitter {
                         y: monitor.get('y') + offsetY
                     });
                 }
-                this.emit(Runtime.MONITORS_UPDATE, this._monitorState.shallowClone());
+                this.emit(RuntimeConstants.MONITORS_UPDATE, this._monitorState.shallowClone());
             }
 
             this.stageWidth = width;
@@ -3365,7 +2901,7 @@ class Runtime extends EventEmitter {
                 );
             }
 
-            this.emit(Runtime.STAGE_SIZE_CHANGED, width, height);
+            this.emit(RuntimeConstants.STAGE_SIZE_CHANGED, width, height);
         }
     }
 
@@ -3509,7 +3045,7 @@ class Runtime extends EventEmitter {
         }
         if (parsed.turbo) {
             this.turboMode = true;
-            this.emit(Runtime.TURBO_MODE_ON);
+            this.emit(RuntimeConstants.TURBO_MODE_ON);
         }
         if (parsed.interpolation) {
             this.setInterpolation(true);
@@ -3659,10 +3195,10 @@ class Runtime extends EventEmitter {
      */
     _emitProjectRunStatus (nonMonitorThreadCount) {
         if (this._nonMonitorThreadCount === 0 && nonMonitorThreadCount > 0) {
-            this.emit(Runtime.PROJECT_RUN_START);
+            this.emit(RuntimeConstants.PROJECT_RUN_START);
         }
         if (this._nonMonitorThreadCount > 0 && nonMonitorThreadCount === 0) {
-            this.emit(Runtime.PROJECT_RUN_STOP);
+            this.emit(RuntimeConstants.PROJECT_RUN_STOP);
         }
         this._nonMonitorThreadCount = nonMonitorThreadCount;
     }
@@ -3687,9 +3223,9 @@ class Runtime extends EventEmitter {
      */
     glowBlock (blockId, isGlowing) {
         if (isGlowing) {
-            this.emit(Runtime.BLOCK_GLOW_ON, {id: blockId});
+            this.emit(RuntimeConstants.BLOCK_GLOW_ON, {id: blockId});
         } else {
-            this.emit(Runtime.BLOCK_GLOW_OFF, {id: blockId});
+            this.emit(RuntimeConstants.BLOCK_GLOW_OFF, {id: blockId});
         }
     }
 
@@ -3700,9 +3236,9 @@ class Runtime extends EventEmitter {
      */
     glowScript (topBlockId, isGlowing) {
         if (isGlowing) {
-            this.emit(Runtime.SCRIPT_GLOW_ON, {id: topBlockId});
+            this.emit(RuntimeConstants.SCRIPT_GLOW_ON, {id: topBlockId});
         } else {
-            this.emit(Runtime.SCRIPT_GLOW_OFF, {id: topBlockId});
+            this.emit(RuntimeConstants.SCRIPT_GLOW_OFF, {id: topBlockId});
         }
     }
 
@@ -3711,7 +3247,7 @@ class Runtime extends EventEmitter {
      * @param {boolean} areBlocksOverGui True if blocks are dragged out of blocks workspace, false otherwise
      */
     emitBlockDragUpdate (areBlocksOverGui) {
-        this.emit(Runtime.BLOCK_DRAG_UPDATE, areBlocksOverGui);
+        this.emit(RuntimeConstants.BLOCK_DRAG_UPDATE, areBlocksOverGui);
     }
 
     /**
@@ -3720,7 +3256,7 @@ class Runtime extends EventEmitter {
      * @param {string} topBlockId The original id of the top block being dragged
      */
     emitBlockEndDrag (blocks, topBlockId) {
-        this.emit(Runtime.BLOCK_DRAG_END, blocks, topBlockId);
+        this.emit(RuntimeConstants.BLOCK_DRAG_END, blocks, topBlockId);
     }
 
     /**
@@ -3739,7 +3275,7 @@ class Runtime extends EventEmitter {
         if (target !== this.getEditingTarget()) {
             console.warn('Tried to emit from a target other than the current editing target.');
         }
-        this.emit(Runtime.VISUAL_REPORT, {
+        this.emit(RuntimeConstants.VISUAL_REPORT, {
             id: blockId,
             value: (
                 (typeof value === 'object') ? value : Cast.toString(value)),
@@ -3756,6 +3292,7 @@ class Runtime extends EventEmitter {
         if (!this.requestUpdateMonitor(monitor)) { // update monitor if it exists in the state
             // if the monitor did not exist in the state, add it
             this._monitorState.set(monitor.id, monitor);
+            this.emitProjectChanged();
         }
     }
 
@@ -3771,6 +3308,9 @@ class Runtime extends EventEmitter {
         const id = delta.id;
         if (this._monitorState.has(id)) {
             this._monitorState.set(id, delta);
+            if (this._monitorState.dirty) {
+                this.emitProjectChanged();
+            }
             return true;
         }
         return false;
@@ -3782,7 +3322,11 @@ class Runtime extends EventEmitter {
      * @param {!string} monitorId ID of the monitor to remove.
      */
     requestRemoveMonitor (monitorId) {
+        const hadMonitor = this._monitorState.has(monitorId);
         this._monitorState.delete(monitorId);
+        if (hadMonitor) {
+            this.emitProjectChanged();
+        }
     }
 
     /**
@@ -3817,6 +3361,9 @@ class Runtime extends EventEmitter {
      */
     requestRemoveMonitorByTargetId (targetId) {
         this._monitorState.filter(value => value.targetId !== targetId);
+        if (this._monitorState.dirty) {
+            this.emitProjectChanged();
+        }
     }
 
     /**
@@ -3882,7 +3429,7 @@ class Runtime extends EventEmitter {
      * Handle that the project has loaded in the Virtual Machine.
      */
     handleProjectLoaded () {
-        this.emit(Runtime.PROJECT_LOADED);
+        this.emit(RuntimeConstants.PROJECT_LOADED);
         this.resetRunId();
     }
 
@@ -3890,7 +3437,7 @@ class Runtime extends EventEmitter {
      * Report that the project has changed in a way that would affect serialization
      */
     emitProjectChanged () {
-        this.emit(Runtime.PROJECT_CHANGED);
+        this.emit(RuntimeConstants.PROJECT_CHANGED);
     }
 
     /**
@@ -4099,7 +3646,7 @@ class Runtime extends EventEmitter {
      * Emit an event that indicates that the blocks on the workspace need updating.
      */
     requestBlocksUpdate () {
-        this.emit(Runtime.BLOCKS_NEED_UPDATE);
+        this.emit(RuntimeConstants.BLOCKS_NEED_UPDATE);
     }
 
     /**
@@ -4108,14 +3655,14 @@ class Runtime extends EventEmitter {
      * @param {ExtensionBlockMetadata} blockInfo The new block info
      */
     updateBlockInfo (blockId, blockInfo) {
-        this.emit(Runtime.BLOCK_UPDATE, blockId, blockInfo);
+        this.emit(RuntimeConstants.BLOCK_UPDATE, blockId, blockInfo);
     }
 
     /**
      * Emit an event that indicates that the toolbox extension blocks need updating.
      */
     requestToolboxExtensionsUpdate () {
-        this.emit(Runtime.TOOLBOX_EXTENSIONS_NEED_UPDATE);
+        this.emit(RuntimeConstants.TOOLBOX_EXTENSIONS_NEED_UPDATE);
     }
 
     /**
@@ -4125,7 +3672,7 @@ class Runtime extends EventEmitter {
         // Do not start if we are already running
         if (this.frameLoop.running) return;
         this.frameLoop.start();
-        this.emit(Runtime.RUNTIME_STARTED);
+        this.emit(RuntimeConstants.RUNTIME_STARTED);
     }
 
     /**
@@ -4144,7 +3691,7 @@ class Runtime extends EventEmitter {
             return;
         }
         this.frameLoop.stop();
-        this.emit(Runtime.RUNTIME_STOPPED);
+        this.emit(RuntimeConstants.RUNTIME_STOPPED);
     }
 
     /**
@@ -4166,7 +3713,7 @@ class Runtime extends EventEmitter {
     }
 
     /**
-     * Update a millisecond timestamp value that is saved on the Runtime.
+     * Update a millisecond timestamp value that is saved on the RuntimeConstants.
      * This value is helpful in certain instances for compatibility with Scratch 2,
      * which sometimes uses a `currentMSecs` timestamp value in Interpreter.as
      */
@@ -4193,7 +3740,7 @@ class Runtime extends EventEmitter {
     }
 
     /**
-     * @param {string} method Name of the method in Runtime.externalCommunicationMethods
+     * @param {string} method Name of the method in RuntimeConstants.externalCommunicationMethods
      * @param {boolean} enabled True if the feature is enabled.
      */
     setExternalCommunicationMethod (method, enabled) {
@@ -4205,7 +3752,7 @@ class Runtime extends EventEmitter {
     }
 
     emitAssetProgress () {
-        this.emit(Runtime.ASSET_PROGRESS, this.finishedAssetRequests, this.totalAssetRequests);
+        this.emit(RuntimeConstants.ASSET_PROGRESS, this.finishedAssetRequests, this.totalAssetRequests);
     }
 
     resetProgress () {

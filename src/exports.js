@@ -93,7 +93,8 @@ module.exports = {
         log: () => require('./util/log'),
         uid: () => require('./util/uid'),
         xmlEscape: () => require('./util/xml-escape'),
-        maybeFormatMessage: () => require('./util/maybe-format-message')
+        maybeFormatMessage: () => require('./util/maybe-format-message'),
+        ReadonlyArray: () => require('./util/ReadonlyArray')
     },
 
     serialization: {

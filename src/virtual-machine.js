@@ -12,6 +12,8 @@ const centralDispatch = require('./dispatch/central-dispatch');
 const ExtensionManager = require('./extension-support/extension-manager');
 const log = require('./util/log');
 const MathUtil = require('./util/math-util');
+const Clone = require('./util/clone');
+const RuntimeConstants = require('./engine/runtime-constants');
 const Runtime = require('./engine/runtime');
 const Resolvers = require('./util/resolvers');
 const RenderedTarget = require('./sprites/rendered-target');
@@ -82,7 +84,12 @@ class VirtualMachine extends EventEmitter {
          * VM runtime, to store blocks, I/O devices, sprites/targets, etc.
          * @type {!Runtime}
          */
-        this._runtime = new Runtime(this);
+        try {
+            this._runtime = new Runtime(this);
+        } catch (error) {
+            log.error(error);
+            throw error;
+        }
 
         centralDispatch.setService('runtime', VirtualMachine.createRuntimeService(this.runtime)).catch(e => {
             log.error(`Failed to register runtime service: ${JSON.stringify(e)}`);
@@ -110,134 +117,134 @@ class VirtualMachine extends EventEmitter {
         this._dragTarget = null;
 
         // Runtime emits are passed along as VM emits.
-        this.runtime.on(Runtime.SCRIPT_GLOW_ON, glowData => {
-            this.emit(Runtime.SCRIPT_GLOW_ON, glowData);
+        this.runtime.on(RuntimeConstants.SCRIPT_GLOW_ON, glowData => {
+            this.emit(RuntimeConstants.SCRIPT_GLOW_ON, glowData);
         });
-        this.runtime.on(Runtime.SCRIPT_GLOW_OFF, glowData => {
-            this.emit(Runtime.SCRIPT_GLOW_OFF, glowData);
+        this.runtime.on(RuntimeConstants.SCRIPT_GLOW_OFF, glowData => {
+            this.emit(RuntimeConstants.SCRIPT_GLOW_OFF, glowData);
         });
-        this.runtime.on(Runtime.BLOCK_GLOW_ON, glowData => {
-            this.emit(Runtime.BLOCK_GLOW_ON, glowData);
+        this.runtime.on(RuntimeConstants.BLOCK_GLOW_ON, glowData => {
+            this.emit(RuntimeConstants.BLOCK_GLOW_ON, glowData);
         });
-        this.runtime.on(Runtime.BLOCK_GLOW_OFF, glowData => {
-            this.emit(Runtime.BLOCK_GLOW_OFF, glowData);
+        this.runtime.on(RuntimeConstants.BLOCK_GLOW_OFF, glowData => {
+            this.emit(RuntimeConstants.BLOCK_GLOW_OFF, glowData);
         });
-        this.runtime.on(Runtime.PROJECT_START, () => {
-            this.emit(Runtime.PROJECT_START);
+        this.runtime.on(RuntimeConstants.PROJECT_START, () => {
+            this.emit(RuntimeConstants.PROJECT_START);
         });
-        this.runtime.on(Runtime.PROJECT_PAUSE, paused => {
-            this.emit(Runtime.PROJECT_PAUSE, paused);
+        this.runtime.on(RuntimeConstants.PROJECT_PAUSE, paused => {
+            this.emit(RuntimeConstants.PROJECT_PAUSE, paused);
         });
-        this.runtime.on(Runtime.PROJECT_RUN_START, () => {
-            this.emit(Runtime.PROJECT_RUN_START);
+        this.runtime.on(RuntimeConstants.PROJECT_RUN_START, () => {
+            this.emit(RuntimeConstants.PROJECT_RUN_START);
         });
-        this.runtime.on(Runtime.PROJECT_RUN_STOP, () => {
-            this.emit(Runtime.PROJECT_RUN_STOP);
+        this.runtime.on(RuntimeConstants.PROJECT_RUN_STOP, () => {
+            this.emit(RuntimeConstants.PROJECT_RUN_STOP);
         });
-        this.runtime.on(Runtime.PROJECT_CHANGED, () => {
-            this.emit(Runtime.PROJECT_CHANGED);
+        this.runtime.on(RuntimeConstants.PROJECT_CHANGED, () => {
+            this.emit(RuntimeConstants.PROJECT_CHANGED);
         });
-        this.runtime.on(Runtime.VISUAL_REPORT, visualReport => {
-            this.emit(Runtime.VISUAL_REPORT, visualReport);
+        this.runtime.on(RuntimeConstants.VISUAL_REPORT, visualReport => {
+            this.emit(RuntimeConstants.VISUAL_REPORT, visualReport);
         });
-        this.runtime.on(Runtime.CAMERA_UPDATE, cameraState => {
-            this.emit(Runtime.CAMERA_UPDATE, cameraState);
+        this.runtime.on(RuntimeConstants.CAMERA_UPDATE, cameraState => {
+            this.emit(RuntimeConstants.CAMERA_UPDATE, cameraState);
         });
-        this.runtime.on(Runtime.TARGETS_UPDATE, emitProjectChanged => {
+        this.runtime.on(RuntimeConstants.TARGETS_UPDATE, emitProjectChanged => {
             this.emitTargetsUpdate(emitProjectChanged);
         });
-        this.runtime.on(Runtime.MONITORS_UPDATE, monitorList => {
-            this.emit(Runtime.MONITORS_UPDATE, monitorList);
+        this.runtime.on(RuntimeConstants.MONITORS_UPDATE, monitorList => {
+            this.emit(RuntimeConstants.MONITORS_UPDATE, monitorList);
         });
-        this.runtime.on(Runtime.BLOCK_DRAG_UPDATE, areBlocksOverGui => {
-            this.emit(Runtime.BLOCK_DRAG_UPDATE, areBlocksOverGui);
+        this.runtime.on(RuntimeConstants.BLOCK_DRAG_UPDATE, areBlocksOverGui => {
+            this.emit(RuntimeConstants.BLOCK_DRAG_UPDATE, areBlocksOverGui);
         });
-        this.runtime.on(Runtime.BLOCK_DRAG_END, (blocks, topBlockId) => {
-            this.emit(Runtime.BLOCK_DRAG_END, blocks, topBlockId);
+        this.runtime.on(RuntimeConstants.BLOCK_DRAG_END, (blocks, topBlockId) => {
+            this.emit(RuntimeConstants.BLOCK_DRAG_END, blocks, topBlockId);
         });
-        this.runtime.on(Runtime.EXTENSION_ADDED, categoryInfo => {
-            this.emit(Runtime.EXTENSION_ADDED, categoryInfo);
+        this.runtime.on(RuntimeConstants.EXTENSION_ADDED, categoryInfo => {
+            this.emit(RuntimeConstants.EXTENSION_ADDED, categoryInfo);
         });
-        this.runtime.on(Runtime.EXTENSION_FIELD_ADDED, (fieldName, fieldImplementation) => {
-            this.emit(Runtime.EXTENSION_FIELD_ADDED, fieldName, fieldImplementation);
+        this.runtime.on(RuntimeConstants.EXTENSION_FIELD_ADDED, (fieldName, fieldImplementation) => {
+            this.emit(RuntimeConstants.EXTENSION_FIELD_ADDED, fieldName, fieldImplementation);
         });
-        this.runtime.on(Runtime.BLOCKSINFO_UPDATE, categoryInfo => {
-            this.emit(Runtime.BLOCKSINFO_UPDATE, categoryInfo);
+        this.runtime.on(RuntimeConstants.BLOCKSINFO_UPDATE, categoryInfo => {
+            this.emit(RuntimeConstants.BLOCKSINFO_UPDATE, categoryInfo);
         });
-        this.runtime.on(Runtime.BLOCKS_NEED_UPDATE, () => {
+        this.runtime.on(RuntimeConstants.BLOCKS_NEED_UPDATE, () => {
             this.emitWorkspaceUpdate();
         });
-        this.runtime.on(Runtime.BLOCK_UPDATE, (blockId, blockInfo) => {
-            this.emit(Runtime.BLOCK_UPDATE, blockId, blockInfo);
+        this.runtime.on(RuntimeConstants.BLOCK_UPDATE, (blockId, blockInfo) => {
+            this.emit(RuntimeConstants.BLOCK_UPDATE, blockId, blockInfo);
         });
-        this.runtime.on(Runtime.TOOLBOX_EXTENSIONS_NEED_UPDATE, () => {
+        this.runtime.on(RuntimeConstants.TOOLBOX_EXTENSIONS_NEED_UPDATE, () => {
             this.extensionManager.refreshBlocks();
         });
-        this.runtime.on(Runtime.PERIPHERAL_LIST_UPDATE, info => {
-            this.emit(Runtime.PERIPHERAL_LIST_UPDATE, info);
+        this.runtime.on(RuntimeConstants.PERIPHERAL_LIST_UPDATE, info => {
+            this.emit(RuntimeConstants.PERIPHERAL_LIST_UPDATE, info);
         });
-        this.runtime.on(Runtime.USER_PICKED_PERIPHERAL, info => {
-            this.emit(Runtime.USER_PICKED_PERIPHERAL, info);
+        this.runtime.on(RuntimeConstants.USER_PICKED_PERIPHERAL, info => {
+            this.emit(RuntimeConstants.USER_PICKED_PERIPHERAL, info);
         });
-        this.runtime.on(Runtime.PERIPHERAL_CONNECTED, () =>
-            this.emit(Runtime.PERIPHERAL_CONNECTED)
+        this.runtime.on(RuntimeConstants.PERIPHERAL_CONNECTED, () =>
+            this.emit(RuntimeConstants.PERIPHERAL_CONNECTED)
         );
-        this.runtime.on(Runtime.PERIPHERAL_REQUEST_ERROR, () =>
-            this.emit(Runtime.PERIPHERAL_REQUEST_ERROR)
+        this.runtime.on(RuntimeConstants.PERIPHERAL_REQUEST_ERROR, () =>
+            this.emit(RuntimeConstants.PERIPHERAL_REQUEST_ERROR)
         );
-        this.runtime.on(Runtime.PERIPHERAL_DISCONNECTED, () =>
-            this.emit(Runtime.PERIPHERAL_DISCONNECTED)
+        this.runtime.on(RuntimeConstants.PERIPHERAL_DISCONNECTED, () =>
+            this.emit(RuntimeConstants.PERIPHERAL_DISCONNECTED)
         );
-        this.runtime.on(Runtime.PERIPHERAL_CONNECTION_LOST_ERROR, data =>
-            this.emit(Runtime.PERIPHERAL_CONNECTION_LOST_ERROR, data)
+        this.runtime.on(RuntimeConstants.PERIPHERAL_CONNECTION_LOST_ERROR, data =>
+            this.emit(RuntimeConstants.PERIPHERAL_CONNECTION_LOST_ERROR, data)
         );
-        this.runtime.on(Runtime.PERIPHERAL_SCAN_TIMEOUT, () =>
-            this.emit(Runtime.PERIPHERAL_SCAN_TIMEOUT)
+        this.runtime.on(RuntimeConstants.PERIPHERAL_SCAN_TIMEOUT, () =>
+            this.emit(RuntimeConstants.PERIPHERAL_SCAN_TIMEOUT)
         );
-        this.runtime.on(Runtime.MIC_LISTENING, listening => {
-            this.emit(Runtime.MIC_LISTENING, listening);
+        this.runtime.on(RuntimeConstants.MIC_LISTENING, listening => {
+            this.emit(RuntimeConstants.MIC_LISTENING, listening);
         });
-        this.runtime.on(Runtime.RUNTIME_STARTED, () => {
-            this.emit(Runtime.RUNTIME_STARTED);
+        this.runtime.on(RuntimeConstants.RUNTIME_STARTED, () => {
+            this.emit(RuntimeConstants.RUNTIME_STARTED);
         });
-        this.runtime.on(Runtime.RUNTIME_STOPPED, () => {
-            this.emit(Runtime.RUNTIME_STOPPED);
+        this.runtime.on(RuntimeConstants.RUNTIME_STOPPED, () => {
+            this.emit(RuntimeConstants.RUNTIME_STOPPED);
         });
-        this.runtime.on(Runtime.HAS_CLOUD_DATA_UPDATE, hasCloudData => {
-            this.emit(Runtime.HAS_CLOUD_DATA_UPDATE, hasCloudData);
+        this.runtime.on(RuntimeConstants.HAS_CLOUD_DATA_UPDATE, hasCloudData => {
+            this.emit(RuntimeConstants.HAS_CLOUD_DATA_UPDATE, hasCloudData);
         });
-        this.runtime.on(Runtime.RUNTIME_OPTIONS_CHANGED, runtimeOptions => {
-            this.emit(Runtime.RUNTIME_OPTIONS_CHANGED, runtimeOptions);
+        this.runtime.on(RuntimeConstants.RUNTIME_OPTIONS_CHANGED, runtimeOptions => {
+            this.emit(RuntimeConstants.RUNTIME_OPTIONS_CHANGED, runtimeOptions);
         });
-        this.runtime.on(Runtime.COMPILER_OPTIONS_CHANGED, compilerOptions => {
-            this.emit(Runtime.COMPILER_OPTIONS_CHANGED, compilerOptions);
+        this.runtime.on(RuntimeConstants.COMPILER_OPTIONS_CHANGED, compilerOptions => {
+            this.emit(RuntimeConstants.COMPILER_OPTIONS_CHANGED, compilerOptions);
         });
-        this.runtime.on(Runtime.FRAMERATE_CHANGED, framerate => {
-            this.emit(Runtime.FRAMERATE_CHANGED, framerate);
+        this.runtime.on(RuntimeConstants.FRAMERATE_CHANGED, framerate => {
+            this.emit(RuntimeConstants.FRAMERATE_CHANGED, framerate);
         });
-        this.runtime.on(Runtime.INTERPOLATION_CHANGED, framerate => {
-            this.emit(Runtime.INTERPOLATION_CHANGED, framerate);
+        this.runtime.on(RuntimeConstants.INTERPOLATION_CHANGED, framerate => {
+            this.emit(RuntimeConstants.INTERPOLATION_CHANGED, framerate);
         });
-        this.runtime.on(Runtime.BEFORE_INTERPOLATE, target => {
-            this.emit(Runtime.BEFORE_INTERPOLATE, target);
+        this.runtime.on(RuntimeConstants.BEFORE_INTERPOLATE, target => {
+            this.emit(RuntimeConstants.BEFORE_INTERPOLATE, target);
         });
-        this.runtime.on(Runtime.AFTER_INTERPOLATE, target => {
-            this.emit(Runtime.AFTER_INTERPOLATE, target);
+        this.runtime.on(RuntimeConstants.AFTER_INTERPOLATE, target => {
+            this.emit(RuntimeConstants.AFTER_INTERPOLATE, target);
         });
-        this.runtime.on(Runtime.STAGE_SIZE_CHANGED, (width, height) => {
-            this.emit(Runtime.STAGE_SIZE_CHANGED, width, height);
+        this.runtime.on(RuntimeConstants.STAGE_SIZE_CHANGED, (width, height) => {
+            this.emit(RuntimeConstants.STAGE_SIZE_CHANGED, width, height);
         });
-        this.runtime.on(Runtime.COMPILE_ERROR, (target, error) => {
-            this.emit(Runtime.COMPILE_ERROR, target, error);
+        this.runtime.on(RuntimeConstants.COMPILE_ERROR, (target, error) => {
+            this.emit(RuntimeConstants.COMPILE_ERROR, target, error);
         });
-        this.runtime.on(Runtime.ASSET_PROGRESS, (finished, total) => {
-            this.emit(Runtime.ASSET_PROGRESS, finished, total);
+        this.runtime.on(RuntimeConstants.ASSET_PROGRESS, (finished, total) => {
+            this.emit(RuntimeConstants.ASSET_PROGRESS, finished, total);
         });
-        this.runtime.on(Runtime.TURBO_MODE_OFF, () => {
-            this.emit(Runtime.TURBO_MODE_OFF);
+        this.runtime.on(RuntimeConstants.TURBO_MODE_OFF, () => {
+            this.emit(RuntimeConstants.TURBO_MODE_OFF);
         });
-        this.runtime.on(Runtime.TURBO_MODE_ON, () => {
-            this.emit(Runtime.TURBO_MODE_ON);
+        this.runtime.on(RuntimeConstants.TURBO_MODE_ON, () => {
+            this.emit(RuntimeConstants.TURBO_MODE_ON);
         });
 
         this.extensionManager = new ExtensionManager(this);
@@ -344,9 +351,9 @@ class VirtualMachine extends EventEmitter {
     setTurboMode (turboModeOn) {
         this.runtime.turboMode = !!turboModeOn;
         if (this.runtime.turboMode) {
-            this.emit(Runtime.TURBO_MODE_ON);
+            this.emit(RuntimeConstants.TURBO_MODE_ON);
         } else {
-            this.emit(Runtime.TURBO_MODE_OFF);
+            this.emit(RuntimeConstants.TURBO_MODE_OFF);
         }
     }
 
@@ -1036,7 +1043,7 @@ class VirtualMachine extends EventEmitter {
      */
     duplicateCostume (costumeIndex) {
         const originalCostume = this.editingTarget.getCostumes()[costumeIndex];
-        const clone = Object.assign({}, originalCostume);
+        const clone = Clone.structured(originalCostume);
         const md5ext = `${clone.assetId}.${clone.dataFormat}`;
         return loadCostume(md5ext, clone, this.runtime).then(() => {
             this.editingTarget.addCostume(clone, costumeIndex + 1);
@@ -1522,7 +1529,14 @@ class VirtualMachine extends EventEmitter {
      */
     setLocale (locale, messages) {
         if (locale !== formatMessage.setup().locale) {
-            formatMessage.setup({locale: locale, translations: {[locale]: messages}});
+            formatMessage.setup({
+                locale: locale,
+                translations: {
+                    [locale]: messages
+                },
+                // Disable missing translation warnings in console
+                missingTranslation: 'ignore'
+            });
         }
         this.emit('LOCALE_CHANGED', locale);
         return this.extensionManager.refreshBlocks();

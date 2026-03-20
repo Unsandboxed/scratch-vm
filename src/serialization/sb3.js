@@ -5,7 +5,7 @@
  */
 
 const Cast = require('../util/cast');
-const Runtime = require('../engine/runtime');
+const RuntimeConstants = require('../../src/engine/runtime-constants');
 const Blocks = require('../engine/blocks');
 const Sprite = require('../sprites/sprite');
 const Variable = require('../engine/variable');
@@ -17,6 +17,7 @@ const uid = require('../util/uid');
 const MathUtil = require('../util/math-util');
 const StringUtil = require('../util/string-util');
 const VariableUtil = require('../util/variable-util');
+const ReadonlyArray = require('../util/ReadonlyArray');
 const compress = require('./tw-compress-sb3');
 
 const {loadCostume} = require('../import/load-costume.js');
@@ -96,9 +97,13 @@ E.primitiveOpcodeInfoMap = {
     math_angle: [E.ANGLE_NUM_PRIMITIVE, 'NUM'],
     colour_picker: [E.COLOR_PICKER_PRIMITIVE, 'COLOUR'],
     text: [E.TEXT_PRIMITIVE, 'TEXT'],
-    event_broadcast_menu: [E.BROADCAST_PRIMITIVE, 'BROADCAST_OPTION'],
-    data_variable: [E.VAR_PRIMITIVE, 'VARIABLE'],
-    data_listcontents: [E.LIST_PRIMITIVE, 'LIST']
+    event_broadcast_menu: [E.BROADCAST_PRIMITIVE, 'BROADCAST_OPTION']
+    /**
+     * USB: Serializing non-shadow blocks as primitives has grave consequences,
+     * such as removing comments and possibly more data we don't know about yet.
+     */
+    // data_variable: [E.VAR_PRIMITIVE, 'VARIABLE'],
+    // data_listcontents: [E.LIST_PRIMITIVE, 'LIST']
 };
 
 // We don't enforce this limit, but Scratch does, so we need to handle it for compatibility.
@@ -1238,7 +1243,7 @@ E.parseScratchObject = function (object, runtime, extensions, zip, assets) {
             target.variables[newList.id] = newList;
 
             if (newList.locked) {
-                newList.value = Object.freeze(newList.value);
+                newList.value = ReadonlyArray.from(newList.value);
             }
         }
     }
@@ -1493,13 +1498,13 @@ E.checkPlatformCompatibility = (json, runtime) => {
         return;
     }
 
-    let pending = runtime.listenerCount(Runtime.PLATFORM_MISMATCH);
+    let pending = runtime.listenerCount(RuntimeConstants.PLATFORM_MISMATCH);
     if (pending === 0) {
         return;
     }
 
     return new Promise(resolve => {
-        runtime.emit(Runtime.PLATFORM_MISMATCH, json.meta.platform, () => {
+        runtime.emit(RuntimeConstants.PLATFORM_MISMATCH, json.meta.platform, () => {
             pending--;
             if (pending === 0) {
                 if (!isNativePlatform) {

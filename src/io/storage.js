@@ -1,4 +1,4 @@
-const Runtime = require('../engine/runtime');
+const RuntimeConstants = require('../engine/runtime-constants');
 const EventEmitter = require('events');
 
 class TemporaryStorageProvider {
@@ -62,13 +62,13 @@ class StorageProvider extends EventEmitter {
         this.clearProjectStorage = this.clearProjectStorage.bind(this);
         this.clearExtensionStorage = this.clearExtensionStorage.bind(this);
 
-        runtime.on(Runtime.PROJECT_LOADED, () => {
+        runtime.on(RuntimeConstants.PROJECT_LOADED, () => {
             this.clearTemporaryStorage();
         });
-        runtime.on(Runtime.PROJECT_START, () => {
+        runtime.on(RuntimeConstants.PROJECT_START, () => {
             this.clearTemporaryStorage();
         });
-        runtime.on(Runtime.PROJECT_STOP_ALL, () => {
+        runtime.on(RuntimeConstants.PROJECT_STOP_ALL, () => {
             this.clearTemporaryStorage();
         });
     }

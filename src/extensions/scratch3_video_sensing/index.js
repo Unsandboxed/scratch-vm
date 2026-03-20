@@ -1,4 +1,4 @@
-const Runtime = require('../../engine/runtime');
+const RuntimeConstants = require('../../engine/runtime-constants');
 
 const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');
@@ -103,10 +103,10 @@ class Scratch3VideoSensingBlocks {
 
         if (this.runtime.ioDevices) {
             // Configure the video device with values from globally stored locations.
-            this.runtime.on(Runtime.PROJECT_LOADED, this.updateVideoDisplay.bind(this));
+            this.runtime.on(RuntimeConstants.PROJECT_LOADED, this.updateVideoDisplay.bind(this));
 
             // Clear target motion state values when the project starts.
-            this.runtime.on(Runtime.PROJECT_RUN_START, this.reset.bind(this));
+            this.runtime.on(RuntimeConstants.PROJECT_RUN_START, this.reset.bind(this));
 
             // Kick off looping the analysis logic.
             this._loop();

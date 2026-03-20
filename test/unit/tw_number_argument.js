@@ -1,11 +1,12 @@
 const {test} = require('tap');
+const RuntimeConstants = require('../../src/engine/runtime-constants');
 const Runtime = require('../../src/engine/runtime');
 const BlockType = require('../../src/extension-support/block-type');
 const ArgumentType = require('../../src/extension-support/argument-type');
 
 test('NUMBER argument defaultValue', t => {
     const runtime = new Runtime();
-    runtime.on(Runtime.EXTENSION_ADDED, categoryInfo => {
+    runtime.on(RuntimeConstants.EXTENSION_ADDED, categoryInfo => {
         /* eslint-disable max-len */
         t.equal(
             categoryInfo.blocks[0].xml,

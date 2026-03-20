@@ -1,4 +1,4 @@
-const Runtime = require('./runtime.js');
+const RuntimeConstants = require('./runtime-constants');
 
 /**
  * Prepare the targets of a runtime for interpolation.
@@ -110,7 +110,7 @@ const interpolate = (runtime, time) => {
             continue;
         }
 
-        runtime.emit(Runtime.BEFORE_INTERPOLATE, target);
+        runtime.emit(RuntimeConstants.BEFORE_INTERPOLATE, target);
 
         const drawableID = target.drawableID;
 
@@ -189,7 +189,7 @@ const interpolate = (runtime, time) => {
             }
         }
 
-        runtime.emit(Runtime.AFTER_INTERPOLATE, target);
+        runtime.emit(RuntimeConstants.AFTER_INTERPOLATE, target);
     }
 };
 
