@@ -63,9 +63,9 @@ module.exports = function (vm, isAprematureLoad) {
 
         Math: vmD.util.Math(),
         Strings: vmD.util.String(),
-        Clone: vm.$.util.Clone(),
-        Color: vm.$.util.Color(),
-        Cast: vm.$.util.Cast(),
+        Clone: vmD.util.Clone(),
+        Color: vmD.util.Color(),
+        Cast: vmD.util.Cast(),
 
         resolves: vm.resolversTool,
 
