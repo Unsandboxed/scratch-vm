@@ -96,11 +96,11 @@ E.primitiveOpcodeInfoMap = {
     math_angle: [E.ANGLE_NUM_PRIMITIVE, 'NUM'],
     colour_picker: [E.COLOR_PICKER_PRIMITIVE, 'COLOUR'],
     text: [E.TEXT_PRIMITIVE, 'TEXT'],
-    event_broadcast_menu: [E.BROADCAST_PRIMITIVE, 'BROADCAST_OPTION'],
+    event_broadcast_menu: [E.BROADCAST_PRIMITIVE, 'BROADCAST_OPTION']
     /**
-     * USB: Serializing non-shadow blocks as primitives has grave consequences, 
+     * USB: Serializing non-shadow blocks as primitives has grave consequences,
      * such as removing comments and possibly more data we don't know about yet.
-     */ 
+     */
     // data_variable: [E.VAR_PRIMITIVE, 'VARIABLE'],
     // data_listcontents: [E.LIST_PRIMITIVE, 'LIST']
 };

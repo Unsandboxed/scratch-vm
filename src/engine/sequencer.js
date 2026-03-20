@@ -137,7 +137,6 @@ class Sequencer {
                         // Increment the number of times stepThread is called.
                         this.runtime.profiler.increment(SequencerInternals.stepThreadProfilerId);
                     }
-                    const previousCount = this.runtime.threads.length;
                     this.stepThread(activeThread);
                     activeThread.warpTimer = null;
                 }

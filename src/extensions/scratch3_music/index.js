@@ -729,7 +729,7 @@ class Scratch3MusicBlocks {
     /**
      * Stops all players that are playing sound.
      */
-    _stopAllPlayers(instr) {
+    _stopAllPlayers (instr) {
         if (instr) {
             for (const player of instr) {
                 if (!player || !player.stop) continue;
