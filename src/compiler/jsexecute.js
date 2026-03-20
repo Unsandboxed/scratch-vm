@@ -489,6 +489,7 @@ runtimeFunctions.listGet = `const listGet = (list, idx) => {
  * @param {*} value The new value.
  */
 runtimeFunctions.listReplace = `const listReplace = (list, idx, value) => {
+    'use strict';
     const index = listIndex(idx, list.value.length);
     if (index === -1) {
         return;

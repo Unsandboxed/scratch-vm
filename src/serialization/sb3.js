@@ -17,6 +17,7 @@ const uid = require('../util/uid');
 const MathUtil = require('../util/math-util');
 const StringUtil = require('../util/string-util');
 const VariableUtil = require('../util/variable-util');
+const ReadonlyArray = require('../util/ReadonlyArray');
 const compress = require('./tw-compress-sb3');
 
 const {loadCostume} = require('../import/load-costume.js');
@@ -1242,7 +1243,7 @@ E.parseScratchObject = function (object, runtime, extensions, zip, assets) {
             target.variables[newList.id] = newList;
 
             if (newList.locked) {
-                newList.value = Object.freeze(newList.value);
+                newList.value = ReadonlyArray.from(newList.value);
             }
         }
     }

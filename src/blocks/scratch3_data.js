@@ -205,6 +205,8 @@ class Scratch3DataBlocks {
         const list = util.target.lookupOrCreateList(
             args.LIST.id, args.LIST.name);
 
+        if (list.locked) return;
+
         list.value = array;
         list._monitorUpToDate = false;
     }
