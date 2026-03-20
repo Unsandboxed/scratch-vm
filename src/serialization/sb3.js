@@ -1236,6 +1236,10 @@ E.parseScratchObject = function (object, runtime, extensions, zip, assets) {
             newList.value = list[1];
             newList.locked = list[2] || false;
             target.variables[newList.id] = newList;
+
+            if (newList.locked) {
+                newList.value = Object.freeze(newList.value);
+            }
         }
     }
     if (Object.prototype.hasOwnProperty.call(object, 'broadcasts')) {
