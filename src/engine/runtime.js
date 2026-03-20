@@ -2895,6 +2895,7 @@ class Runtime extends EventEmitter {
                 }
             } else {
                 execute(this.sequencer, thread);
+                // Execute might have retired the thread, if so the stackFrames will be empty.
                 if (thread.status !== Thread.STATUS_DONE) {
                   thread.goToNextBlock();
                 }
