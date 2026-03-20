@@ -33,6 +33,7 @@ class ReadonlyArray extends Array {
                 configurable: false,
                 enumerable: true,
                 get: (value => value).bind(this, this[i]),
+                // eslint-disable-next-line no-setter-return
                 set: () => true
             });
         }
@@ -70,7 +71,7 @@ class ReadonlyArray extends Array {
     }
     static of (...items) {
         Object.setPrototypeOf(items, this.prototype);
-        return this._proxy(args);
+        return this._proxy(items);
     }
     static get [Symbol.species] () {
         return Array;
