@@ -147,7 +147,9 @@ module.exports = function (compilerData, {
         });
     }, function (jsg, block) {
         const varReference = jsg.referenceVariable(block.inputs.list);
-        jsg.source += `if (!${varReference}.locked) {${varReference}.value = ${jsg.descendInput(block.inputs.value)}};\n`;
+        jsg.source += `if (!${varReference}.locked) {
+            ${varReference}.value = ${jsg.descendInput(block.inputs.value)}
+        };\n`;
     }, {
         input: false
     });
