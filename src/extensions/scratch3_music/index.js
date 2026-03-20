@@ -5,6 +5,7 @@ const Cast = require('../../util/cast');
 const formatMessage = require('format-message');
 const MathUtil = require('../../util/math-util');
 const Timer = require('../../util/timer');
+const RuntimeConstants = require('../../engine/runtime-constants');
 const Runtime = require('../../engine/runtime');
 
 /**
@@ -92,7 +93,7 @@ class Scratch3MusicBlocks {
         this._playNoteForPicker = this._playNoteForPicker.bind(this);
         this.runtime.on('PLAY_NOTE', this._playNoteForPicker);
 
-        this.runtime.on(Runtime.STOP_ALL_SOUNDS, this._stopAllPlayers);
+        this.runtime.on(RuntimeConstants.STOP_ALL_SOUNDS, this._stopAllPlayers);
     }
 
     /**

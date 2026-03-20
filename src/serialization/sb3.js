@@ -5,6 +5,7 @@
  */
 
 const Cast = require('../util/cast');
+const RuntimeConstants = require('../../src/engine/runtime-constants');
 const Runtime = require('../engine/runtime');
 const Blocks = require('../engine/blocks');
 const Sprite = require('../sprites/sprite');
@@ -1498,13 +1499,13 @@ E.checkPlatformCompatibility = (json, runtime) => {
         return;
     }
 
-    let pending = runtime.listenerCount(Runtime.PLATFORM_MISMATCH);
+    let pending = runtime.listenerCount(RuntimeConstants.PLATFORM_MISMATCH);
     if (pending === 0) {
         return;
     }
 
     return new Promise(resolve => {
-        runtime.emit(Runtime.PLATFORM_MISMATCH, json.meta.platform, () => {
+        runtime.emit(RuntimeConstants.PLATFORM_MISMATCH, json.meta.platform, () => {
             pending--;
             if (pending === 0) {
                 if (!isNativePlatform) {

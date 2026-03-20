@@ -1,4 +1,5 @@
 const tap = require('tap');
+const RuntimeConstants = require('../../src/engine/runtime-constants');
 const Runtime = require('../../src/engine/runtime');
 const MonitorRecord = require('../../src/engine/monitor-record');
 const makeTestStorage = require('../fixtures/make-test-storage');
@@ -262,7 +263,7 @@ test('visual report -0', t => {
     const target = new Target();
     rt.setEditingTarget(target);
 
-    rt.on(Runtime.VISUAL_REPORT, report => {
+    rt.on(RuntimeConstants.VISUAL_REPORT, report => {
         t.same(report, {
             id: 'blockid',
             value: '-0'

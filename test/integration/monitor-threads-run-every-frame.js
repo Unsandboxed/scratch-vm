@@ -4,6 +4,7 @@ const makeTestStorage = require('../fixtures/make-test-storage');
 const readFileToBuffer = require('../fixtures/readProjectFile').readFileToBuffer;
 const VirtualMachine = require('../../src/index');
 const Thread = require('../../src/engine/thread');
+const RuntimeConstants = require('../../src/engine/runtime-constants');
 const Runtime = require('../../src/engine/runtime');
 
 const projectUri = path.resolve(__dirname, '../fixtures/timer-monitor.sb3');
@@ -27,7 +28,7 @@ test('monitor thread runs every frame', t => {
     // Start VM, load project, and run
     t.doesNotThrow(() => {
         // Note: don't run vm.start(), we handle calling _step() manually in this test
-        vm.runtime.currentStepTime = Runtime.THREAD_STEP_INTERVAL;
+        vm.runtime.currentStepTime = RuntimeConstants.THREAD_STEP_INTERVAL;
         vm.clear();
         vm.setCompatibilityMode(false);
         vm.setTurboMode(false);

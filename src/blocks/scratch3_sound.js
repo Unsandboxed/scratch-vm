@@ -1,6 +1,7 @@
 const MathUtil = require('../util/math-util');
 const Cast = require('../util/cast');
 const Clone = require('../util/clone');
+const RuntimeConstants = require('../engine/runtime-constants');
 const Runtime = require('../engine/runtime');
 
 /**
@@ -244,7 +245,7 @@ class Scratch3SoundBlocks {
         for (let i = 0; i < allTargets.length; i++) {
             this._stopAllSoundsForTarget(allTargets[i], true);
         }
-        this.runtime.emit(Runtime.STOP_ALL_SOUNDS);
+        this.runtime.emit(RuntimeConstants.STOP_ALL_SOUNDS);
     }
 
     _stopAllSoundsForTarget (target, low) {
