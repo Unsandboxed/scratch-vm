@@ -1,5 +1,4 @@
 const RuntimeConstants = require('../../engine/runtime-constants');
-const Runtime = require('../../engine/runtime');
 
 const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');

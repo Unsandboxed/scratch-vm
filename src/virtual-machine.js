@@ -85,10 +85,10 @@ class VirtualMachine extends EventEmitter {
          * @type {!Runtime}
          */
         try {
-          this._runtime = new Runtime(this);
-        } catch(error) {
-          log.error(error);
-          throw error;
+            this._runtime = new Runtime(this);
+        } catch (error) {
+            log.error(error);
+            throw error;
         }
 
         centralDispatch.setService('runtime', VirtualMachine.createRuntimeService(this.runtime)).catch(e => {

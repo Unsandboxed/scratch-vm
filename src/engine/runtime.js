@@ -1,4 +1,3 @@
-const EventEmitter = require('events');
 const ExtendedJSON = require('@turbowarp/json');
 const uuid = require('uuid');
 

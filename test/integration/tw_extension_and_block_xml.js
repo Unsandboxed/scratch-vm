@@ -3,7 +3,6 @@ const pathUtil = require('path');
 const htmlparser = require('htmlparser2');
 const {test} = require('tap');
 const VirtualMachine = require('../../src/virtual-machine');
-const RuntimeConstants = require('../../src/engine/runtime-constants');
 const Runtime = require('../../src/engine/runtime');
 const ArgumentType = require('../../src/extension-support/argument-type');
 const BlockType = require('../../src/extension-support/block-type');

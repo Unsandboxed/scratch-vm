@@ -1,5 +1,4 @@
 const RuntimeConstants = require('../engine/runtime-constants');
-const Runtime = require('../engine/runtime');
 const JSONRPC = require('../util/jsonrpc');
 
 class BLE extends JSONRPC {

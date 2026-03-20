@@ -2,7 +2,6 @@ const MathUtil = require('../util/math-util');
 const Cast = require('../util/cast');
 const Clone = require('../util/clone');
 const RuntimeConstants = require('../engine/runtime-constants');
-const Runtime = require('../engine/runtime');
 
 /**
  * Occluded boolean value to make its use more understandable.

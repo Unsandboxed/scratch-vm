@@ -1,5 +1,4 @@
 const RuntimeConstants = require('./runtime-constants');
-const Runtime = require('./runtime.js');
 
 /**
  * Prepare the targets of a runtime for interpolation.

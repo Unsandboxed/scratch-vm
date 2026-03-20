@@ -6,7 +6,6 @@ const formatMessage = require('format-message');
 const MathUtil = require('../../util/math-util');
 const Timer = require('../../util/timer');
 const RuntimeConstants = require('../../engine/runtime-constants');
-const Runtime = require('../../engine/runtime');
 
 /**
  * The instrument and drum sounds, loaded as static assets.

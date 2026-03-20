@@ -46,7 +46,6 @@ importLoadSound.loadSound = soundMiddleware.install(importLoadSound, importLoadS
 const ScratchStorage = require('scratch-storage');
 const VirtualMachine = require('..');
 const RuntimeConstants = require('../engine/runtime-constants');
-const Runtime = require('../engine/runtime');
 
 const ScratchRender = require('scratch-render');
 const AudioEngine = require('scratch-audio');

@@ -6,7 +6,6 @@
 
 const Cast = require('../util/cast');
 const RuntimeConstants = require('../../src/engine/runtime-constants');
-const Runtime = require('../engine/runtime');
 const Blocks = require('../engine/blocks');
 const Sprite = require('../sprites/sprite');
 const Variable = require('../engine/variable');

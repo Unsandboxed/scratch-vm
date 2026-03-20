@@ -5,7 +5,6 @@ const readFileToBuffer = require('../fixtures/readProjectFile').readFileToBuffer
 const VirtualMachine = require('../../src/index');
 const Thread = require('../../src/engine/thread');
 const RuntimeConstants = require('../../src/engine/runtime-constants');
-const Runtime = require('../../src/engine/runtime');
 const execute = require('../../src/engine/execute.js');
 
 const compilerAndInterpreter = (name, callback) => {
