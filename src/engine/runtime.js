@@ -660,32 +660,14 @@ class Runtime extends RuntimeConstants {
 
         this.store = new (Storage.StorageProvider)(this, this);
         /**
-         * @deprecated
-         */
-        Object.defineProperty(this, 'temporaryStorage', {
-            enumerable: true,
-            configurable: true,
-            /**
-             * @deprecated
-             */
-            get: () => {
-                log.warn('DEPRECATED API WAS USED: Please use the .store temporary API instead.');
-                return this.store.unsafe$getTemporaryStorage();
-            },
-            /**
-             * @deprecated
-             */
-            set: () => {
-                throw new ReferenceError('DEPRECATED: Cannot set the temporaryStorage object.');
-            }
-        });
-        /**
+         * NOTE: Kept for compatibility with upstream TurboWarp.
          * @deprecated
          */
         Object.defineProperty(this, 'extensionStorage', {
             enumerable: true,
             configurable: true,
             /**
+             * NOTE: Kept for compatibility with upstream TurboWarp.
              * @deprecated
              */
             get: () => {
@@ -693,6 +675,7 @@ class Runtime extends RuntimeConstants {
                 return this.store.unsafe$getExtensionStorage();
             },
             /**
+             * NOTE: Kept for compatibility with upstream TurboWarp.
              * @deprecated
              */
             set: () => {
@@ -713,22 +696,6 @@ class Runtime extends RuntimeConstants {
             this.requestGlobalProceduresMutationsRefresh();
             this.requestGlobalProceduresRefresh();
         });
-
-        /**
-         * Export some internal values for extensions.
-         */
-        this.exports = {
-            Cast,
-            ExtendedJSON,
-            i_will_not_ask_for_help_when_these_break: () => {
-                log.warn('You are using unsupported APIs. WHEN your code breaks, do not expect help.');
-                return ({
-                    ScratchBlocksConstants,
-                    ArgumentTypeMap: RuntimeInternals.ArgumentTypeMap,
-                    FieldTypeMap: RuntimeInternals.FieldTypeMap
-                });
-            }
-        };
     }
 
     // -----------------------------------------------------------------------------
@@ -3504,6 +3471,7 @@ class Runtime extends RuntimeConstants {
      * @property {string} category - the category for this opcode
      * @property {Function} [labelFn] - function to generate the label for this opcode
      * @property {string} [label] - the label for this opcode if `labelFn` is absent
+     * NOTE: Kept for compatibility with upstream TurboWarp.
      * @deprecated
      */
     getLabelForOpcode (extendedOpcode) {
@@ -3676,6 +3644,7 @@ class Runtime extends RuntimeConstants {
     }
 
     /**
+     * NOTE: Kept for compatibility with upstream TurboWarp.
      * @deprecated Used by old versions of TurboWarp. Superceded by upstream's quit()
      */
     stop () {

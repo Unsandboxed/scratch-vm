@@ -37,6 +37,7 @@ class Timer {
     }
 
     /**
+     * NOTE: Kept for compatibility with upstream TurboWarp.
      * Legacy object to allow for us to call now to get the old style date time (for backwards compatibility)
      * @deprecated This is only called via the nowObj.now() if no other means is possible...
      */

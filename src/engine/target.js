@@ -73,32 +73,14 @@ class Target extends EventEmitter {
 
         this.store = new StorageProvider(runtime, this);
         /**
-         * @deprecated
-         */
-        Object.defineProperty(this, 'temporaryStorage', {
-            enumerable: true,
-            configurable: true,
-            /**
-             * @deprecated
-             */
-            get: () => {
-                // eslint-disable-next-line max-len
-                throw new ReferenceError('DEPRECATED: Cannot get the temporaryStorage object, please use the .store temporary API instead.');
-            },
-            /**
-             * @deprecated
-             */
-            set: () => {
-                throw new ReferenceError('DEPRECATED: Cannot set the temporaryStorage object.');
-            }
-        });
-        /**
+         * NOTE: Kept for compatibility with upstream TurboWarp.
          * @deprecated
          */
         Object.defineProperty(this, 'extensionStorage', {
             enumerable: true,
             configurable: true,
             /**
+             * NOTE: Kept for compatibility with upstream TurboWarp.
              * @deprecated
              */
             get: () => {
@@ -106,6 +88,7 @@ class Target extends EventEmitter {
                 return this.store.unsafe$getExtensionStorage();
             },
             /**
+             * NOTE: Kept for compatibility with upstream TurboWarp.
              * @deprecated
              */
             set: () => {

@@ -322,6 +322,7 @@ class VirtualMachine extends EventEmitter {
     }
 
     /**
+     * NOTE: Kept for compatibility with upstream TurboWarp.
      * @deprecated Used by old versions of TurboWarp. Superceded by upstream's quit()
      */
     stop () {
@@ -1499,7 +1500,10 @@ class VirtualMachine extends EventEmitter {
         return this.runtime && this.runtime.renderer;
     }
 
-    // @deprecated
+    /**
+     * NOTE: Kept for compatibility with upstream TurboWarp.
+     * @deprecated
+     */
     attachV2SVGAdapter () {
     }
 

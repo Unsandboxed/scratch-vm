@@ -188,6 +188,7 @@ class RenderedTarget extends Target {
 
     get audioPlayer () {
         /* eslint-disable no-console */
+        // NOTE: Kept for compatibility with upstream TurboWarp.
         console.warn('get audioPlayer deprecated, please update to use .sprite.soundBank methods');
         console.warn(new Error('stack for debug').stack);
         /* eslint-enable no-console */

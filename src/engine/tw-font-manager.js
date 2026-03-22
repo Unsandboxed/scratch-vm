@@ -94,6 +94,7 @@ class FontManager extends EventEmitter {
     }
 
     /**
+     * NOTE: Kept for compatibility with upstream TurboWarp.
      * @deprecated only exists for extension compatibility, use isValidSystemFont or isValidCustomFont instead
      */
     isValidFamily (family) {
