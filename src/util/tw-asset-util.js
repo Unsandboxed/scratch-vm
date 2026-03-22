@@ -37,6 +37,15 @@ class AssetUtil {
 
         return runtime.wrapAssetRequest(() => runtime.storage.load(assetType, md5, ext));
     }
+
+    /**
+     * Do not construct this class.
+     *
+     * @privateconstructor
+     */
+    constructor () {
+        throw new TypeError('Illegal constructor.\nDo not construct this class...');
+    }
 }
 
 module.exports = AssetUtil;

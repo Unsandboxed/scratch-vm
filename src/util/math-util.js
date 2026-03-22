@@ -117,6 +117,15 @@ class MathUtil {
         const p = (i - iMin) / (iMax - iMin);
         return (p * (oMax - oMin)) + oMin;
     }
+
+    /**
+     * Do not construct this class.
+     *
+     * @privateconstructor
+     */
+    constructor () {
+        throw new TypeError('Illegal constructor.\nDo not construct this class...');
+    }
 }
 
 module.exports = MathUtil;

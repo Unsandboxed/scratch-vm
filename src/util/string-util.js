@@ -119,6 +119,15 @@ class StringUtil {
             numeric: true
         });
     }
+
+    /**
+     * Do not construct this class.
+     *
+     * @privateconstructor
+     */
+    constructor () {
+        throw new TypeError('Illegal constructor.\nDo not construct this class...');
+    }
 }
 
 module.exports = StringUtil;

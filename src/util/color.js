@@ -213,6 +213,15 @@ class Color {
             b: (fraction0 * rgb0.b) + (fraction1 * rgb1.b)
         };
     }
+
+    /**
+     * Do not construct this class.
+     *
+     * @privateconstructor
+     */
+    constructor () {
+        throw new TypeError('Illegal constructor.\nDo not construct this class...');
+    }
 }
 
 module.exports = Color;

@@ -24,6 +24,15 @@ class StageLayering {
             StageLayering.SPRITE_LAYER
         ];
     }
+
+    /**
+     * Do not construct this class.
+     *
+     * @privateconstructor
+     */
+    constructor () {
+        throw new TypeError('Illegal constructor.\nDo not construct this class...');
+    }
 }
 
 module.exports = StageLayering;

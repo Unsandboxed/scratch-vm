@@ -22,6 +22,15 @@ class Clone {
     static structured (original) {
         return structuredClone(original);
     }
+
+    /**
+     * Do not construct this class.
+     *
+     * @privateconstructor
+     */
+    constructor () {
+        throw new TypeError('Illegal constructor.\nDo not construct this class...');
+    }
 }
 
 module.exports = Clone;

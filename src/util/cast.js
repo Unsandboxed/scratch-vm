@@ -307,6 +307,15 @@ class Cast {
 
     static Color = require('./color');
     static Clone = require('./clone');
+
+    /**
+     * Do not construct this class.
+     *
+     * @privateconstructor
+     */
+    constructor () {
+        throw new TypeError('Illegal constructor.\nDo not construct this class...');
+    }
 }
 
 module.exports = Cast;

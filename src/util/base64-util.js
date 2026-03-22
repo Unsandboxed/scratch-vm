@@ -43,6 +43,14 @@ class Base64Util {
         return Base64Util.uint8ArrayToBase64(new Uint8Array(buffer));
     }
 
+    /**
+     * Do not construct this class.
+     *
+     * @privateconstructor
+     */
+    constructor () {
+        throw new TypeError('Illegal constructor.\nDo not construct this class...');
+    }
 }
 
 module.exports = Base64Util;
