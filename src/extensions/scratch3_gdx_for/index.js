@@ -899,6 +899,7 @@ class Scratch3GdxForBlocks {
             return Math.round(this._peripheral.getTiltLeftRight(false));
         default:
             log.warn(`Unknown direction in getTilt: ${direction}`);
+            return 0;
         }
     }
 
@@ -912,6 +913,7 @@ class Scratch3GdxForBlocks {
             return Math.round(this._peripheral.getSpinSpeedZ());
         default:
             log.warn(`Unknown direction in getSpinSpeed: ${args.DIRECTION}`);
+            return 0;
         }
     }
 
@@ -925,6 +927,7 @@ class Scratch3GdxForBlocks {
             return Math.round(this._peripheral.getAccelerationZ());
         default:
             log.warn(`Unknown direction in getAcceleration: ${args.DIRECTION}`);
+            return 0;
         }
     }
 

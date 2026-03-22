@@ -66,7 +66,7 @@ const baseExtensionInfo = {
     }
 };
 
-test('XML escaped in Runtime.getBlocksXML()', t => {
+test('XML escaped in RuntimeConstants.getBlocksXML()', t => {
     // While these changes will make the extension unusable in a real editor environment, we still
     // want to make sure that these fields are actually being escaped.
     const mangledExtension = JSON.parse(JSON.stringify(baseExtensionInfo));
@@ -202,7 +202,7 @@ test('XML escaped in Runtime.getBlocksXML()', t => {
     t.end();
 });
 
-test('ID escaped in Runtime.getBlocksXML()', t => {
+test('ID escaped in RuntimeConstants.getBlocksXML()', t => {
     // Previous test needs to use an actually valid extension ID. For this test we will
     // register an invalid extension just to make sure that the ID ends up being escaped.
 

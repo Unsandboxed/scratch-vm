@@ -964,6 +964,7 @@ class Scratch3MicroBitBlocks {
             return Math.round(this._peripheral.tiltX / 10);
         default:
             log.warn(`Unknown tilt direction in _getTiltAngle: ${direction}`);
+            return 0;
         }
     }
 

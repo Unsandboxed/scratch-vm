@@ -146,7 +146,7 @@ const executeInCompatibilityLayer = function*(inputs, blockFunction, isWarp, use
 
     const finish = (returnValue) => {
         if (branchInfo) {
-            if (typeof returnValue === 'undefined' && blockUtility._startedBranch) {
+            if (typeof returnValue === 'undefined' && blockUtility._startedBranch && blockUtility._startedBranch[0]) {
                 branchInfo.isLoop = blockUtility._startedBranch[0][1];
                 return blockUtility._startedBranch[0][0];
             }
@@ -489,6 +489,7 @@ runtimeFunctions.listGet = `const listGet = (list, idx) => {
  * @param {*} value The new value.
  */
 runtimeFunctions.listReplace = `const listReplace = (list, idx, value) => {
+    'use strict';
     const index = listIndex(idx, list.value.length);
     if (index === -1) {
         return;

@@ -1,4 +1,4 @@
-const Runtime = require('../engine/runtime');
+const RuntimeConstants = require('../engine/runtime-constants');
 const JSONRPC = require('../util/jsonrpc');
 
 class BT extends JSONRPC {
@@ -68,7 +68,7 @@ class BT extends JSONRPC {
         this.sendRemoteRequest('connect', params)
             .then(() => {
                 this._connected = true;
-                this._runtime.emit(Runtime.PERIPHERAL_CONNECTED);
+                this._runtime.emit(RuntimeConstants.PERIPHERAL_CONNECTED);
                 this._connectCallback();
             })
             .catch(e => {
@@ -93,7 +93,7 @@ class BT extends JSONRPC {
         }
 
         // Sets connection status icon to orange
-        this._runtime.emit(Runtime.PERIPHERAL_DISCONNECTED);
+        this._runtime.emit(RuntimeConstants.PERIPHERAL_DISCONNECTED);
     }
 
     /**
@@ -122,7 +122,7 @@ class BT extends JSONRPC {
         case 'didDiscoverPeripheral':
             this._availablePeripherals[params.peripheralId] = params;
             this._runtime.emit(
-                Runtime.PERIPHERAL_LIST_UPDATE,
+                RuntimeConstants.PERIPHERAL_LIST_UPDATE,
                 this._availablePeripherals
             );
             if (this._discoverTimeoutID) {
@@ -132,7 +132,7 @@ class BT extends JSONRPC {
         case 'userDidPickPeripheral':
             this._availablePeripherals[params.peripheralId] = params;
             this._runtime.emit(
-                Runtime.USER_PICKED_PERIPHERAL,
+                RuntimeConstants.USER_PICKED_PERIPHERAL,
                 this._availablePeripherals
             );
             if (this._discoverTimeoutID) {
@@ -141,7 +141,7 @@ class BT extends JSONRPC {
             break;
         case 'userDidNotPickPeripheral':
             this._runtime.emit(
-                Runtime.PERIPHERAL_SCAN_TIMEOUT
+                RuntimeConstants.PERIPHERAL_SCAN_TIMEOUT
             );
             if (this._discoverTimeoutID) {
                 window.clearTimeout(this._discoverTimeoutID);
@@ -177,7 +177,7 @@ class BT extends JSONRPC {
             this._resetCallback();
         }
 
-        this._runtime.emit(Runtime.PERIPHERAL_CONNECTION_LOST_ERROR, {
+        this._runtime.emit(RuntimeConstants.PERIPHERAL_CONNECTION_LOST_ERROR, {
             message: `Scratch lost connection to`,
             extensionId: this._extensionId
         });
@@ -186,7 +186,7 @@ class BT extends JSONRPC {
     _handleRequestError (/* e */) {
         // log.error(`BT error: ${JSON.stringify(e)}`);
 
-        this._runtime.emit(Runtime.PERIPHERAL_REQUEST_ERROR, {
+        this._runtime.emit(RuntimeConstants.PERIPHERAL_REQUEST_ERROR, {
             message: `Scratch lost connection to`,
             extensionId: this._extensionId
         });
@@ -196,7 +196,7 @@ class BT extends JSONRPC {
         if (this._discoverTimeoutID) {
             window.clearTimeout(this._discoverTimeoutID);
         }
-        this._runtime.emit(Runtime.PERIPHERAL_SCAN_TIMEOUT);
+        this._runtime.emit(RuntimeConstants.PERIPHERAL_SCAN_TIMEOUT);
     }
 }
 

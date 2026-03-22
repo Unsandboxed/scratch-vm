@@ -169,6 +169,7 @@ class Sprite {
 
     dispose () {
         if (this.soundBank) {
+            this.soundBank.stopAllSounds(this);
             this.soundBank.dispose();
         }
     }

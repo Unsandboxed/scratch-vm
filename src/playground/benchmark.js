@@ -45,7 +45,7 @@ importLoadSound.loadSound = soundMiddleware.install(importLoadSound, importLoadS
 
 const ScratchStorage = require('scratch-storage');
 const VirtualMachine = require('..');
-const Runtime = require('../engine/runtime');
+const RuntimeConstants = require('../engine/runtime-constants');
 
 const ScratchRender = require('scratch-render');
 const AudioEngine = require('scratch-audio');
@@ -234,7 +234,7 @@ class LoadingProgress {
             });
             return result;
         };
-        vm.runtime.on(Runtime.PROJECT_LOADED, () => {
+        vm.runtime.on(RuntimeConstants.PROJECT_LOADED, () => {
             // Currently LoadingProgress tracks when the data has been loaded
             // and not when the data has been decoded. It may be difficult to
             // track that but it isn't hard to track when its all been decoded.

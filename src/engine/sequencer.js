@@ -84,6 +84,7 @@ class Sequencer {
         let numActiveThreads = Infinity;
         // Whether `stepThreads` has run through a full single tick.
         let ranFirstTick = false;
+        // Count the number of added threads
         const doneThreads = [];
         // Conditions for continuing to stepping threads:
         // 1. We must have threads in the list, and some must be active.
@@ -101,11 +102,12 @@ class Sequencer {
                 this.runtime.profiler.start(SequencerInternals.stepThreadsInnerProfilerId);
             }
 
+
             numActiveThreads = 0;
             let stoppedThread = false;
             // Attempt to run each thread one time.
             const threads = this.runtime.threads;
-            for (let i = 0; i < threads.length; i++) {
+            for (let i = 0; i < this.runtime.threads.length; i++) {
                 const activeThread = this.activeThread = threads[i];
                 // Check if the thread is done so it is not executed.
                 if (activeThread.stack.length === 0 ||
@@ -175,10 +177,19 @@ class Sequencer {
             }
         }
 
+        // Execute the hat queue at the end of the frame.
+        this.runtime.executeHatQueue();
+
         this.activeThread = null;
 
         return doneThreads;
     }
+
+    /**
+     * Limit on how many blocks should be ran in a single while loop.
+     * @constant {number}
+     */
+    static MAX_WORKSIZE = 15000;
 
     /**
      * Step the requested thread for as long as necessary.
@@ -204,6 +215,8 @@ class Sequencer {
                 return;
             }
         }
+
+        let worksize = 0;
         // Save the current block ID to notice if we did control flow.
         while ((currentBlockId = thread.peekStack())) {
             const initialStackSize = thread.stack.length;
@@ -256,6 +269,11 @@ class Sequencer {
                 return;
             }
 
+            // Prevent large loops from hanging the page.
+            if (worksize++ >= Sequencer.MAX_WORKSIZE) {
+                return;
+            }
+            
             // If no control flow has happened, switch to next block.
             if (
                 thread.stack.length === initialStackSize &&
@@ -272,6 +290,11 @@ class Sequencer {
                 if (thread.stack.length === 0) {
                     // No more stack to run!
                     thread.setStatus(Thread.STATUS_DONE);
+                    return;
+                }
+
+                // Prevent large loops from hanging the page.
+                if (worksize++ >= Sequencer.MAX_WORKSIZE) {
                     return;
                 }
 

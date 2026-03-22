@@ -4,7 +4,7 @@ const makeTestStorage = require('../fixtures/make-test-storage');
 const readFileToBuffer = require('../fixtures/readProjectFile').readFileToBuffer;
 const VirtualMachine = require('../../src/index');
 const Thread = require('../../src/engine/thread');
-const Runtime = require('../../src/engine/runtime');
+const RuntimeConstants = require('../../src/engine/runtime-constants');
 const execute = require('../../src/engine/execute.js');
 
 const compilerAndInterpreter = (name, callback) => {
@@ -51,7 +51,7 @@ compilerAndInterpreter('edge activated hat thread runs once every frame', (t, co
     // Start VM, load project, and run
     t.doesNotThrow(() => {
         // Note: don't run vm.start(), we handle calling _step() manually in this test
-        vm.runtime.currentStepTime = Runtime.THREAD_STEP_INTERVAL;
+        vm.runtime.currentStepTime = RuntimeConstants.THREAD_STEP_INTERVAL;
         vm.clear();
         vm.setCompatibilityMode(false);
         vm.setTurboMode(false);
@@ -91,7 +91,7 @@ compilerAndInterpreter('edge activated hat thread runs after being added to prev
     // Start VM, load project, and run
     t.doesNotThrow(() => {
         // Note: don't run vm.start(), we handle calling _step() manually in this test
-        vm.runtime.currentStepTime = Runtime.THREAD_STEP_INTERVAL;
+        vm.runtime.currentStepTime = RuntimeConstants.THREAD_STEP_INTERVAL;
         vm.clear();
         vm.setCompatibilityMode(false);
         vm.setTurboMode(false);
@@ -280,7 +280,7 @@ compilerAndInterpreter('edge activated hat thread does not interrupt stack click
     // Start VM, load project, and run
     t.doesNotThrow(() => {
         // Note: don't run vm.start(), we handle calling _step() manually in this test
-        vm.runtime.currentStepTime = Runtime.THREAD_STEP_INTERVAL;
+        vm.runtime.currentStepTime = RuntimeConstants.THREAD_STEP_INTERVAL;
         vm.clear();
         vm.setCompatibilityMode(false);
         vm.setTurboMode(false);
@@ -348,7 +348,7 @@ compilerAndInterpreter('edge activated hat thread does not interrupt stack click
             checkIsHatThread(t, vm, vm.runtime.threads[0]);
             t.assert(vm.runtime.threads[0].status === Thread.STATUS_RUNNING);
 
-            vm.runtime.currentStepTime = Runtime.THREAD_STEP_INTERVAL;
+            vm.runtime.currentStepTime = RuntimeConstants.THREAD_STEP_INTERVAL;
 
             // Add stack click thread on this hat
             vm.runtime.toggleScript(vm.runtime.threads[0].topBlock, {stackClick: true});

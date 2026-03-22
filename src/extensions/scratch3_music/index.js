@@ -5,6 +5,7 @@ const Cast = require('../../util/cast');
 const formatMessage = require('format-message');
 const MathUtil = require('../../util/math-util');
 const Timer = require('../../util/timer');
+const RuntimeConstants = require('../../engine/runtime-constants');
 
 /**
  * The instrument and drum sounds, loaded as static assets.
@@ -90,6 +91,8 @@ class Scratch3MusicBlocks {
 
         this._playNoteForPicker = this._playNoteForPicker.bind(this);
         this.runtime.on('PLAY_NOTE', this._playNoteForPicker);
+
+        this.runtime.on(RuntimeConstants.STOP_ALL_SOUNDS, this._stopAllPlayers);
     }
 
     /**
@@ -721,6 +724,23 @@ class Scratch3MusicBlocks {
      */
     static get CONCURRENCY_LIMIT () {
         return 30;
+    }
+
+    /**
+     * Stops all players that are playing sound.
+     */
+    _stopAllPlayers (instr) {
+        if (instr) {
+            for (const player of instr) {
+                if (!player || !player.stop) continue;
+                (player.stopImmediately || player.stop)();
+            }
+            return;
+        }
+        this._stopAllPlayers(this._drumPlayers);
+        for (const instI of this._instrumentPlayerNoteArrays) {
+            this._stopAllPlayers(instI);
+        }
     }
 
     /**
