@@ -1,4 +1,6 @@
 const StringUtil = require('./string-util');
+const Clone = require('./clone');
+const ScratchStorage = require('@turbowarp/scratch-storage');
 
 class AssetUtil {
     /**
@@ -36,6 +38,37 @@ class AssetUtil {
         }
 
         return runtime.wrapAssetRequest(() => runtime.storage.load(assetType, md5, ext));
+    }
+
+    /**
+     * Clones an asset / object containing an asset.
+     * @template {({} & {asset: AssetUtil.Asset?}) | AssetUtil.Asset} T
+     * @param {T} asset The asset to clone.
+     * @returns {T} The cloned asset.
+     */
+    static cloneAsset (asset) {
+        if (!asset) {
+            return asset; // Just in-case its null or undefined.
+        }
+
+        if (ScratchStorage.isAssetLike(asset)) {
+            if (!asset.clean) {
+                throw new Error('Cannot clone a dirty asset.');
+            }
+            return new ScratchStorage.Asset(
+                asset.assetType,
+                asset.assetId,
+                asset.dataFormat,
+                Clone.structured(asset.data),
+                true
+            );
+        }
+
+        const next = Clone.structured(asset);
+        if (Object.prototype.hasOwnProperty.call(asset, 'asset')) {
+            next.asset = this.cloneAsset(asset.asset);
+        }
+        return next;
     }
 
     /**

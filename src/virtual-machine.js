@@ -12,7 +12,6 @@ const centralDispatch = require('./dispatch/central-dispatch');
 const ExtensionManager = require('./extension-support/extension-manager');
 const log = require('./util/log');
 const MathUtil = require('./util/math-util');
-const Clone = require('./util/clone');
 const RuntimeConstants = require('./engine/runtime-constants');
 const Runtime = require('./engine/runtime');
 const Resolvers = require('./util/resolvers');
@@ -33,6 +32,7 @@ const {serializeSounds, serializeCostumes} = require('./serialization/serialize-
 require('canvas-toBlob');
 const {exportCostume} = require('./serialization/tw-costume-import-export');
 const Base64Util = require('./util/base64-util');
+const AssetUtil = require('./util/tw-asset-util');
 
 const RESERVED_NAMES = ['_mouse_', '_stage_', '_edge_', '_myself_', '_random_', '_camera_'];
 
@@ -1044,7 +1044,7 @@ class VirtualMachine extends EventEmitter {
      */
     duplicateCostume (costumeIndex) {
         const originalCostume = this.editingTarget.getCostumes()[costumeIndex];
-        const clone = Clone.structured(originalCostume);
+        const clone = AssetUtil.cloneAsset(originalCostume);
         const md5ext = `${clone.assetId}.${clone.dataFormat}`;
         return loadCostume(md5ext, clone, this.runtime).then(() => {
             this.editingTarget.addCostume(clone, costumeIndex + 1);
@@ -1060,7 +1060,7 @@ class VirtualMachine extends EventEmitter {
      */
     duplicateSound (soundIndex) {
         const originalSound = this.editingTarget.getSounds()[soundIndex];
-        const clone = Object.assign({}, originalSound);
+        const clone = AssetUtil.cloneAsset(originalSound);
         return loadSound(clone, this.runtime, this.editingTarget.sprite.soundBank).then(() => {
             this.editingTarget.addSound(clone, soundIndex + 1);
             this.emitTargetsUpdate();
