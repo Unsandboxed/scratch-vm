@@ -38,7 +38,6 @@
     "@turbowarp/json": "^0.1.2",
     "@turbowarp/jszip": "^3.11.0",
     "@turbowarp/nanolog": "^0.2.0",
-    "@turbowarp/scratch-storage": "github:Unsandboxed/scratch-storage#develop",
     "@vernier/godirect": "1.5.0",
     "arraybuffer-loader": "^1.0.6",
     "atob": "2.1.2",
@@ -63,9 +62,11 @@
     "worker-loader": "^1.1.1"
   },
   "peerDependencies": {
-    "@turbowarp/scratch-svg-renderer": "^1.0.0-202312300007-62fe825"
+    "@turbowarp/scratch-svg-renderer": "^1.0.0-202312300007-62fe825",
+    "@turbowarp/scratch-storage": "github:Unsandboxed/scratch-storage#develop"
   },
   "devDependencies": {
+    "@turbowarp/scratch-storage": "github:Unsandboxed/scratch-storage#develop",
     "@babel/core": "7.13.10",
     "@babel/preset-env": "7.14.8",
     "@types/lodash": "^4.17.24",
