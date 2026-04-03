@@ -1,3 +1,4 @@
+const UnsandboxedExtensions = require('extensions');
 const dispatch = require('../dispatch/central-dispatch');
 const log = require('../util/log');
 const maybeFormatMessage = require('../util/maybe-format-message');
@@ -27,7 +28,9 @@ class ExtensionManager {
         boost: () => require('../extensions/scratch3_boost'),
         gdxfor: () => require('../extensions/scratch3_gdx_for'),
         // tw: core extension
-        tw: () => require('../extensions/tw')
+        tw: () => require('../extensions/tw'),
+        // external USB extensions
+        ...UnsandboxedExtensions.extensions
     };
 
     /**
@@ -212,6 +215,7 @@ class ExtensionManager {
      */
     async loadExtensionURL (extensionURL) {
         if (this.isBuiltinExtension(extensionURL)) {
+            require('./tw-unsandboxed-extension-runner').setupUnsandboxedExtensionAPI(this.vm);
             this.loadExtensionIdSync(extensionURL);
             return;
         }
