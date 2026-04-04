@@ -176,6 +176,8 @@ class ExtensionManager {
             return;
         }
 
+        require('./tw-unsandboxed-extension-runner').setupUnsandboxedExtensionAPI(this.vm);
+
         /** @TODO dupe handling for non-builtin extensions. See commit 670e51d33580e8a2e852b3b038bb3afc282f81b9 */
         if (this.isExtensionLoaded(extensionId)) {
             const message = `Rejecting attempt to load a second extension with ID ${extensionId}`;
@@ -215,7 +217,6 @@ class ExtensionManager {
      */
     async loadExtensionURL (extensionURL) {
         if (this.isBuiltinExtension(extensionURL)) {
-            require('./tw-unsandboxed-extension-runner').setupUnsandboxedExtensionAPI(this.vm);
             this.loadExtensionIdSync(extensionURL);
             return;
         }
