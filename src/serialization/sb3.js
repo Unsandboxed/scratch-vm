@@ -557,6 +557,28 @@ E.serializeComments = function (comments) {
     return obj;
 };
 
+E.serializeFrames = function (frames) {
+    const obj = Object.create(null);
+    for (const frameId in frames) {
+        if (!Object.prototype.hasOwnProperty.call(frames, frameId)) continue;
+        const frame = frames[frameId];
+        if (!frame) continue;
+
+        const serializedFrame = Object.create(null);
+        serializedFrame.x = frame.x;
+        serializedFrame.y = frame.y;
+        serializedFrame.width = frame.width;
+        serializedFrame.height = frame.height;
+        serializedFrame.title = frame.title;
+        serializedFrame.color = frame.color;
+        serializedFrame.minimized = Boolean(frame.minimized);
+        serializedFrame.locked = Boolean(frame.locked);
+
+        obj[frameId] = serializedFrame;
+    }
+    return obj;
+};
+
 /**
  * Serialize the given target. Only serialize properties that are necessary
  * for saving and loading this target.
@@ -575,6 +597,7 @@ E.serializeTarget = function (target, extensions) {
     obj.broadcasts = vars.broadcasts;
     [obj.blocks, targetExtensions] = E.serializeBlocks(target.blocks);
     obj.comments = E.serializeComments(target.comments);
+    obj.frames = E.serializeFrames(target.frames || {});
 
     // TODO remove this check/patch when (#1901) is fixed
     if (target.currentCostume < 0 || target.currentCostume >= target.costumes.length) {
@@ -1278,6 +1301,23 @@ E.parseScratchObject = function (object, runtime, extensions, zip, assets) {
                 newComment.blockId = comment.blockId;
             }
             target.comments[newComment.id] = newComment;
+        }
+    }
+    if (Object.prototype.hasOwnProperty.call(object, 'frames')) {
+        for (const frameId in object.frames) {
+            const frame = object.frames[frameId];
+            if (!frame) continue;
+            target.frames[frameId] = {
+                id: frameId,
+                x: typeof frame.x === 'number' ? frame.x : 0,
+                y: typeof frame.y === 'number' ? frame.y : 0,
+                width: typeof frame.width === 'number' ? frame.width : 200,
+                height: typeof frame.height === 'number' ? frame.height : 150,
+                title: typeof frame.title === 'string' ? frame.title : 'New Group',
+                color: typeof frame.color === 'string' ? frame.color : '#4C97FF',
+                minimized: Boolean(frame.minimized),
+                locked: Boolean(frame.locked)
+            };
         }
     }
     if (Object.prototype.hasOwnProperty.call(object, 'x')) {

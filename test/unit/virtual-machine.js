@@ -520,6 +520,19 @@ test('emitWorkspaceUpdate', t => {
             blocks: {
                 toXML: blocksToXML
             },
+            frames: {
+                aStageFrame: {
+                    id: 'aStageFrame',
+                    x: 1,
+                    y: 2,
+                    width: 3,
+                    height: 4,
+                    title: 'unused stage frame',
+                    color: '#4C97FF',
+                    minimized: false,
+                    locked: false
+                }
+            },
             comments: {
                 aStageComment: {
                     toXML: () => 'aStageComment',
@@ -535,6 +548,7 @@ test('emitWorkspaceUpdate', t => {
             blocks: {
                 toXML: blocksToXML
             },
+            frames: {},
             comments: {
                 someBlockComment: {
                     toXML: () => 'someBlockComment',
@@ -549,6 +563,19 @@ test('emitWorkspaceUpdate', t => {
             },
             blocks: {
                 toXML: blocksToXML
+            },
+            frames: {
+                editingFrame: {
+                    id: 'editingFrame',
+                    x: 10,
+                    y: 20,
+                    width: 300,
+                    height: 120,
+                    title: 'FrameTitle',
+                    color: '#FFAA00',
+                    minimized: true,
+                    locked: true
+                }
             },
             comments: {
                 someOtherComment: {
@@ -575,6 +602,9 @@ test('emitWorkspaceUpdate', t => {
     t.equal(xml.indexOf('someBlockComment'), -1);
     t.notEqual(xml.indexOf('someOtherComment'), -1);
     t.notEqual(xml.indexOf('A Block Comment: aBlockComment'), -1);
+    t.notEqual(xml.indexOf('<frame id="editingFrame"'), -1);
+    t.notEqual(xml.indexOf('title="FrameTitle"'), -1);
+    t.equal(xml.indexOf('aStageFrame'), -1);
     t.end();
 });
 

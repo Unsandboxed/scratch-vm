@@ -150,6 +150,46 @@ test('deserialize sb3 project with comments - no duplicate id serialization', t 
         });
 });
 
+test('serialize and deserialize frames in sb3', t => {
+    const vm = new VirtualMachine();
+    vm.loadProject(readFileToBuffer(exampleProjectPath))
+        .then(() => {
+            const sprite = vm.runtime.targets.find(target => !target.isStage);
+            sprite.frames = {
+                frameA: {
+                    id: 'frameA',
+                    x: 123,
+                    y: 45,
+                    width: 210,
+                    height: 130,
+                    title: 'Script Group',
+                    color: '#4C97FF',
+                    minimized: false,
+                    locked: true
+                }
+            };
+
+            const serialized = sb3.serialize(vm.runtime);
+            const serializedSprite = serialized.targets.find(target => !target.isStage);
+            t.type(serializedSprite.frames, 'object');
+            t.ok(Object.prototype.hasOwnProperty.call(serializedSprite.frames, 'frameA'));
+            t.equal(serializedSprite.frames.frameA.title, 'Script Group');
+            t.equal(serializedSprite.frames.frameA.locked, true);
+
+            return sb3.deserialize(JSON.parse(JSON.stringify(serialized)), new Runtime(), null, false)
+                .then(({targets}) => {
+                    const deserializedSprite = targets.find(target => !target.isStage);
+                    t.type(deserializedSprite.frames, 'object');
+                    t.ok(Object.prototype.hasOwnProperty.call(deserializedSprite.frames, 'frameA'));
+                    t.equal(deserializedSprite.frames.frameA.x, 123);
+                    t.equal(deserializedSprite.frames.frameA.width, 210);
+                    t.equal(deserializedSprite.frames.frameA.title, 'Script Group');
+                    t.equal(deserializedSprite.frames.frameA.locked, true);
+                    t.end();
+                });
+        });
+});
+
 test('serializing and deserializing sb3 preserves sprite layer order', t => {
     const vm = new VirtualMachine();
     vm.attachRenderer(new FakeRenderer());
