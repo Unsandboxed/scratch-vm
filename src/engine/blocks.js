@@ -440,7 +440,7 @@ class Blocks {
         // Validate event
         if (typeof e !== 'object') return;
         if (typeof e.blockId !== 'string' && typeof e.varId !== 'string' &&
-            typeof e.commentId !== 'string') {
+            typeof e.commentId !== 'string' && typeof e.frameId !== 'string') {
             return;
         }
         const stage = this.runtime.getTargetForStage();
@@ -656,6 +656,77 @@ class Blocks {
                 }
 
                 this.emitProjectChanged();
+            }
+            break;
+        case 'frame_create':
+            if (this.runtime.getEditingTarget()) {
+                const currTarget = this.runtime.getEditingTarget();
+                if (!currTarget.frames) {
+                    currTarget.frames = {};
+                }
+                let frameData = null;
+                if (e.xml && typeof e.xml.getAttribute === 'function') {
+                    const x = Number(e.xml.getAttribute('x'));
+                    const y = Number(e.xml.getAttribute('y'));
+                    const width = Number(e.xml.getAttribute('w'));
+                    const height = Number(e.xml.getAttribute('h'));
+                    frameData = {
+                        id: e.frameId,
+                        x: Number.isFinite(x) ? x : 0,
+                        y: Number.isFinite(y) ? y : 0,
+                        width: Number.isFinite(width) ? width : 200,
+                        height: Number.isFinite(height) ? height : 150,
+                        title: e.xml.getAttribute('title') || 'New Group',
+                        color: e.xml.getAttribute('color') || '#4C97FF',
+                        minimized: e.xml.getAttribute('minimized') === 'true',
+                        locked: e.xml.getAttribute('locked') === 'true'
+                    };
+                }
+                if (frameData) {
+                    currTarget.frames[e.frameId] = frameData;
+                    this.emitProjectChanged();
+                }
+            }
+            break;
+        case 'frame_change':
+            if (this.runtime.getEditingTarget()) {
+                const currTarget = this.runtime.getEditingTarget();
+                if (!currTarget.frames || !Object.prototype.hasOwnProperty.call(currTarget.frames, e.frameId)) {
+                    return;
+                }
+                const frame = currTarget.frames[e.frameId];
+                const change = e.newValue;
+                if (e.element === 'state' && change && typeof change === 'object') {
+                    if (typeof change.x === 'number') frame.x = change.x;
+                    if (typeof change.y === 'number') frame.y = change.y;
+                    if (typeof change.userRight === 'number' && typeof frame.x === 'number') {
+                        frame.width = change.userRight - frame.x;
+                    }
+                    if (typeof change.userBottom === 'number' && typeof frame.y === 'number') {
+                        frame.height = change.userBottom - frame.y;
+                    }
+                    if (typeof change.minimized === 'boolean') {
+                        frame.minimized = change.minimized;
+                    }
+                } else if (e.element === 'title') {
+                    frame.title = change;
+                } else if (e.element === 'minimized') {
+                    frame.minimized = Boolean(change);
+                } else if (e.element === 'locked') {
+                    frame.locked = Boolean(change);
+                } else if (e.element === 'color') {
+                    frame.color = typeof change === 'string' ? change : '#4C97FF';
+                }
+                this.emitProjectChanged();
+            }
+            break;
+        case 'frame_delete':
+            if (this.runtime.getEditingTarget()) {
+                const currTarget = this.runtime.getEditingTarget();
+                if (currTarget.frames && Object.prototype.hasOwnProperty.call(currTarget.frames, e.frameId)) {
+                    delete currTarget.frames[e.frameId];
+                    this.emitProjectChanged();
+                }
             }
             break;
         }

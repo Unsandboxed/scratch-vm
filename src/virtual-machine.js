@@ -1806,6 +1806,27 @@ class VirtualMachine extends EventEmitter {
         const workspaceComments = Object.keys(this.editingTarget.comments)
             .map(k => this.editingTarget.comments[k])
             .filter(c => c.blockId === null);
+        const workspaceFrames = Object.keys(this.editingTarget.frames || {})
+            .map(k => this.editingTarget.frames[k]);
+
+        const escapeXmlAttr = value => String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/'/g, '&apos;');
+        const frameToXML = frame => (
+            `<frame id="${escapeXmlAttr(frame.id)}"` +
+            ` x="${Math.round(frame.x)}"` +
+            ` y="${Math.round(frame.y)}"` +
+            ` w="${Math.round(frame.width)}"` +
+            ` h="${Math.round(frame.height)}"` +
+            ` title="${escapeXmlAttr(frame.title || 'New Group')}"` +
+            ` color="${escapeXmlAttr(frame.color || '#4C97FF')}"` +
+            (frame.minimized ? ' minimized="true"' : '') +
+            (frame.locked ? ' locked="true"' : '') +
+            '/>'
+        );
 
         const globalProcedureMutations = [];
         const localProcedureMutations = this.editingTarget.blocks.getLocalProcedureMutationXMLs();
@@ -1831,6 +1852,7 @@ class VirtualMachine extends EventEmitter {
                                 ${globalProcedureMutations.join()}
                                 ${localProcedureMutations.join()}
                             </procedures>
+                            ${workspaceFrames.map(frameToXML).join()}
                             ${workspaceComments.map(c => c.toXML()).join()}
                             ${this.editingTarget.blocks.toXML(this.editingTarget.comments)}
                         </xml>`;
