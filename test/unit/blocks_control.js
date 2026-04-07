@@ -187,6 +187,117 @@ test('if / ifElse', t => {
     t.end();
 });
 
+test('ifElseExtends with branch kinds mutation', t => {
+    const rt = new Runtime();
+    const c = new Control(rt);
+
+    let selected = 0;
+    const util = {
+        startBranch: function (branchNum) {
+            selected = branchNum;
+        }
+    };
+
+    c.ifElseExtends({
+        CONDITION: false,
+        CONDITION2: true,
+        mutation: {branchkinds: JSON.stringify(['if', 'elseif', 'else'])}
+    }, util);
+    t.strictEqual(selected, 2);
+
+    c.ifElseExtends({
+        CONDITION: false,
+        CONDITION2: false,
+        mutation: {branchkinds: JSON.stringify(['if', 'elseif', 'else'])}
+    }, util);
+    t.strictEqual(selected, 3);
+    t.end();
+});
+
+test('ifElseExtends fallback without mutation', t => {
+    const rt = new Runtime();
+    const c = new Control(rt);
+
+    let selected = 0;
+    const util = {
+        startBranch: function (branchNum) {
+            selected = branchNum;
+        }
+    };
+
+    c.ifElseExtends({CONDITION: true, CONDITION2: false}, util);
+    t.strictEqual(selected, 1);
+
+    c.ifElseExtends({CONDITION: false, CONDITION2: false}, util);
+    t.strictEqual(selected, 3);
+    t.end();
+});
+
+test('switchCaseExtends', t => {
+    const rt = new Runtime();
+    const c = new Control(rt);
+
+    const selected = [];
+    const stackFrame = {};
+    const threadFrame = {};
+    const util = {
+        stackFrame,
+        thread: {
+            peekStackFrame: () => threadFrame
+        },
+        startBranch: function (branchNum, isLoop) {
+            selected.push({branchNum, isLoop});
+        }
+    };
+
+    c.switchCaseExtends({
+        SWITCH_VALUE: 'b',
+        CASE_VALUE: 'a',
+        CASE_VALUE2: 'b',
+        mutation: {branchkinds: JSON.stringify(['case', 'case', 'default'])}
+    }, util);
+    t.same(selected[0], {branchNum: 2, isLoop: true});
+    t.strictEqual(threadFrame.isBreakable, true);
+
+    // Fall-through to default branch on subsequent iteration.
+    c.switchCaseExtends({
+        SWITCH_VALUE: 'b',
+        CASE_VALUE: 'a',
+        CASE_VALUE2: 'b',
+        mutation: {branchkinds: JSON.stringify(['case', 'case', 'default'])}
+    }, util);
+    t.same(selected[1], {branchNum: 3, isLoop: true});
+
+    // End of switch: no more branches.
+    c.switchCaseExtends({
+        SWITCH_VALUE: 'b',
+        CASE_VALUE: 'a',
+        CASE_VALUE2: 'b',
+        mutation: {branchkinds: JSON.stringify(['case', 'case', 'default'])}
+    }, util);
+    t.strictEqual(selected.length, 2);
+
+    // Reset frame state and confirm unmatched value starts at default.
+    const selectedDefault = [];
+    const utilDefault = {
+        stackFrame: {},
+        thread: {
+            peekStackFrame: () => ({})
+        },
+        startBranch: function (branchNum, isLoop) {
+            selectedDefault.push({branchNum, isLoop});
+        }
+    };
+    c.switchCaseExtends({
+        SWITCH_VALUE: 'z',
+        CASE_VALUE: 'a',
+        CASE_VALUE2: 'b',
+        mutation: {branchkinds: JSON.stringify(['case', 'case', 'default'])}
+    }, utilDefault);
+    t.same(selectedDefault[0], {branchNum: 3, isLoop: true});
+    t.end();
+});
+
 test('stop', t => {
     const rt = new Runtime();
     const c = new Control(rt);

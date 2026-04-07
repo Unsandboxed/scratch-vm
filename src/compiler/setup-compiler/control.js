@@ -8,6 +8,40 @@ module.exports = function (compilerData, {
     Frame,
     SCALAR_TYPE
 }) {
+    const parseSwitchBranchKinds = mutation => {
+        if (!mutation || typeof mutation !== 'object') {
+            return [];
+        }
+        const raw = mutation.branchkinds;
+        if (Array.isArray(raw)) {
+            return raw.filter(kind => typeof kind === 'string');
+        }
+        if (typeof raw !== 'string') {
+            return [];
+        }
+        try {
+            const parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) {
+                return [];
+            }
+            return parsed.filter(kind => typeof kind === 'string');
+        } catch (_error) {
+            return [];
+        }
+    };
+
+    const countSwitchBranches = block => {
+        let maxBranchNum = 0;
+        for (const inputName in block.inputs) {
+            if (!inputName.startsWith('SUBSTACK')) continue;
+            const branchNum = inputName === 'SUBSTACK' ? 1 : +inputName.substring('SUBSTACK'.length);
+            if (!Number.isNaN(branchNum) && branchNum > maxBranchNum) {
+                maxBranchNum = branchNum;
+            }
+        }
+        return maxBranchNum;
+    };
+
     /* eslint-disable no-invalid-this,prefer-arrow-callback */
     // Stack
     compilerData.registerBlock('control_all_at_once', function (stg, block) {
@@ -103,6 +137,71 @@ module.exports = function (compilerData, {
         jsg.source += `}\n`;
     }, {
         input: false
+    });
+    compilerData.registerBlock('control_switch_case_extends', function (stg, block) {
+        const branchKinds = parseSwitchBranchKinds(block.mutation);
+        const branchCount = branchKinds.length || countSwitchBranches(block);
+
+        const switchBranches = [];
+        for (let i = 1; i <= branchCount; i++) {
+            const branchKind = branchKinds[i - 1];
+            const caseKey = i === 1 ? 'CASE_VALUE' : `CASE_VALUE${i}`;
+            const substackName = i === 1 ? 'SUBSTACK' : `SUBSTACK${i}`;
+            const isDefault = branchKind === 'default' || !block.inputs[caseKey];
+
+            switchBranches.push({
+                kind: isDefault ? 'default' : 'case',
+                caseValue: isDefault ? null : stg.descendInputOfBlock(block, caseKey),
+                stack: stg.descendSubstack(block, substackName)
+            });
+        }
+
+        return new IntermediateStackBlock(this.ir_opcode, {
+            switchValue: stg.descendInputOfBlock(block, 'SWITCH_VALUE'),
+            branches: switchBranches
+        });
+    }, function (jsg, block) {
+        const switchValue = jsg.localVariables.next();
+        const startCase = jsg.localVariables.next();
+
+        jsg.source += `const ${switchValue} = ${jsg.descendInput(block.inputs.switchValue)};\n`;
+        jsg.source += `let ${startCase} = -1;\n`;
+
+        for (let i = 0; i < block.inputs.branches.length; i++) {
+            const switchBranch = block.inputs.branches[i];
+            if (switchBranch.kind !== 'case') {
+                continue;
+            }
+            const caseValue = jsg.localVariables.next();
+            jsg.source += `const ${caseValue} = ${jsg.descendInput(switchBranch.caseValue)};\n`;
+            jsg.source += `if (${startCase} === -1 && compareEqual(${switchValue}, ${caseValue})) ${startCase} = ${i};\n`;
+        }
+
+        let defaultIndex = -1;
+        for (let i = 0; i < block.inputs.branches.length; i++) {
+            if (block.inputs.branches[i].kind === 'default') {
+                defaultIndex = i;
+                break;
+            }
+        }
+
+        if (defaultIndex !== -1) {
+            jsg.source += `if (${startCase} === -1) ${startCase} = ${defaultIndex};\n`;
+        }
+
+        jsg.source += `if (${startCase} !== -1) {\n`;
+        jsg.source += `switch (${startCase}) {\n`;
+        for (let i = 0; i < block.inputs.branches.length; i++) {
+            const switchBranch = block.inputs.branches[i];
+            jsg.source += `case ${i}:\n`;
+            // Intentionally no break here: cases should fall through unless control_break runs.
+            jsg.descendStack(switchBranch.stack, new Frame(false, true));
+        }
+        jsg.source += '}\n';
+        jsg.source += '}\n';
+    }, {
+        input: false,
+        dynamicChanges: true
     });
     compilerData.registerBlock('control_repeat', function (stg, block) {
         this.yields = stg.analyzeLoop();

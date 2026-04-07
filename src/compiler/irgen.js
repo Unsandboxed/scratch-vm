@@ -227,6 +227,10 @@ class ScriptTreeGenerator {
      * @returns {IntermediateInput} Compiled input node for this input.
      */
     descendInput (block, preserveStrings = false) {
+        if (compatBlocks.inputs.includes(block.opcode)) {
+            return this.descendCompatLayerInput(block);
+        }
+
         if (this.runtime.compilerData.inputs.has(block.opcode)) {
             block = this.runtime.compilerData.inputs.get(block.opcode).stg(this, block, preserveStrings, true);
             return block;
@@ -234,10 +238,6 @@ class ScriptTreeGenerator {
 
         const opcodeFunction = this.runtime.getOpcodeFunction(block.opcode);
         if (opcodeFunction) {
-            // It might be a non-compiled primitive from a standard category
-            if (compatBlocks.inputs.includes(block.opcode)) {
-                return this.descendCompatLayerInput(block);
-            }
             // It might be an extension block.
             const blockInfo = this.getBlockInfo(block.opcode);
             if (blockInfo) {
@@ -266,16 +266,16 @@ class ScriptTreeGenerator {
      * @returns {IntermediateStackBlock} Compiled node for this block.
      */
     descendStackedBlock (block) {
+        if (compatBlocks.stacked.includes(block.opcode)) {
+            return this.descendCompatLayerStack(block);
+        }
+
         if (this.runtime.compilerData.stacks.has(block.opcode)) {
             block = this.runtime.compilerData.stacks.get(block.opcode).stg(this, block, null, false);
             return block;
         }
         const opcodeFunction = this.runtime.getOpcodeFunction(block.opcode);
         if (opcodeFunction) {
-            // It might be a non-compiled primitive from a standard category
-            if (compatBlocks.stacked.includes(block.opcode)) {
-                return this.descendCompatLayerStack(block);
-            }
             // It might be an extension block.
             const blockInfo = this.getBlockInfo(block.opcode);
             if (blockInfo) {
@@ -617,7 +617,11 @@ class ScriptTreeGenerator {
         }
 
         const blockInfo = this.getBlockInfo(block.opcode);
-        const blockType = (blockInfo && blockInfo.info && blockInfo.info.blockType) || BlockType.COMMAND;
+        let blockType = (blockInfo && blockInfo.info && blockInfo.info.blockType) || BlockType.COMMAND;
+        if (block.opcode === 'control_if_else_extends' ||
+            block.opcode === 'control_switch_case_extends') {
+            blockType = BlockType.CONDITIONAL;
+        }
         const substacks = {};
         if (this.runtime.compilerData.bt_branchables.has(blockType)) {
             for (const inputName in block.inputs) {
@@ -662,7 +666,11 @@ class ScriptTreeGenerator {
         }
 
         const blockInfo = this.getBlockInfo(block.opcode);
-        const blockType = (blockInfo && blockInfo.info && blockInfo.info.blockType) || BlockType.COMMAND;
+        let blockType = (blockInfo && blockInfo.info && blockInfo.info.blockType) || BlockType.COMMAND;
+        if (block.opcode === 'control_if_else_extends' ||
+            block.opcode === 'control_switch_case_extends') {
+            blockType = BlockType.CONDITIONAL;
+        }
         const substacks = {};
         if (this.runtime.compilerData.bt_branchables.has(blockType)) {
             for (const inputName in block.inputs) {
