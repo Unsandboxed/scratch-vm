@@ -127,6 +127,12 @@ class Scratch3MotionBlocks {
         const targetXY = this.getTargetXY(args.TO, util);
         if (targetXY) {
             util.target.setXY(targetXY[0], targetXY[1]);
+            if (args.TO === '_camera_') {
+                // Mark this sprite as sticky-camera so the runtime re-snaps it
+                // to the camera's final position at the end of the frame.
+                util.target.followingCamera = true;
+                util.target.runtime._hasFollowingCameraTargets = true;
+            }
         }
     }
 

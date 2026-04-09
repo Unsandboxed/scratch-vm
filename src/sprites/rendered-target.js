@@ -96,6 +96,14 @@ class RenderedTarget extends Target {
         this.draggable = false;
 
         /**
+         * True if the sprite's last positional movement this frame was "go to [camera]".
+         * When stickyCamera is enabled, the runtime re-snaps this sprite to the
+         * camera's final position at the end of that frame, then this flag is cleared.
+         * @type {boolean}
+         */
+        this.followingCamera = false;
+
+        /**
          * Whether the rendered target is currently visible.
          * @type {boolean}
          */
@@ -272,6 +280,8 @@ class RenderedTarget extends Target {
     setXY (x, y, force) { // used by compiler
         if (this.isStage) return;
         if (this.dragging && !force) return;
+        // Clear the sticky-camera flag — any "real" movement breaks camera-following.
+        this.followingCamera = false;
         const oldX = this.x;
         const oldY = this.y;
         if (this.renderer) {
