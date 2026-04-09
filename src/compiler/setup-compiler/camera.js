@@ -12,12 +12,7 @@ module.exports = function (compilerData, {
         'camera_movetoxy',
         'camera_changex',
         'camera_changey',
-        'camera_changebyxy',
-        'camera_setzoom',
-        'camera_changezoom',
-        'camera_turnright',
-        'camera_turnleft',
-        'camera_pointindirection'
+        'camera_changebyxy'
     ], function (stg, block) {
         const args = {};
         switch (this.ir_opcode) {
@@ -26,12 +21,6 @@ module.exports = function (compilerData, {
         case 'camera.movetoxy':
             if ('X' in block.inputs) args.x = stg.descendInputOfBlock(block, 'X').toType(InputType.NUMBER);
             if ('Y' in block.inputs) args.y = stg.descendInputOfBlock(block, 'Y').toType(InputType.NUMBER);
-            break;
-        case 'camera.setzoom':
-            if ('ZOOM' in block.inputs) args.zoom = stg.descendInputOfBlock(block, 'ZOOM').toType(InputType.NUMBER);
-            break;
-        case 'camera.pointindirection':
-            if ('DIRECTION' in block.inputs) args.rotation = stg.descendInputOfBlock(block, 'DIRECTION').toType(InputType.NUMBER);
             break;
         case 'camera.changex':
         case 'camera.changey':
@@ -53,39 +42,6 @@ module.exports = function (compilerData, {
             } else args.y = new IntermediateInput('camera.yposition', InputType.NUMBER);
             break;
         }
-        case 'camera.changezoom':
-            args.disableModulo = true;
-            if ('ZOOM' in block.inputs) {
-                args.zoom = new IntermediateInput('operator.add', InputType.NUMBER, {
-                    left: new IntermediateInput('camera.zoom', InputType.NUMBER),
-                    right: stg.descendInputOfBlock(block, 'ZOOM').toType(InputType.NUMBER)
-                });
-            } else {
-                args.zoom = new IntermediateInput('camera.zoom', InputType.NUMBER);
-            }
-            break;
-        case 'camera.turnright':
-            args.disableModulo = true;
-            if ('DEGREES' in block.inputs) {
-                args.rotation = new IntermediateInput('operator.add', InputType.NUMBER, {
-                    left: new IntermediateInput('camera.rotation', InputType.NUMBER),
-                    right: stg.descendInputOfBlock(block, 'DEGREES').toType(InputType.NUMBER)
-                });
-            } else {
-                args.rotation = new IntermediateInput('camera.rotation', InputType.NUMBER);
-            }
-            break;
-        case 'camera.turnleft':
-            args.disableModulo = true;
-            if ('DEGREES' in block.inputs) {
-                args.rotation = new IntermediateInput('operator.subtract', InputType.NUMBER, {
-                    left: new IntermediateInput('camera.rotation', InputType.NUMBER),
-                    right: stg.descendInputOfBlock(block, 'DEGREES').toType(InputType.NUMBER)
-                });
-            } else {
-                args.rotation = new IntermediateInput('camera.rotation', InputType.NUMBER);
-            }
-            break;
         }
         switch (this.ir_opcode) {
         case 'camera.setzoom':
