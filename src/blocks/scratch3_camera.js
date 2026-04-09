@@ -16,6 +16,12 @@ class Scratch3CameraBlocks {
             },
             camera_yposition: {
                 getId: () => 'yposition'
+            },
+            camera_zoom: {
+                getId: () => 'zoom'
+            },
+            camera_rotation: {
+                getId: () => 'rotation'
             }
         };
     }
@@ -32,8 +38,15 @@ class Scratch3CameraBlocks {
             camera_changex: this.changeX,
             camera_sety: this.setY,
             camera_changey: this.changeY,
+            camera_setzoom: this.setZoom,
+            camera_changezoom: this.changeZoom,
+            camera_turnright: this.turnRight,
+            camera_turnleft: this.turnLeft,
+            camera_pointindirection: this.pointInDirection,
             camera_xposition: this.getCameraX,
-            camera_yposition: this.getCameraY
+            camera_yposition: this.getCameraY,
+            camera_zoom: this.getCameraZoom,
+            camera_rotation: this.getCameraRotation
         };
     }
 
@@ -73,12 +86,48 @@ class Scratch3CameraBlocks {
         this.runtime.camera.setXY(this.runtime.camera.x, newY);
     }
 
+    setZoom (args) {
+        const zoom = Cast.toNumber(args.ZOOM);
+        this.runtime.camera.setZoom(zoom);
+    }
+
+    changeZoom (args) {
+        const zoom = Cast.toNumber(args.ZOOM);
+        const newZoom = zoom + this.runtime.camera.zoom;
+        this.runtime.camera.setZoom(newZoom);
+    }
+
+    turnRight (args) {
+        const degrees = Cast.toNumber(args.DEGREES);
+        const newRotation = this.runtime.camera.direction + degrees;
+        this.runtime.camera.setDirection(newRotation);
+    }
+
+    turnLeft (args) {
+        const degrees = Cast.toNumber(args.DEGREES);
+        const newRotation = this.runtime.camera.direction - degrees;
+        this.runtime.camera.setDirection(newRotation);
+    }
+
+    pointInDirection (args) {
+        const direction = Cast.toNumber(args.DIRECTION);
+        this.runtime.camera.setDirection(direction);
+    }
+
     getCameraX () {
         return this.runtime.camera.x;
     }
 
     getCameraY () {
         return this.runtime.camera.y;
+    }
+
+    getCameraZoom () {
+        return this.runtime.camera.zoom;
+    }
+
+    getCameraRotation () {
+        return this.runtime.camera.direction;
     }
 }
 
