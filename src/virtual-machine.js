@@ -36,6 +36,57 @@ const AssetUtil = require('./util/tw-asset-util');
 
 const RESERVED_NAMES = ['_mouse_', '_stage_', '_edge_', '_myself_', '_random_', '_camera_'];
 
+const BLUR_EFFECT_INFO = {
+    menuName: 'Blur',
+    showInMenu: true,
+    converter: x => {
+        return Number.isFinite(x) ? Math.abs(x) : 0;
+    },
+    shapeChanges: true,
+    fragmentUniforms: [
+        'uniform float u_blur;',
+        '#ifndef ENABLE_pixelate',
+        'uniform vec2 u_skinSize;',
+        '#endif // ENABLE_pixelate',
+        'float blurGaussianWeight9 (int sampleIndex) {',
+        '    int index = sampleIndex < 0 ? -sampleIndex : sampleIndex;',
+        '    if (index == 0) return 70.0;',
+        '    if (index == 1) return 56.0;',
+        '    if (index == 2) return 28.0;',
+        '    if (index == 3) return 8.0;',
+        '    return 1.0;',
+        '}'
+    ].join('\n'),
+    fragmentColor: [
+        '{',
+        '    float blurRadius = max(u_blur, 0.0);',
+        '    if (blurRadius > 0.0) {',
+        '        vec2 texelSize = vec2(1.0) / max(u_skinSize, vec2(1.0));',
+        '        vec2 sampleStep = texelSize * (blurRadius / 4.0);',
+        '        vec4 blurSum = vec4(0.0);',
+        '        float weightSum = 0.0;',
+        '        for (int y = -4; y <= 4; y++) {',
+        '            float weightY = blurGaussianWeight9(y);',
+        '            for (int x = -4; x <= 4; x++) {',
+        '                float weightX = blurGaussianWeight9(x);',
+        '                float sampleWeight = weightX * weightY;',
+        '                vec2 sampleOffset = vec2(float(x), float(y)) * sampleStep;',
+        '                vec2 sampleTexcoord = texcoord0 + sampleOffset;',
+        '                float inBounds =',
+        '                    step(0.0, sampleTexcoord.x) *',
+        '                    step(sampleTexcoord.x, 1.0) *',
+        '                    step(0.0, sampleTexcoord.y) *',
+        '                    step(sampleTexcoord.y, 1.0);',
+        '                blurSum += texture2D(u_skin, clamp(sampleTexcoord, vec2(0.0), vec2(1.0))) * sampleWeight * inBounds;',
+        '                weightSum += sampleWeight * inBounds;',
+        '            }',
+        '        }',
+        '        gl_FragColor = blurSum / max(weightSum, epsilon);',
+        '    }',
+        '}'
+    ].join('\n')
+};
+
 const CORE_EXTENSIONS = [
     // 'motion',
     // 'looks',
@@ -1491,6 +1542,18 @@ class VirtualMachine extends EventEmitter {
      */
     attachRenderer (renderer) {
         this.runtime.attachRenderer(renderer);
+
+        if (renderer && typeof renderer.registerSpriteShaderEffect === 'function') {
+            try {
+                this.registerSpriteShaderEffect('blur', BLUR_EFFECT_INFO);
+            } catch (error) {
+                // Ignore duplicate registration on repeated renderer attachment.
+                if (!(error && typeof error.message === 'string' &&
+                    error.message.indexOf('Effect already exists: blur') !== -1)) {
+                    throw error;
+                }
+            }
+        }
     }
 
     /**
@@ -1498,6 +1561,25 @@ class VirtualMachine extends EventEmitter {
      */
     get renderer () {
         return this.runtime && this.runtime.renderer;
+    }
+
+    /**
+     * Register a custom sprite shader effect.
+     * @param {string} effectName The effect's unique name.
+     * @param {object} effectInfo Renderer-specific effect metadata and shader snippets.
+     * @param {string} [effectInfo.menuName] Optional name shown in the Looks effect dropdown.
+     * @param {boolean} [effectInfo.showInMenu=true] If false, hide from the Looks effect dropdown.
+     * @returns {string} The normalized effect name.
+     */
+    registerSpriteShaderEffect (effectName, effectInfo = {}) {
+        const renderer = this.runtime && this.runtime.renderer;
+        if (!renderer || typeof renderer.registerSpriteShaderEffect !== 'function') {
+            throw new Error('Cannot register sprite shader effect without an attached renderer.');
+        }
+
+        const normalizedEffectName = renderer.registerSpriteShaderEffect(effectName, effectInfo);
+        this.runtime.registerSpriteShaderEffect(normalizedEffectName, effectInfo);
+        return normalizedEffectName;
     }
 
     /**

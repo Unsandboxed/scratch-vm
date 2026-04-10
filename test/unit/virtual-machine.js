@@ -1038,6 +1038,75 @@ test('Getting the renderer returns the renderer', t => {
     t.end();
 });
 
+test('attachRenderer registers default blur sprite shader effect', t => {
+    const vm = new VirtualMachine();
+    let called = false;
+    const renderer = new Renderer();
+
+    renderer.registerSpriteShaderEffect = (effectName, effectInfo) => {
+        called = true;
+        t.equal(effectName, 'blur');
+        t.equal(typeof effectInfo.converter, 'function');
+        t.equal(effectInfo.menuName, 'Blur');
+        t.equal(effectInfo.showInMenu, true);
+        t.ok(effectInfo.fragmentUniforms.indexOf('uniform float u_blur;') !== -1);
+        t.ok(effectInfo.fragmentColor.indexOf('gl_FragColor = blurSum / max(weightSum, epsilon);') !== -1);
+        return effectName;
+    };
+
+    vm.attachRenderer(renderer);
+    t.equal(called, true);
+    t.same(vm.runtime.getSpriteShaderEffectNames(), ['blur']);
+    t.same(vm.runtime.getSpriteShaderEffects(), [{
+        name: 'blur',
+        menuName: 'Blur',
+        showInMenu: true
+    }]);
+    t.end();
+});
+
+test('registerSpriteShaderEffect forwards to renderer and updates runtime effects and metadata', t => {
+    const vm = new VirtualMachine();
+    const converter = x => x / 100;
+    let called = false;
+
+    vm.runtime.renderer = {
+        registerSpriteShaderEffect: (effectName, effectInfo) => {
+            called = true;
+            t.equal(effectName, 'scanline');
+            t.equal(effectInfo.converter, converter);
+            return 'scanline';
+        }
+    };
+
+    vm.runtime.targets = [{effects: {ghost: 0}}];
+
+    const registered = vm.registerSpriteShaderEffect('scanline', {
+        converter,
+        menuName: 'Scanline',
+        showInMenu: false
+    });
+
+    t.equal(called, true);
+    t.equal(registered, 'scanline');
+    t.equal(vm.runtime.targets[0].effects.scanline, 0);
+    t.same(vm.runtime.getSpriteShaderEffectNames(), ['scanline']);
+    t.same(vm.runtime.getSpriteShaderEffects(), [{
+        name: 'scanline',
+        menuName: 'Scanline',
+        showInMenu: false
+    }]);
+    t.end();
+});
+
+test('registerSpriteShaderEffect throws when no renderer is attached', t => {
+    const vm = new VirtualMachine();
+    t.throws(() => {
+        vm.registerSpriteShaderEffect('scanline');
+    }, new Error('Cannot register sprite shader effect without an attached renderer.'));
+    t.end();
+});
+
 test('Starting the VM emits an event', t => {
     let started = false;
     const vm = new VirtualMachine();
