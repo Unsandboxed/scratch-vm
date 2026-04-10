@@ -1050,7 +1050,7 @@ test('attachRenderer registers default blur sprite shader effect', t => {
         t.equal(effectInfo.menuName, 'Blur');
         t.equal(effectInfo.showInMenu, true);
         t.ok(effectInfo.fragmentUniforms.indexOf('uniform float u_blur;') !== -1);
-        t.ok(effectInfo.fragmentColor.indexOf('gl_FragColor = blurSum / max(weightSum, epsilon);') !== -1);
+        t.ok(effectInfo.fragmentColor.indexOf('gl_FragColor = premulSum / max(weightSum, epsilon);') !== -1);
         return effectName;
     };
 
