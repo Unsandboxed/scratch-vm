@@ -898,12 +898,14 @@ class Runtime extends RuntimeConstants {
      * @private
      */
     _registerExtensionPrimitives (extensionInfo) {
+        const appendTo = typeof extensionInfo.appendTo === 'string' ? extensionInfo.appendTo : null;
         const categoryInfo = this._mapColours({
             id: extensionInfo.id,
             name: maybeFormatMessage(extensionInfo.name),
             showStatusButton: extensionInfo.showStatusButton,
             blockIconURI: extensionInfo.blockIconURI,
-            menuIconURI: extensionInfo.menuIconURI
+            menuIconURI: extensionInfo.menuIconURI,
+            appendTo
         }, false, extensionInfo);
 
         this._blockInfo.push(categoryInfo);
@@ -948,6 +950,11 @@ class Runtime extends RuntimeConstants {
         const categoryInfo = this._blockInfo.find(info => info.id === extensionInfo.id);
         if (categoryInfo) {
             categoryInfo.name = maybeFormatMessage(extensionInfo.name);
+            if (typeof extensionInfo.appendTo === 'string') {
+                categoryInfo.appendTo = extensionInfo.appendTo;
+            } else {
+                delete categoryInfo.appendTo;
+            }
             this._fillExtensionCategory(categoryInfo, extensionInfo);
 
             this.emit(RuntimeConstants.BLOCKSINFO_UPDATE, categoryInfo);
@@ -1685,6 +1692,7 @@ class Runtime extends RuntimeConstants {
      * @returns {Array.<object>} scratch-blocks XML for each category of extension blocks, in category order.
      * @param {?Target} [target] - the active editing target (optional)
      * @property {string} id - the category / extension ID
+     * @property {string|undefined} appendTo - optional category ID to append these blocks into
      * @property {string} xml - the XML text for this category, starting with `<category>` and ending with `</category>`
      */
     getBlocksXML (target) {
@@ -1731,10 +1739,14 @@ class Runtime extends RuntimeConstants {
             xml += paletteBlocks.map(block => block.xml).join('');
             xml += '</category>';
 
-            return {
+            const result = {
                 id: categoryInfo.id,
                 xml
             };
+            if (categoryInfo.appendTo) {
+                result.appendTo = categoryInfo.appendTo;
+            }
+            return result;
         });
     }
 
