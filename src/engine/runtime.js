@@ -37,6 +37,12 @@ const Storage = require('../io/storage');
 const StringUtil = require('../util/string-util');
 const uid = require('../util/uid');
 
+const now = () => (
+    typeof performance !== 'undefined' && typeof performance.now === 'function' ?
+        performance.now() :
+        Date.now()
+);
+
 const defaultBlockPackages = {
     scratch3_control: require('../blocks/scratch3_control'),
     scratch3_event: require('../blocks/scratch3_event'),
@@ -551,7 +557,8 @@ class Runtime extends RuntimeConstants {
         this.runtimeOptions = {
             maxClones: RuntimeConstants.MAX_CLONES,
             miscLimits: false,
-            fencing: false
+            fencing: false,
+            stickyCamera: true
         };
 
         /**
@@ -579,9 +586,16 @@ class Runtime extends RuntimeConstants {
         }
         this.debug = false;
 
-        this._lastStepTime = Date.now();
+        this._lastStepTime = now();
         this.interpolationEnabled = false;
         this.interpolate = interpolate;
+
+        /**
+         * True if at least one target requested camera-follow this frame.
+         * Used to skip follower maintenance work when inactive.
+         * @type {boolean}
+         */
+        this._hasFollowingCameraTargets = false;
 
         this._defaultStoredSettings = this._generateAllProjectOptions();
 
@@ -2697,8 +2711,8 @@ class Runtime extends RuntimeConstants {
 
     _renderInterpolatedPositions () {
         const frameStarted = this._lastStepTime;
-        const now = Date.now();
-        const timeSinceStart = now - frameStarted;
+        const frameNow = now();
+        const timeSinceStart = frameNow - frameStarted;
         const progressInFrame = Math.min(1, Math.max(0, timeSinceStart / this.currentStepTime));
 
         interpolate.interpolate(this, progressInFrame);
@@ -2722,6 +2736,17 @@ class Runtime extends RuntimeConstants {
      * inactive threads after each iteration.
      */
     _step () {
+        // followingCamera is a per-frame marker set by "go to [camera]".
+        // Only clear it if at least one target used it in the previous frame.
+        if (this._hasFollowingCameraTargets) {
+            for (const target of this.targets) {
+                if (target.followingCamera) {
+                    target.followingCamera = false;
+                }
+            }
+            this._hasFollowingCameraTargets = false;
+        }
+
         if (this._refreshGlobalProceduresMutations) {
             this._refreshGlobalProceduresMutations = false;
             this._updateGlobalProceduresMutations();
@@ -2773,6 +2798,44 @@ class Runtime extends RuntimeConstants {
             this.profiler.stop();
         }
         this.emit(RuntimeConstants.AFTER_EXECUTE);
+
+        // Keep model state in sync with camera-follow rendering so the normal
+        // per-step draw (non-interpolated) and interpolation draws don't fight.
+        if (this.runtimeOptions.stickyCamera && this._hasFollowingCameraTargets) {
+            const camX = this.camera.x;
+            const camY = this.camera.y;
+            for (const target of this.targets) {
+                if (target.followingCamera) {
+                    // Keep camera-following exact: bypass setXY so fencing/clamping
+                    // doesn't introduce sub-frame wobble against camera interpolation.
+                    const oldX = target.x;
+                    const oldY = target.y;
+                    target.x = camX;
+                    target.y = camY;
+
+                    if (target.renderer && typeof target.drawableID === 'number') {
+                        if (typeof target.renderer.updateDrawablePositionExact === 'function') {
+                            target.renderer.updateDrawablePositionExact(target.drawableID, [camX, camY]);
+                        } else {
+                            target.renderer.updateDrawablePosition(target.drawableID, [camX, camY]);
+                        }
+                        if (target.visible) {
+                            target.emitVisualChange();
+                            this.requestRedraw();
+                        }
+                    }
+
+                    if (target.onTargetMoved) {
+                        target.onTargetMoved(target, oldX, oldY, true);
+                    }
+                    this.requestTargetsUpdate(target);
+
+                    // Preserve per-frame marker through interpolation passes.
+                    target.followingCamera = true;
+                }
+            }
+        }
+
         this._updateGlows(doneThreads);
         // Add done threads so that even if a thread finishes within 1 frame, the green
         // flag will still indicate that a script ran.
@@ -2817,7 +2880,7 @@ class Runtime extends RuntimeConstants {
         }
 
         if (this.interpolationEnabled || targetHasInterpolation) {
-            this._lastStepTime = Date.now();
+            this._lastStepTime = now();
         }
     }
 

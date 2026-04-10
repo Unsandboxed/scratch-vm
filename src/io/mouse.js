@@ -63,31 +63,42 @@ class Mouse {
      * @param  {object} data Data from DOM event.
      */
     postData (data) {
-        if (typeof data.x === 'number') {
+        const hasX = typeof data.x === 'number';
+        const hasY = typeof data.y === 'number';
+        if (hasX) {
             this._clientX = data.x;
-            this._scratchX = MathUtil.clamp(
-                this.runtime.stageWidth * ((data.x / data.canvasWidth) - 0.5),
-                -(this.runtime.stageWidth / 2),
-                (this.runtime.stageWidth / 2)
-            );
-
-            // usb: transform based on camera
-            this._scratchX = this.runtime.renderer.translateX(
-                this._scratchX, false, 1, true, this._scratchY, 1
-            );
         }
-        if (typeof data.y === 'number') {
+        if (hasY) {
             this._clientY = data.y;
-            this._scratchY = MathUtil.clamp(
-                -this.runtime.stageHeight * ((data.y / data.canvasHeight) - 0.5),
-                -(this.runtime.stageHeight / 2),
-                (this.runtime.stageHeight / 2)
-            );
+        }
 
-            // usb: transform based on camera
-            this._scratchY = this.runtime.renderer.translateY(
-                this._scratchY, false, 1, true, this._scratchX, 1
-            );
+        if (hasX || hasY) {
+            const hasCanvasSize = typeof data.canvasWidth === 'number' && typeof data.canvasHeight === 'number';
+            // Clamp in screen/client space before camera inversion so stage bounds stay screen-aligned.
+            const constrainedClientX = hasCanvasSize ?
+                MathUtil.clamp(this._clientX, 0, data.canvasWidth) :
+                this._clientX;
+            const constrainedClientY = hasCanvasSize ?
+                MathUtil.clamp(this._clientY, 0, data.canvasHeight) :
+                this._clientY;
+
+            const renderer = this.runtime.renderer;
+            if (renderer) {
+                const [scratchX, scratchY] = renderer.clientSpaceToScratchPoint(constrainedClientX, constrainedClientY);
+                this._scratchX = scratchX;
+                this._scratchY = scratchY;
+            } else if (hasCanvasSize) {
+                this._scratchX = MathUtil.clamp(
+                    this.runtime.stageWidth * ((constrainedClientX / data.canvasWidth) - 0.5),
+                    -(this.runtime.stageWidth / 2),
+                    (this.runtime.stageWidth / 2)
+                );
+                this._scratchY = MathUtil.clamp(
+                    -this.runtime.stageHeight * ((constrainedClientY / data.canvasHeight) - 0.5),
+                    -(this.runtime.stageHeight / 2),
+                    (this.runtime.stageHeight / 2)
+                );
+            }
         }
         if (typeof data.isDown !== 'undefined') {
             // If no button specified, default to left button for compatibility
@@ -133,9 +144,7 @@ class Mouse {
      * @return {number} Non-clamped X position of the mouse cursor.
      */
     getClientX () {
-        return this.runtime.renderer.translateX(
-            this._clientX, true, 1, true, this._clientY, -1
-        );
+        return this._clientX;
     }
 
     /**
@@ -143,9 +152,7 @@ class Mouse {
      * @return {number} Non-clamped Y position of the mouse cursor.
      */
     getClientY () {
-        return this.runtime.renderer.translateY(
-            this._clientY, true, -1, true, this._clientX, 1
-        );
+        return this._clientY;
     }
 
     /**

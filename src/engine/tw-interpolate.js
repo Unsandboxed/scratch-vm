@@ -65,6 +65,8 @@ const setupInitialState = runtime => {
 const interpolate = (runtime, time) => {
     const renderer = runtime.renderer;
     const camera = runtime.camera;
+    let cameraRenderX = camera.x;
+    let cameraRenderY = camera.y;
 
     if (!renderer) {
         return;
@@ -83,9 +85,30 @@ const interpolate = (runtime, time) => {
             // Large movements are likely intended to be instantaneous.
             const distance = Math.sqrt((absoluteXDistance ** 2) + (absoluteYDistance ** 2));
             if (distance < 50) {
-                const newX = interpolationData.x + (xDistance * time);
-                const newY = interpolationData.y + (yDistance * time);
-                renderer._updateCamera(newX, newY, camera.direction, camera.zoom);
+                cameraRenderX = interpolationData.x + (xDistance * time);
+                cameraRenderY = interpolationData.y + (yDistance * time);
+            }
+        }
+
+        renderer._updateCamera(
+            cameraRenderX,
+            cameraRenderY,
+            camera.direction,
+            camera.zoom
+        );
+
+        // When interpolation is enabled, move camera-following targets immediately
+        // after camera interpolation so they use the camera's current interpolated
+        // position for this sub-frame.
+        if (runtime.interpolationEnabled && runtime.runtimeOptions.stickyCamera && runtime._hasFollowingCameraTargets) {
+            for (const target of runtime.targets) {
+                if (target.followingCamera && target.visible && !target.isStage) {
+                    if (typeof renderer.updateDrawablePositionExact === 'function') {
+                        renderer.updateDrawablePositionExact(target.drawableID, [cameraRenderX, cameraRenderY]);
+                    } else {
+                        renderer.updateDrawablePosition(target.drawableID, [cameraRenderX, cameraRenderY]);
+                    }
+                }
             }
         }
     }
@@ -107,6 +130,10 @@ const interpolate = (runtime, time) => {
                 interpolationData.ghost === 100
             )
         ) {
+            continue;
+        }
+
+        if (target.followingCamera) {
             continue;
         }
 
