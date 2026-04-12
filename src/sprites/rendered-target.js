@@ -188,7 +188,7 @@ class RenderedTarget extends Target {
         }
         // If we're a clone, start the hats.
         if (!this.isOriginal) {
-            this.runtime.appendHatQueue(
+            this.runtime.startHats(
                 'control_start_as_clone', null, this
             );
         }

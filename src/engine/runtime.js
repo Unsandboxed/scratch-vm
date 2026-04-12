@@ -291,8 +291,6 @@ class Runtime extends RuntimeConstants {
 
         this.threadMap = new Map();
 
-        this._hatQueue = [];
-
         /** @type {!Sequencer} */
         this.sequencer = new Sequencer(this);
 
@@ -2285,18 +2283,6 @@ class Runtime extends RuntimeConstants {
         }
     }
 
-
-    executeHatQueue () {
-        // Copy the queue just in case more hats are added during execution.
-        const queue = this._hatQueue.slice(0, Infinity);
-        this._hatQueue.length = 0;
-        for (const args of queue) {
-            this.startHats(...args);
-        }
-    }
-    appendHatQueue (...args) {
-        this._hatQueue.push(args);
-    }
 
     /**
      * Start all relevant hats.
