@@ -43,6 +43,19 @@ const BLUR_EFFECT_INFO = {
         return Number.isFinite(x) ? Math.abs(x) : 0;
     },
     shapeChanges: false,
+    boundsPadding: x => {
+        const blurStrength = Math.max(0, Number(x) || 0);
+        if (blurStrength === 0) {
+            return {texels: 0};
+        }
+
+        const blurScale = Math.log2(1.0 + (blurStrength * 0.20));
+        const sampleScale = 1.0 + (0.24 * blurScale);
+        const kernelRadius = 3.5;
+        return {
+            texels: kernelRadius * sampleScale
+        };
+    },
     fragmentUniforms: [
         'uniform float u_blur;',
         '#ifndef CUSTOM_U_SKINSIZE_DECLARED',
@@ -70,15 +83,15 @@ const BLUR_EFFECT_INFO = {
         '                vec2 kernelOffset = vec2(float(x), float(y));',
         '                float primaryWeight = blurGaussian(length(kernelOffset), sigma);',
         '                vec2 primaryOffset = kernelOffset * sampleStep;',
-        '                vec2 primaryTexcoord = clamp(texcoord0 + primaryOffset, vec2(0.0), vec2(1.0));',
-        '                vec4 primaryColor = texture2D(u_skin, primaryTexcoord);',
+        '                vec2 primaryTexcoord = texcoord0 + primaryOffset;',
+        '                vec4 primaryColor = sampleSpriteTexel(primaryTexcoord);',
         '                premulSum += primaryColor * primaryWeight;',
         '                weightSum += primaryWeight;',
         '                vec2 secondaryKernelOffset = kernelOffset + latticeJitter;',
         '                float secondaryWeight = blurGaussian(length(secondaryKernelOffset), sigma) * 0.5;',
         '                vec2 secondaryOffset = secondaryKernelOffset * sampleStep;',
-        '                vec2 secondaryTexcoord = clamp(texcoord0 + secondaryOffset, vec2(0.0), vec2(1.0));',
-        '                vec4 secondaryColor = texture2D(u_skin, secondaryTexcoord);',
+        '                vec2 secondaryTexcoord = texcoord0 + secondaryOffset;',
+        '                vec4 secondaryColor = sampleSpriteTexel(secondaryTexcoord);',
         '                premulSum += secondaryColor * secondaryWeight;',
         '                weightSum += secondaryWeight;',
         '            }',
