@@ -36,6 +36,59 @@ const AssetUtil = require('./util/tw-asset-util');
 
 const RESERVED_NAMES = ['_mouse_', '_stage_', '_edge_', '_myself_', '_random_', '_camera_'];
 
+const BLUR_EFFECT_INFO = {
+    menuName: 'blur',
+    showInMenu: true,
+    converter: x => {
+        return Number.isFinite(x) ? Math.abs(x) : 0;
+    },
+    shapeChanges: false,
+    fragmentUniforms: [
+        'uniform float u_blur;',
+        '#ifndef CUSTOM_U_SKINSIZE_DECLARED',
+        '#define CUSTOM_U_SKINSIZE_DECLARED',
+        'uniform vec2 u_skinSize;',
+        '#endif // CUSTOM_U_SKINSIZE_DECLARED',
+        'float blurGaussian (float distanceFromCenter, float sigma) {',
+        '    return exp(-(distanceFromCenter * distanceFromCenter) / (2.0 * sigma * sigma));',
+        '}'
+    ].join('\n'),
+    fragmentColor: [
+        '{',
+        '    float blurStrength = max(u_blur, 0.0);',
+        '    if (blurStrength > 0.0) {',
+        '        vec2 texelSize = vec2(1.0) / max(u_skinSize, vec2(1.0));',
+        '        float blurScale = log(1.0 + (blurStrength * 0.20)) * 1.442695;',
+        '        float sampleScale = 1.0 + (0.24 * blurScale);',
+        '        float sigma = 1.0 + (0.24 * blurScale);',
+        '        vec2 sampleStep = texelSize * sampleScale;',
+        '        vec2 latticeJitter = vec2(0.5, 0.5);',
+        '        vec4 premulSum = vec4(0.0);',
+        '        float weightSum = 0.0;',
+        '        for (int y = -3; y <= 3; y++) {',
+        '            for (int x = -3; x <= 3; x++) {',
+        '                vec2 kernelOffset = vec2(float(x), float(y));',
+        '                float primaryWeight = blurGaussian(length(kernelOffset), sigma);',
+        '                vec2 primaryOffset = kernelOffset * sampleStep;',
+        '                vec2 primaryTexcoord = clamp(texcoord0 + primaryOffset, vec2(0.0), vec2(1.0));',
+        '                vec4 primaryColor = texture2D(u_skin, primaryTexcoord);',
+        '                premulSum += primaryColor * primaryWeight;',
+        '                weightSum += primaryWeight;',
+        '                vec2 secondaryKernelOffset = kernelOffset + latticeJitter;',
+        '                float secondaryWeight = blurGaussian(length(secondaryKernelOffset), sigma) * 0.5;',
+        '                vec2 secondaryOffset = secondaryKernelOffset * sampleStep;',
+        '                vec2 secondaryTexcoord = clamp(texcoord0 + secondaryOffset, vec2(0.0), vec2(1.0));',
+        '                vec4 secondaryColor = texture2D(u_skin, secondaryTexcoord);',
+        '                premulSum += secondaryColor * secondaryWeight;',
+        '                weightSum += secondaryWeight;',
+        '            }',
+        '        }',
+        '        gl_FragColor = premulSum / max(weightSum, epsilon);',
+        '    }',
+        '}'
+    ].join('\n')
+};
+
 const CORE_EXTENSIONS = [
     // 'motion',
     // 'looks',
@@ -1491,6 +1544,18 @@ class VirtualMachine extends EventEmitter {
      */
     attachRenderer (renderer) {
         this.runtime.attachRenderer(renderer);
+
+        if (renderer && typeof renderer.registerSpriteShaderEffect === 'function') {
+            try {
+                this.registerSpriteShaderEffect('blur', BLUR_EFFECT_INFO);
+            } catch (error) {
+                // Ignore duplicate registration on repeated renderer attachment.
+                if (!(error && typeof error.message === 'string' &&
+                    error.message.indexOf('Effect already exists: blur') !== -1)) {
+                    throw error;
+                }
+            }
+        }
     }
 
     /**
@@ -1498,6 +1563,25 @@ class VirtualMachine extends EventEmitter {
      */
     get renderer () {
         return this.runtime && this.runtime.renderer;
+    }
+
+    /**
+     * Register a custom sprite shader effect.
+     * @param {string} effectName The effect's unique name.
+     * @param {object} effectInfo Renderer-specific effect metadata and shader snippets.
+     * @param {string} [effectInfo.menuName] Optional name shown in the Looks effect dropdown.
+     * @param {boolean} [effectInfo.showInMenu=true] If false, hide from the Looks effect dropdown.
+     * @returns {string} The normalized effect name.
+     */
+    registerSpriteShaderEffect (effectName, effectInfo = {}) {
+        const renderer = this.runtime && this.runtime.renderer;
+        if (!renderer || typeof renderer.registerSpriteShaderEffect !== 'function') {
+            throw new Error('Cannot register sprite shader effect without an attached renderer.');
+        }
+
+        const normalizedEffectName = renderer.registerSpriteShaderEffect(effectName, effectInfo);
+        this.runtime.registerSpriteShaderEffect(normalizedEffectName, effectInfo);
+        return normalizedEffectName;
     }
 
     /**

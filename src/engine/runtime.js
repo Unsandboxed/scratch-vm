@@ -559,6 +559,18 @@ class Runtime extends RuntimeConstants {
             stickyCamera: true
         };
 
+        /**
+         * Custom sprite shader effect names registered at runtime.
+         * @type {Array<string>}
+         */
+        this._registeredSpriteShaderEffects = [];
+
+        /**
+         * Metadata for custom sprite shader effects, keyed by effect name.
+         * @type {Object.<string, {name: string, menuName: string, showInMenu: boolean}>}
+         */
+        this._registeredSpriteShaderEffectDetails = Object.create(null);
+
         this.compilerOptions = {
             enabled: true,
             warpTimer: false
@@ -1944,6 +1956,81 @@ class Runtime extends RuntimeConstants {
         this.renderer.setLayerGroupOrdering(StageLayering.LAYER_GROUPS);
         this.renderer.offscreenTouching = !this.runtimeOptions.fencing;
         this.updatePrivacy();
+    }
+
+    /**
+     * Register a custom sprite shader effect in runtime state.
+     * @param {string} effectName Effect name.
+     * @param {object} [effectInfo] Effect metadata.
+     * @param {string} [effectInfo.menuName] Optional name shown in the Looks effect dropdown.
+     * @param {boolean} [effectInfo.showInMenu=true] If false, hide this effect from the Looks effect dropdown.
+     * @param {boolean} [effectInfo.hideFromMenu=false] Backward-compatible alias for !showInMenu.
+     * @returns {string} The normalized effect name.
+     */
+    registerSpriteShaderEffect (effectName, effectInfo = {}) {
+        if (typeof effectName !== 'string') {
+            throw new Error('Effect name must be a string.');
+        }
+
+        const normalizedEffectName = effectName.trim().toLowerCase();
+        if (!normalizedEffectName) {
+            throw new Error('Effect name must not be empty.');
+        }
+
+        if (!this._registeredSpriteShaderEffects.includes(normalizedEffectName)) {
+            this._registeredSpriteShaderEffects.push(normalizedEffectName);
+
+            for (const target of this.targets) {
+                if (!target || !target.effects) continue;
+                if (!Object.prototype.hasOwnProperty.call(target.effects, normalizedEffectName)) {
+                    target.effects[normalizedEffectName] = 0;
+                }
+            }
+        }
+
+        const explicitShowInMenu = effectInfo.showInMenu;
+        const showInMenu = effectInfo.hideFromMenu === true ? false : explicitShowInMenu !== false;
+        const menuName = typeof effectInfo.menuName === 'string' && effectInfo.menuName.trim() ?
+            effectInfo.menuName.trim() : normalizedEffectName;
+
+        this._registeredSpriteShaderEffectDetails[normalizedEffectName] = {
+            name: normalizedEffectName,
+            menuName,
+            showInMenu
+        };
+
+        return normalizedEffectName;
+    }
+
+    /**
+     * Get custom sprite shader effect names currently registered in runtime.
+     * @returns {Array<string>} Registered custom effect names.
+     */
+    getSpriteShaderEffectNames () {
+        return this._registeredSpriteShaderEffects.slice();
+    }
+
+    /**
+     * Get custom sprite shader effect metadata currently registered in runtime.
+     * @returns {Array<{name: string, menuName: string, showInMenu: boolean}>} Registered custom effect metadata.
+     */
+    getSpriteShaderEffects () {
+        return this._registeredSpriteShaderEffects.map(effectName => {
+            const details = this._registeredSpriteShaderEffectDetails[effectName];
+            if (!details) {
+                return {
+                    name: effectName,
+                    menuName: effectName,
+                    showInMenu: true
+                };
+            }
+
+            return {
+                name: details.name,
+                menuName: details.menuName,
+                showInMenu: details.showInMenu
+            };
+        });
     }
 
     /**

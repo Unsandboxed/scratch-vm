@@ -48,15 +48,9 @@ class RenderedTarget extends Target {
          * Map of current graphic effect values.
          * @type {!Object.<string, number>}
          */
-        this.effects = {
-            color: 0,
-            fisheye: 0,
-            whirl: 0,
-            pixelate: 0,
-            mosaic: 0,
-            brightness: 0,
-            ghost: 0
-        };
+        const runtimeCustomEffects = this.runtime && this.runtime.getSpriteShaderEffectNames ?
+            this.runtime.getSpriteShaderEffectNames() : [];
+        this.effects = RenderedTarget.createDefaultEffects(runtimeCustomEffects);
 
         /**
          * Whether this represents an "original" non-clone rendered-target for a sprite,
@@ -263,6 +257,40 @@ class RenderedTarget extends Target {
             ON: 'on',
             ON_FLIPPED: 'on-flipped'
         };
+    }
+
+    /**
+     * Built-in graphic effects supported by default.
+     * @type {Array<string>}
+     */
+    static get BUILTIN_EFFECTS () {
+        return [
+            'color',
+            'fisheye',
+            'whirl',
+            'pixelate',
+            'mosaic',
+            'brightness',
+            'ghost'
+        ];
+    }
+
+    /**
+     * Build the default effects object for a target.
+     * @param {Array<string>} customEffects Additional effect names.
+     * @returns {Object.<string, number>} Effect object initialized to zeros.
+     */
+    static createDefaultEffects (customEffects = []) {
+        const effects = {};
+        for (const effectName of RenderedTarget.BUILTIN_EFFECTS) {
+            effects[effectName] = 0;
+        }
+        for (const effectName of customEffects) {
+            if (!Object.prototype.hasOwnProperty.call(effects, effectName)) {
+                effects[effectName] = 0;
+            }
+        }
+        return effects;
     }
 
     emitVisualChange () {
