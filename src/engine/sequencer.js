@@ -177,19 +177,10 @@ class Sequencer {
             }
         }
 
-        // Execute the hat queue at the end of the frame.
-        this.runtime.executeHatQueue();
-
         this.activeThread = null;
 
         return doneThreads;
     }
-
-    /**
-     * Limit on how many blocks should be ran in a single while loop.
-     * @constant {number}
-     */
-    static MAX_WORKSIZE = 15000;
 
     /**
      * Step the requested thread for as long as necessary.
@@ -216,7 +207,6 @@ class Sequencer {
             }
         }
 
-        let worksize = 0;
         // Save the current block ID to notice if we did control flow.
         while ((currentBlockId = thread.peekStack())) {
             const initialStackSize = thread.stack.length;
@@ -269,11 +259,6 @@ class Sequencer {
                 return;
             }
 
-            // Prevent large loops from hanging the page.
-            if (worksize++ >= Sequencer.MAX_WORKSIZE) {
-                return;
-            }
-            
             // If no control flow has happened, switch to next block.
             if (
                 thread.stack.length === initialStackSize &&
@@ -290,11 +275,6 @@ class Sequencer {
                 if (thread.stack.length === 0) {
                     // No more stack to run!
                     thread.setStatus(Thread.STATUS_DONE);
-                    return;
-                }
-
-                // Prevent large loops from hanging the page.
-                if (worksize++ >= Sequencer.MAX_WORKSIZE) {
                     return;
                 }
 

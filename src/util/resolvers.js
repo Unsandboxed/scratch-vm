@@ -87,7 +87,7 @@ class Resolvers {
                 IS_MOUSE: true,
 
                 x: this.runtime.ioDevices.mouse.getScratchX(),
-                y: this.runtime.ioDevices.mouse.getScratchX(),
+                y: this.runtime.ioDevices.mouse.getScratchY(),
                 dir: 90,
                 czoom: this.runtime.camera.zoom
             };

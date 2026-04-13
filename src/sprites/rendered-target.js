@@ -48,15 +48,9 @@ class RenderedTarget extends Target {
          * Map of current graphic effect values.
          * @type {!Object.<string, number>}
          */
-        this.effects = {
-            color: 0,
-            fisheye: 0,
-            whirl: 0,
-            pixelate: 0,
-            mosaic: 0,
-            brightness: 0,
-            ghost: 0
-        };
+        const runtimeCustomEffects = this.runtime && this.runtime.getSpriteShaderEffectNames ?
+            this.runtime.getSpriteShaderEffectNames() : [];
+        this.effects = RenderedTarget.createDefaultEffects(runtimeCustomEffects);
 
         /**
          * Whether this represents an "original" non-clone rendered-target for a sprite,
@@ -94,6 +88,14 @@ class RenderedTarget extends Target {
          * @type {boolean}
          */
         this.draggable = false;
+
+        /**
+         * True if the sprite's last positional movement this frame was "go to [camera]".
+         * When stickyCamera is enabled, the runtime re-snaps this sprite to the
+         * camera's final position at the end of that frame, then this flag is cleared.
+         * @type {boolean}
+         */
+        this.followingCamera = false;
 
         /**
          * Whether the rendered target is currently visible.
@@ -180,7 +182,7 @@ class RenderedTarget extends Target {
         }
         // If we're a clone, start the hats.
         if (!this.isOriginal) {
-            this.runtime.appendHatQueue(
+            this.runtime.startHats(
                 'control_start_as_clone', null, this
             );
         }
@@ -257,6 +259,40 @@ class RenderedTarget extends Target {
         };
     }
 
+    /**
+     * Built-in graphic effects supported by default.
+     * @type {Array<string>}
+     */
+    static get BUILTIN_EFFECTS () {
+        return [
+            'color',
+            'fisheye',
+            'whirl',
+            'pixelate',
+            'mosaic',
+            'brightness',
+            'ghost'
+        ];
+    }
+
+    /**
+     * Build the default effects object for a target.
+     * @param {Array<string>} customEffects Additional effect names.
+     * @returns {Object.<string, number>} Effect object initialized to zeros.
+     */
+    static createDefaultEffects (customEffects = []) {
+        const effects = {};
+        for (const effectName of RenderedTarget.BUILTIN_EFFECTS) {
+            effects[effectName] = 0;
+        }
+        for (const effectName of customEffects) {
+            if (!Object.prototype.hasOwnProperty.call(effects, effectName)) {
+                effects[effectName] = 0;
+            }
+        }
+        return effects;
+    }
+
     emitVisualChange () {
         if (this.onTargetVisualChange) {
             this.onTargetVisualChange(this);
@@ -272,6 +308,8 @@ class RenderedTarget extends Target {
     setXY (x, y, force) { // used by compiler
         if (this.isStage) return;
         if (this.dragging && !force) return;
+        // Clear the sticky-camera flag — any "real" movement breaks camera-following.
+        this.followingCamera = false;
         const oldX = this.x;
         const oldY = this.y;
         if (this.renderer) {
@@ -1117,6 +1155,7 @@ class RenderedTarget extends Target {
             visible: this.visible,
             rotationStyle: this.rotationStyle,
             comments: this.comments,
+            frames: this.frames,
             blocks: this.blocks._blocks,
             variables: this.variables,
             costumes: costumes,

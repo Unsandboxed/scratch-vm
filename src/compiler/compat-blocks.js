@@ -6,6 +6,11 @@
 // Please keep these lists alphabetical.
 
 const stacked = [
+    'camera_changezoom',
+    'camera_pointindirection',
+    'camera_setzoom',
+    'camera_turnleft',
+    'camera_turnright',
     'looks_changestretchby',
     'looks_hideallsprites',
     'looks_sayforsecs',

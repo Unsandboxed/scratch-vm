@@ -57,6 +57,12 @@ class Target extends EventEmitter {
          */
         this.comments = {};
         /**
+         * Dictionary of frames for this target.
+         * Key is the frame id.
+         * @type {Object.<string,*>}
+         */
+        this.frames = {};
+        /**
          * Dictionary of custom state for this target.
          * This can be used to store target-specific custom state for blocks which need it.
          * TODO: do we want to persist this in SB3 files?

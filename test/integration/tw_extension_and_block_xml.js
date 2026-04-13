@@ -228,6 +228,23 @@ test('ID escaped in RuntimeConstants.getBlocksXML()', t => {
     t.end();
 });
 
+test('appendTo metadata is preserved in RuntimeConstants.getBlocksXML()', t => {
+    const rt = new Runtime();
+    rt._registerExtensionPrimitives({
+        id: 'appendtotest',
+        name: 'Append To Test',
+        appendTo: 'control',
+        blocks: []
+    });
+
+    const xmlList = rt.getBlocksXML();
+    t.equal(xmlList.length, 1, 'XML contains extension entry');
+    t.equal(xmlList[0].id, 'appendtotest', 'extension id unchanged');
+    t.equal(xmlList[0].appendTo, 'control', 'append target included in XML metadata');
+
+    t.end();
+});
+
 test('XML escaped in Blocks.toXML()', async t => {
     const vm = new VirtualMachine();
     const serviceName = vm.extensionManager._registerInternalExtension({
