@@ -38,7 +38,7 @@
     "@turbowarp/json": "^0.1.2",
     "@turbowarp/jszip": "^3.11.0",
     "@turbowarp/nanolog": "^0.2.0",
-    "@turbowarp/scratch-storage": "github:Unsandboxed/scratch-storage#develop",
+    "scratch-storage": "2.3.1",
     "@vernier/godirect": "1.5.0",
     "arraybuffer-loader": "^1.0.6",
     "atob": "2.1.2",

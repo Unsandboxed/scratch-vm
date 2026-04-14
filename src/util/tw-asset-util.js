@@ -1,6 +1,6 @@
 const StringUtil = require('./string-util');
 const Clone = require('./clone');
-const ScratchStorage = require('@turbowarp/scratch-storage');
+const ScratchStorage = require('scratch-storage');
 
 class AssetUtil {
     /**
