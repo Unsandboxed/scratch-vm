@@ -37,6 +37,12 @@ const Storage = require('../io/storage');
 const StringUtil = require('../util/string-util');
 const uid = require('../util/uid');
 
+const now = () => (
+    typeof performance !== 'undefined' && typeof performance.now === 'function' ?
+        performance.now() :
+        Date.now()
+);
+
 const defaultBlockPackages = {
     scratch3_control: require('../blocks/scratch3_control'),
     scratch3_event: require('../blocks/scratch3_event'),
@@ -284,8 +290,6 @@ class Runtime extends RuntimeConstants {
         this.threads = [];
 
         this.threadMap = new Map();
-
-        this._hatQueue = [];
 
         /** @type {!Sequencer} */
         this.sequencer = new Sequencer(this);
@@ -551,8 +555,21 @@ class Runtime extends RuntimeConstants {
         this.runtimeOptions = {
             maxClones: RuntimeConstants.MAX_CLONES,
             miscLimits: false,
-            fencing: false
+            fencing: false,
+            stickyCamera: true
         };
+
+        /**
+         * Custom sprite shader effect names registered at runtime.
+         * @type {Array<string>}
+         */
+        this._registeredSpriteShaderEffects = [];
+
+        /**
+         * Metadata for custom sprite shader effects, keyed by effect name.
+         * @type {Object.<string, {name: string, menuName: string, showInMenu: boolean}>}
+         */
+        this._registeredSpriteShaderEffectDetails = Object.create(null);
 
         this.compilerOptions = {
             enabled: true,
@@ -567,9 +584,16 @@ class Runtime extends RuntimeConstants {
         }
         this.debug = false;
 
-        this._lastStepTime = Date.now();
+        this._lastStepTime = now();
         this.interpolationEnabled = false;
         this.interpolate = interpolate;
+
+        /**
+         * True if at least one target requested camera-follow this frame.
+         * Used to skip follower maintenance work when inactive.
+         * @type {boolean}
+         */
+        this._hasFollowingCameraTargets = false;
 
         this._defaultStoredSettings = this._generateAllProjectOptions();
 
@@ -884,12 +908,14 @@ class Runtime extends RuntimeConstants {
      * @private
      */
     _registerExtensionPrimitives (extensionInfo) {
+        const appendTo = typeof extensionInfo.appendTo === 'string' ? extensionInfo.appendTo : null;
         const categoryInfo = this._mapColours({
             id: extensionInfo.id,
             name: maybeFormatMessage(extensionInfo.name),
             showStatusButton: extensionInfo.showStatusButton,
             blockIconURI: extensionInfo.blockIconURI,
-            menuIconURI: extensionInfo.menuIconURI
+            menuIconURI: extensionInfo.menuIconURI,
+            appendTo
         }, false, extensionInfo);
 
         this._blockInfo.push(categoryInfo);
@@ -934,6 +960,11 @@ class Runtime extends RuntimeConstants {
         const categoryInfo = this._blockInfo.find(info => info.id === extensionInfo.id);
         if (categoryInfo) {
             categoryInfo.name = maybeFormatMessage(extensionInfo.name);
+            if (typeof extensionInfo.appendTo === 'string') {
+                categoryInfo.appendTo = extensionInfo.appendTo;
+            } else {
+                delete categoryInfo.appendTo;
+            }
             this._fillExtensionCategory(categoryInfo, extensionInfo);
 
             this.emit(RuntimeConstants.BLOCKSINFO_UPDATE, categoryInfo);
@@ -1671,6 +1702,7 @@ class Runtime extends RuntimeConstants {
      * @returns {Array.<object>} scratch-blocks XML for each category of extension blocks, in category order.
      * @param {?Target} [target] - the active editing target (optional)
      * @property {string} id - the category / extension ID
+     * @property {string|undefined} appendTo - optional category ID to append these blocks into
      * @property {string} xml - the XML text for this category, starting with `<category>` and ending with `</category>`
      */
     getBlocksXML (target) {
@@ -1717,10 +1749,14 @@ class Runtime extends RuntimeConstants {
             xml += paletteBlocks.map(block => block.xml).join('');
             xml += '</category>';
 
-            return {
+            const result = {
                 id: categoryInfo.id,
                 xml
             };
+            if (categoryInfo.appendTo) {
+                result.appendTo = categoryInfo.appendTo;
+            }
+            return result;
         });
     }
 
@@ -1920,6 +1956,81 @@ class Runtime extends RuntimeConstants {
         this.renderer.setLayerGroupOrdering(StageLayering.LAYER_GROUPS);
         this.renderer.offscreenTouching = !this.runtimeOptions.fencing;
         this.updatePrivacy();
+    }
+
+    /**
+     * Register a custom sprite shader effect in runtime state.
+     * @param {string} effectName Effect name.
+     * @param {object} [effectInfo] Effect metadata.
+     * @param {string} [effectInfo.menuName] Optional name shown in the Looks effect dropdown.
+     * @param {boolean} [effectInfo.showInMenu=true] If false, hide this effect from the Looks effect dropdown.
+     * @param {boolean} [effectInfo.hideFromMenu=false] Backward-compatible alias for !showInMenu.
+     * @returns {string} The normalized effect name.
+     */
+    registerSpriteShaderEffect (effectName, effectInfo = {}) {
+        if (typeof effectName !== 'string') {
+            throw new Error('Effect name must be a string.');
+        }
+
+        const normalizedEffectName = effectName.trim().toLowerCase();
+        if (!normalizedEffectName) {
+            throw new Error('Effect name must not be empty.');
+        }
+
+        if (!this._registeredSpriteShaderEffects.includes(normalizedEffectName)) {
+            this._registeredSpriteShaderEffects.push(normalizedEffectName);
+
+            for (const target of this.targets) {
+                if (!target || !target.effects) continue;
+                if (!Object.prototype.hasOwnProperty.call(target.effects, normalizedEffectName)) {
+                    target.effects[normalizedEffectName] = 0;
+                }
+            }
+        }
+
+        const explicitShowInMenu = effectInfo.showInMenu;
+        const showInMenu = effectInfo.hideFromMenu === true ? false : explicitShowInMenu !== false;
+        const menuName = typeof effectInfo.menuName === 'string' && effectInfo.menuName.trim() ?
+            effectInfo.menuName.trim() : normalizedEffectName;
+
+        this._registeredSpriteShaderEffectDetails[normalizedEffectName] = {
+            name: normalizedEffectName,
+            menuName,
+            showInMenu
+        };
+
+        return normalizedEffectName;
+    }
+
+    /**
+     * Get custom sprite shader effect names currently registered in runtime.
+     * @returns {Array<string>} Registered custom effect names.
+     */
+    getSpriteShaderEffectNames () {
+        return this._registeredSpriteShaderEffects.slice();
+    }
+
+    /**
+     * Get custom sprite shader effect metadata currently registered in runtime.
+     * @returns {Array<{name: string, menuName: string, showInMenu: boolean}>} Registered custom effect metadata.
+     */
+    getSpriteShaderEffects () {
+        return this._registeredSpriteShaderEffects.map(effectName => {
+            const details = this._registeredSpriteShaderEffectDetails[effectName];
+            if (!details) {
+                return {
+                    name: effectName,
+                    menuName: effectName,
+                    showInMenu: true
+                };
+            }
+
+            return {
+                name: details.name,
+                menuName: details.menuName,
+                showInMenu: details.showInMenu
+            };
+        });
     }
 
     /**
@@ -2260,18 +2371,6 @@ class Runtime extends RuntimeConstants {
     }
 
 
-    executeHatQueue () {
-        // Copy the queue just in case more hats are added during execution.
-        const queue = this._hatQueue.slice(0, Infinity);
-        this._hatQueue.length = 0;
-        for (const args of queue) {
-            this.startHats(...args);
-        }
-    }
-    appendHatQueue (...args) {
-        this._hatQueue.push(args);
-    }
-
     /**
      * Start all relevant hats.
      * @param {!string} requestedHatOpcode Opcode of hats to start.
@@ -2610,8 +2709,8 @@ class Runtime extends RuntimeConstants {
 
     _renderInterpolatedPositions () {
         const frameStarted = this._lastStepTime;
-        const now = Date.now();
-        const timeSinceStart = now - frameStarted;
+        const frameNow = now();
+        const timeSinceStart = frameNow - frameStarted;
         const progressInFrame = Math.min(1, Math.max(0, timeSinceStart / this.currentStepTime));
 
         interpolate.interpolate(this, progressInFrame);
@@ -2635,6 +2734,17 @@ class Runtime extends RuntimeConstants {
      * inactive threads after each iteration.
      */
     _step () {
+        // followingCamera is a per-frame marker set by "go to [camera]".
+        // Only clear it if at least one target used it in the previous frame.
+        if (this._hasFollowingCameraTargets) {
+            for (const target of this.targets) {
+                if (target.followingCamera) {
+                    target.followingCamera = false;
+                }
+            }
+            this._hasFollowingCameraTargets = false;
+        }
+
         if (this._refreshGlobalProceduresMutations) {
             this._refreshGlobalProceduresMutations = false;
             this._updateGlobalProceduresMutations();
@@ -2686,6 +2796,44 @@ class Runtime extends RuntimeConstants {
             this.profiler.stop();
         }
         this.emit(RuntimeConstants.AFTER_EXECUTE);
+
+        // Keep model state in sync with camera-follow rendering so the normal
+        // per-step draw (non-interpolated) and interpolation draws don't fight.
+        if (this.runtimeOptions.stickyCamera && this._hasFollowingCameraTargets) {
+            const camX = this.camera.x;
+            const camY = this.camera.y;
+            for (const target of this.targets) {
+                if (target.followingCamera) {
+                    // Keep camera-following exact: bypass setXY so fencing/clamping
+                    // doesn't introduce sub-frame wobble against camera interpolation.
+                    const oldX = target.x;
+                    const oldY = target.y;
+                    target.x = camX;
+                    target.y = camY;
+
+                    if (target.renderer && typeof target.drawableID === 'number') {
+                        if (typeof target.renderer.updateDrawablePositionExact === 'function') {
+                            target.renderer.updateDrawablePositionExact(target.drawableID, [camX, camY]);
+                        } else {
+                            target.renderer.updateDrawablePosition(target.drawableID, [camX, camY]);
+                        }
+                        if (target.visible) {
+                            target.emitVisualChange();
+                            this.requestRedraw();
+                        }
+                    }
+
+                    if (target.onTargetMoved) {
+                        target.onTargetMoved(target, oldX, oldY, true);
+                    }
+                    this.requestTargetsUpdate(target);
+
+                    // Preserve per-frame marker through interpolation passes.
+                    target.followingCamera = true;
+                }
+            }
+        }
+
         this._updateGlows(doneThreads);
         // Add done threads so that even if a thread finishes within 1 frame, the green
         // flag will still indicate that a script ran.
@@ -2730,7 +2878,7 @@ class Runtime extends RuntimeConstants {
         }
 
         if (this.interpolationEnabled || targetHasInterpolation) {
-            this._lastStepTime = Date.now();
+            this._lastStepTime = now();
         }
     }
 

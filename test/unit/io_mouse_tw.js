@@ -146,3 +146,30 @@ test('accepts 0 as x and y position', t => {
 
     t.end();
 });
+
+test('clamps client coordinates before renderer conversion', t => {
+    const rt = new Runtime();
+    const m = new Mouse(rt);
+
+    let convertedX = null;
+    let convertedY = null;
+    rt.renderer = {
+        clientSpaceToScratchPoint: (x, y) => {
+            convertedX = x;
+            convertedY = y;
+            // Keep this simple; this test only validates the clamped input to the renderer.
+            return [x, y];
+        }
+    };
+
+    m.postData({
+        x: 9999,
+        y: -9999,
+        canvasWidth: 480,
+        canvasHeight: 360
+    });
+
+    t.equal(convertedX, 480);
+    t.equal(convertedY, 0);
+    t.end();
+});

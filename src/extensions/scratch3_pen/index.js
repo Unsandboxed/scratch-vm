@@ -8,6 +8,7 @@ const formatMessage = require('format-message');
 const MathUtil = require('../../util/math-util');
 const log = require('../../util/log');
 const StageLayering = require('../../engine/stage-layering');
+const RuntimeConstants = require('../../engine/runtime-constants');
 
 /**
  * @typedef {object} PenState - the pen state associated with a particular target.
@@ -65,8 +66,17 @@ class Scratch3PenBlocks {
 
         this._onTargetCreated = this._onTargetCreated.bind(this);
         this._onTargetMoved = this._onTargetMoved.bind(this);
+        this._onCameraUpdated = this._onCameraUpdated.bind(this);
+
+        this._lastCameraState = {
+            x: runtime.camera ? runtime.camera.x : 0,
+            y: runtime.camera ? runtime.camera.y : 0,
+            direction: runtime.camera ? runtime.camera.direction : 0,
+            zoom: runtime.camera ? runtime.camera.zoom : 100
+        };
 
         runtime.on('targetWasCreated', this._onTargetCreated);
+        runtime.on(RuntimeConstants.CAMERA_UPDATE, this._onCameraUpdated);
         runtime.on('RUNTIME_DISPOSED', this.clear.bind(this));
     }
 
@@ -199,6 +209,48 @@ class Scratch3PenBlocks {
                 this.runtime.renderer.penLine(penSkinId, penState.penAttributes, oldX, oldY, target.x, target.y);
                 this.runtime.requestRedraw();
             }
+        }
+    }
+
+    /**
+     * Handle camera movement by drawing synthetic pen motion for pen-down targets.
+     * This keeps camera-locked pen drawing continuous even when targets are stationary in world space.
+     * @param {{x: number, y: number, direction: number, zoom: number}} cameraState latest camera state.
+     * @private
+     */
+    _onCameraUpdated (cameraState) {
+        const nextX = cameraState && Number.isFinite(cameraState.x) ? cameraState.x : 0;
+        const nextY = cameraState && Number.isFinite(cameraState.y) ? cameraState.y : 0;
+        const nextDir = cameraState && Number.isFinite(cameraState.direction) ? cameraState.direction : 0;
+        const nextZoom = cameraState && Number.isFinite(cameraState.zoom) ? cameraState.zoom : 100;
+
+        const prev = this._lastCameraState;
+        const changed =
+            prev.x !== nextX ||
+            prev.y !== nextY ||
+            prev.direction !== nextDir ||
+            prev.zoom !== nextZoom;
+
+        this._lastCameraState = {
+            x: nextX,
+            y: nextY,
+            direction: nextDir,
+            zoom: nextZoom
+        };
+
+        if (!changed) return;
+
+        const targets = this.runtime.targets;
+        if (!Array.isArray(targets) || targets.length === 0) return;
+
+        for (let i = 0; i < targets.length; i++) {
+            const target = targets[i];
+            if (!target || target.isStage || target.dragging) continue;
+
+            const penState = target.getCustomState && target.getCustomState(Scratch3PenBlocks.STATE_KEY);
+            if (!penState || !penState.penDown) continue;
+
+            this._onTargetMoved(target, target.x, target.y, false);
         }
     }
 

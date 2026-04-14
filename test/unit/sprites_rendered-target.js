@@ -15,6 +15,17 @@ test('clone effects', t => {
     t.end();
 });
 
+test('new targets include runtime-registered shader effects', t => {
+    const r = new Runtime();
+    r.registerSpriteShaderEffect('scanline');
+
+    const sprite = new Sprite(null, r);
+    const target = new RenderedTarget(sprite, r);
+
+    t.equal(target.effects.scanline, 0);
+    t.end();
+});
+
 test('setxy', t => {
     const r = new Runtime();
     const s = new Sprite(null, r);

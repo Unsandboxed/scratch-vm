@@ -1,3 +1,4 @@
+const UnsandboxedExtensions = require('extensions/src');
 const dispatch = require('../dispatch/central-dispatch');
 const log = require('../util/log');
 const maybeFormatMessage = require('../util/maybe-format-message');
@@ -27,7 +28,9 @@ class ExtensionManager {
         boost: () => require('../extensions/scratch3_boost'),
         gdxfor: () => require('../extensions/scratch3_gdx_for'),
         // tw: core extension
-        tw: () => require('../extensions/tw')
+        tw: () => require('../extensions/tw'),
+        // external USB extensions
+        ...UnsandboxedExtensions.extensions
     };
 
     /**
@@ -52,6 +55,7 @@ class ExtensionManager {
      * @property {string} color1 - the primary color for this category, in '#rrggbb' format
      * @property {string} color2 - the secondary color for this category, in '#rrggbb' format
      * @property {string} color3 - the tertiary color for this category, in '#rrggbb' format
+    * @property {string|undefined} appendTo - optional category ID to append this category's blocks into
      * @property {Array.<ConvertedBlockInfo>} blocks - the blocks, separators, etc. in this category
      * @property {Array.<object>} menus - the menus provided by this category
      */
@@ -172,6 +176,8 @@ class ExtensionManager {
             log.warn(`Could not find extension ${extensionId} in the built in extensions.`);
             return;
         }
+
+        require('./tw-unsandboxed-extension-runner').setupUnsandboxedExtensionAPI(this.vm);
 
         /** @TODO dupe handling for non-builtin extensions. See commit 670e51d33580e8a2e852b3b038bb3afc282f81b9 */
         if (this.isExtensionLoaded(extensionId)) {
