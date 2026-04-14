@@ -108,7 +108,7 @@ module.exports = [
                     loader: 'expose-loader?AudioEngine'
                 },
                 {
-                    test: require.resolve('scratch-storage/src/index.js'),
+                    test: require.resolve('@turbowarp/scratch-storage/src/index.js'),
                     loader: 'expose-loader?ScratchStorage'
                 },
                 {
@@ -125,7 +125,7 @@ module.exports = [
                 from: 'node_modules/scratch-blocks/media',
                 to: 'media'
             }, {
-                from: 'node_modules/scratch-storage/dist/web'
+                from: 'node_modules/@turbowarp/scratch-storage/dist/web'
             }, {
                 from: 'node_modules/scratch-render/dist/web'
             }, {
