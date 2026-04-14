@@ -47,7 +47,7 @@
     "canvas-toBlob": "1.0.0",
     "decode-html": "2.0.0",
     "diff-match-patch": "1.0.4",
-    "extensions": "github:Unsandboxed/extensions#develop",
+    "extensions": "github:Unsandboxed/extensions#develop-builds",
     "format-message": "6.2.1",
     "fp-ts": "^2.16.11",
     "futil": "^1.76.4",
