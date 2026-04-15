@@ -162,8 +162,7 @@ class Compiler {
          */
         this.bt_branchables = new Set([
             BlockType.CONDITIONAL,
-            BlockType.LOOP,
-            BlockType.INLINE
+            BlockType.LOOP
         ]);
 
         /**
@@ -179,7 +178,7 @@ class Compiler {
          * @type {Set<BlockType[?]>}
          */
         this.bt_inlines = new Set([
-            BlockType.INLINE
+            // Inline behavior is now inferred from branchCount on input block types.
         ]);
 
         /**
@@ -187,7 +186,6 @@ class Compiler {
          * @type {Set<BlockType[?]>}
          */
         this.bt_inputs = new Set([
-            BlockType.INLINE,
             BlockType.REPORTER,
             BlockType.ARRAY,
             BlockType.OBJECT,
@@ -200,7 +198,6 @@ class Compiler {
          */
         this.bt_to_type = new Map([
             [BlockType.REPORTER, enums.InputType.ANY],
-            [BlockType.INLINE, enums.InputType.ANY],
             [BlockType.BOOLEAN, enums.InputType.BOOLEAN_INTERPRETABLE],
             [BlockType.ARRAY, enums.InputType.ARRAY],
             [BlockType.OBJECT, enums.InputType.OBJECT]

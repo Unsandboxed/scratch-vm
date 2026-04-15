@@ -151,6 +151,9 @@ const executeInCompatibilityLayer = function*(inputs, blockFunction, isWarp, use
                 return blockUtility._startedBranch[0][0];
             }
             branchInfo.isLoop = branchInfo.defaultIsLoop;
+            if (typeof returnValue === 'undefined') {
+                return '';
+            }
             return returnValue;
         }
         return returnValue;

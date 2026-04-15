@@ -150,14 +150,15 @@ class JSGenerator {
             return `asObject(${this.descendInput(node.target)})`;
 
         case InputOpcode.COMPATIBILITY_LAYER:
-            if (this.target.runtime.compilerData.bt_inlines.has(node.blockType)) {
+            if (node.isInline) {
                 let source = '(yield* (function*() {\n';
                 const returnVariable = this.localVariables.next();
                 const branchVariable = this.localVariables.next();
                 source += `const ${branchVariable} = createBranchInfo(${this.target.runtime.compilerData.bt_loops.has(node.blockType)});\n`;
-                source += `let ${returnVariable} = undefined;\n`;
+                source += `let ${returnVariable} = "";\n`;
                 source += `while (true) {\n`;
                 source += `${returnVariable} = ${this.generateCompatibilityLayerCall(node, false, branchVariable)};\n`;
+                source += `if (!globalState.blockUtility._startedBranch[0]) break;\n`;
                 source += `${branchVariable}.branch = +(globalState.blockUtility._startedBranch[0][0]);\n`;
                 source += `${branchVariable}.isLoop = globalState.blockUtility._startedBranch[0][1];\n`;
                 source += `globalState.blockUtility._startedBranch.shift();\n`;
@@ -167,14 +168,27 @@ class JSGenerator {
                     const _frame = new Frame(false, node.breakable);
                     _frame.isIterable = node.iterable;
                     _frame.isCompat = true;
+                    _frame.isReturnable = true;
+                    const substackReturn = this.localVariables.next();
+                    source += `const ${substackReturn} = (yield* (function*() {\n`;
                     source += this.descendStackForSource(node.substacks[index], _frame);
+                    source += `return \"\";\n`;
+                    source += `})());\n`;
+                    source += `${branchVariable}.stackFrame.returnValue = ${substackReturn};\n`;
+                    source += `${branchVariable}.returnValue = ${substackReturn};\n`;
+                    source += `${returnVariable} = ${substackReturn};\n`;
                     source += `break;\n`;
                     source += `}\n`; // close case
                 }
                 source += '}\n'; // close switch
                 source += `if (${branchVariable}.onEnd[0]) yield ${branchVariable}.onEnd.shift()(${branchVariable});\n`;
                 source += `if (!${branchVariable}.isLoop) break;\n`;
-                this.yieldLoop();
+                if (this.isWarp) {
+                    source += 'if (isStuck()) yield;\n';
+                } else {
+                    source += 'yield;\n';
+                }
+                this.yielded();
                 source += '}\n'; // close while
                 source += `globalState.blockUtility._branchInfo.shift();\n`;
                 source += `return ${returnVariable};\n`;
@@ -238,13 +252,15 @@ class JSGenerator {
             const blockType = node.blockType;
             if (this.target.runtime.compilerData.bt_stacks.has(blockType)) {
                 this.source += `${this.generateCompatibilityLayerCall(node, isLastInLoop)};\n`;
-            } else if (this.target.runtime.compilerData.bt_branchables.has(blockType)) {
+            } else if (this.target.runtime.compilerData.bt_branchables.has(blockType) || node.isInline) {
                 const branchVariable = this.localVariables.next();
                 this.source += `const ${branchVariable} = createBranchInfo(${this.target.runtime.compilerData.bt_loops.has(blockType)});\n`;
                 this.source += `while (true) {\n`;
                 this.source += `${branchVariable}.returnValue = ${this.generateCompatibilityLayerCall(node, false, branchVariable)};\n`;
-                this.source += `${this.target.runtime.compilerData.bt_inlines.has(blockType) ?
-                    `${`${branchVariable}.branch = +(globalState.blockUtility._startedBranch[0][0]);\n`}${
+                this.source += `${node.isInline ?
+                    `${`if (!globalState.blockUtility._startedBranch[0]) break;\n`}${
+                        `${branchVariable}.branch = +(globalState.blockUtility._startedBranch[0][0]);\n`
+                    }${
                         `${branchVariable}.isLoop = globalState.blockUtility._startedBranch[0][1];\n`
                     };globalState.blockUtility._startedBranch.shift();` :
                     `${branchVariable}.branch = +(${branchVariable}.returnValue);\n`
@@ -255,7 +271,18 @@ class JSGenerator {
                     const _frame = new Frame(false, node.breakable);
                     _frame.isIterable = node.iterable;
                     _frame.isCompat = true;
-                    this.source += this.descendStackForSource(node.substacks[index], _frame);
+                    if (node.isInline) {
+                        _frame.isReturnable = true;
+                        const substackReturn = this.localVariables.next();
+                        this.source += `const ${substackReturn} = (yield* (function*() {\n`;
+                        this.source += this.descendStackForSource(node.substacks[index], _frame);
+                        this.source += `return \"\";\n`;
+                        this.source += `})());\n`;
+                        this.source += `${branchVariable}.stackFrame.returnValue = ${substackReturn};\n`;
+                        this.source += `${branchVariable}.returnValue = ${substackReturn};\n`;
+                    } else {
+                        this.source += this.descendStackForSource(node.substacks[index], _frame);
+                    }
                     this.source += `break;\n`;
                     this.source += `}\n`; // close case
                 }

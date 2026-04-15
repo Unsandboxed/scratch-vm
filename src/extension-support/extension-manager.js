@@ -559,19 +559,31 @@ class ExtensionManager {
             return blockInfo;
         }
 
+        const isInputBlockType = type =>
+            type === BlockType.REPORTER ||
+            type === BlockType.BOOLEAN ||
+            type === BlockType.ARRAY ||
+            type === BlockType.OBJECT;
+        const hasBranchCount = info => Number.isInteger(info.branchCount) && info.branchCount > 0;
+        const isInlineLikeBlock = info => isInputBlockType(info.blockType) && hasBranchCount(info);
+
         blockInfo = Object.assign({}, {
             blockType: BlockType.COMMAND,
             terminal: false,
             blockAllThreads: false,
             arguments: {}
         }, blockInfo);
+
+        if (blockInfo.blockType === BlockType.INLINE) {
+            throw new Error('BlockType.INLINE has been removed; use branchCount on reporter/boolean/array/object blocks');
+        }
         blockInfo.text = blockInfo.text || blockInfo.opcode;
 
         if (blockInfo.extendable) {
             const isBranchBlock =
                 blockInfo.blockType === BlockType.CONDITIONAL ||
                 blockInfo.blockType === BlockType.LOOP ||
-                blockInfo.blockType === BlockType.INLINE;
+                isInlineLikeBlock(blockInfo);
             if (isBranchBlock) {
                 throw new Error('extendable is not supported for branch block types yet');
             }
@@ -626,6 +638,11 @@ class ExtensionManager {
                     return (args, util, realBlockInfo) =>
                         dispatch.call(serviceName, funcName, args, util, realBlockInfo)
                             .then(result => {
+                                if (realBlockInfo &&
+                                    isInlineLikeBlock(realBlockInfo) &&
+                                    typeof result === 'undefined') {
+                                    return '';
+                                }
                                 // Scratch is only designed to handle these types.
                                 // If any other value comes in such as undefined, null, an object, etc.
                                 // we'll convert it to a string to avoid undefined behavior.
@@ -650,10 +667,24 @@ class ExtensionManager {
                     serviceObject[funcName](args, util, realBlockInfo);
             })();
 
+            const normalizeInlineReturn = (result, realBlockInfo) => {
+                if (!realBlockInfo || !isInlineLikeBlock(realBlockInfo)) {
+                    return result;
+                }
+                if (typeof result === 'undefined') {
+                    return '';
+                }
+                return result;
+            };
+
             blockInfo.func = (args, util) => {
                 const realBlockInfo = getBlockInfo(args);
                 // TODO: filter args using the keys of realBlockInfo.arguments? maybe only if sandboxed?
-                return callBlockFunc(args, util, realBlockInfo);
+                const result = callBlockFunc(args, util, realBlockInfo);
+                if (result && typeof result.then === 'function') {
+                    return result.then(resolved => normalizeInlineReturn(resolved, realBlockInfo));
+                }
+                return normalizeInlineReturn(result, realBlockInfo);
             };
             break;
         }

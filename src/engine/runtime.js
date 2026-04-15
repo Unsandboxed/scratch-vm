@@ -1284,6 +1284,14 @@ class Runtime extends RuntimeConstants {
             ];
         }
 
+        const isInlineLikeBlock =
+            (blockInfo.blockType === BlockType.REPORTER ||
+                blockInfo.blockType === BlockType.BOOLEAN ||
+                blockInfo.blockType === BlockType.ARRAY ||
+                blockInfo.blockType === BlockType.OBJECT) &&
+            Number.isInteger(blockInfo.branchCount) &&
+            blockInfo.branchCount > 0;
+
         switch (blockInfo.blockType) {
         case BlockType.COMMAND:
             blockJSON.outputShape = ScratchBlocksConstants.OUTPUT_SHAPE_SQUARE;
@@ -1318,11 +1326,6 @@ class Runtime extends RuntimeConstants {
                 blockJSON.nextStatement = null; // null = available connection; undefined = terminal
             }
             break;
-        case BlockType.INLINE:
-            blockInfo.branchCount = blockInfo.branchCount || 1;
-            blockJSON.output = blockInfo.allowDropAnywhere ? null : 'String'; // TODO: distinguish number & string here?
-            blockJSON.outputShape = ScratchBlocksConstants.OUTPUT_SHAPE_SQUARE;
-            break;
         case BlockType.ARRAY:
             blockJSON.output = 'Array';
             blockJSON.outputShape = ScratchBlocksConstants.OUTPUT_SHAPE_SQUARE;
@@ -1338,6 +1341,10 @@ class Runtime extends RuntimeConstants {
             shape.outputShape = shape.outputShape || ScratchBlocksConstants.OUTPUT_SHAPE_SQUARE;
             shape.convertBlockForScratchBlocks(blockJSON);
         }
+        }
+
+        if (isInlineLikeBlock) {
+            blockInfo.branchCount = blockInfo.branchCount || 1;
         }
 
         if (blockInfo.blockShape ?? blockInfo.outputShape) {
@@ -1399,8 +1406,16 @@ class Runtime extends RuntimeConstants {
             }
         }
 
+        const isInlineLikeInput = blockInfo.branchCount > 0 && (
+            blockInfo.blockType === BlockType.INLINE ||
+            blockInfo.blockType === BlockType.REPORTER ||
+            blockInfo.blockType === BlockType.BOOLEAN ||
+            blockInfo.blockType === BlockType.ARRAY ||
+            blockInfo.blockType === BlockType.OBJECT
+        );
+
         if (blockInfo.blockType === BlockType.REPORTER || blockInfo.blockType === BlockType.BOOLEAN) {
-            if (!blockInfo.disableMonitor && context.inputList.length === 0) {
+            if (!blockInfo.disableMonitor && !isInlineLikeInput && context.inputList.length === 0) {
                 blockJSON.checkboxInFlyout = true;
             }
         } else if (

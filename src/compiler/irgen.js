@@ -280,10 +280,14 @@ class ScriptTreeGenerator {
             const blockInfo = this.getBlockInfo(block.opcode);
             if (blockInfo) {
                 const type = blockInfo.info.blockType;
+                const isInlineLike =
+                    this.runtime.compilerData.bt_inputs.has(type) &&
+                    Number.isInteger(blockInfo.info.branchCount) &&
+                    blockInfo.info.branchCount > 0;
                 if (this.runtime.compilerData.bt_stacks.has(type)) {
                     return this.descendCompatLayerStack(block);
                 }
-                if (this.runtime.compilerData.bt_branchables.has(type) && !this.runtime.compilerData.bt_inlines.has(type)) {
+                if (this.runtime.compilerData.bt_branchables.has(type) && !isInlineLike) {
                     return this.descendCompatLayerStack(block);
                 }
             }
@@ -618,12 +622,14 @@ class ScriptTreeGenerator {
 
         const blockInfo = this.getBlockInfo(block.opcode);
         let blockType = (blockInfo && blockInfo.info && blockInfo.info.blockType) || BlockType.COMMAND;
+        const branchCount = blockInfo && blockInfo.info ? Number(blockInfo.info.branchCount) || 0 : 0;
+        const isInline = this.runtime.compilerData.bt_inputs.has(blockType) && branchCount > 0;
         if (block.opcode === 'control_if_else_extends' ||
             block.opcode === 'control_switch_case_extends') {
             blockType = BlockType.CONDITIONAL;
         }
         const substacks = {};
-        if (this.runtime.compilerData.bt_branchables.has(blockType)) {
+        if (this.runtime.compilerData.bt_branchables.has(blockType) || isInline) {
             for (const inputName in block.inputs) {
                 if (!inputName.startsWith('SUBSTACK')) continue;
                 const branchNum = inputName === 'SUBSTACK' ? 1 : +inputName.substring('SUBSTACK'.length);
@@ -637,6 +643,7 @@ class ScriptTreeGenerator {
             opcode: block.opcode,
             id: block.id,
             blockType,
+            isInline,
             inputs,
             fields,
             substacks,
@@ -667,12 +674,14 @@ class ScriptTreeGenerator {
 
         const blockInfo = this.getBlockInfo(block.opcode);
         let blockType = (blockInfo && blockInfo.info && blockInfo.info.blockType) || BlockType.COMMAND;
+        const branchCount = blockInfo && blockInfo.info ? Number(blockInfo.info.branchCount) || 0 : 0;
+        const isInline = this.runtime.compilerData.bt_inputs.has(blockType) && branchCount > 0;
         if (block.opcode === 'control_if_else_extends' ||
             block.opcode === 'control_switch_case_extends') {
             blockType = BlockType.CONDITIONAL;
         }
         const substacks = {};
-        if (this.runtime.compilerData.bt_branchables.has(blockType)) {
+        if (this.runtime.compilerData.bt_branchables.has(blockType) || isInline) {
             for (const inputName in block.inputs) {
                 if (!inputName.startsWith('SUBSTACK')) continue;
                 const branchNum = inputName === 'SUBSTACK' ? 1 : +inputName.substring('SUBSTACK'.length);
@@ -686,6 +695,7 @@ class ScriptTreeGenerator {
             opcode: block.opcode,
             id: block.id,
             blockType,
+            isInline,
             inputs,
             fields,
             substacks,
