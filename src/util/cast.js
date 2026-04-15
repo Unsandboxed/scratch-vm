@@ -123,7 +123,8 @@ class Cast {
         }
 
         try {
-            return JSON.parse(this.toString(value));
+            const parsed = JSON.parse(this.toString(value));
+            return Array.isArray(parsed) ? parsed : [];
         } catch (error) {
             return [];
         }
@@ -136,7 +137,7 @@ class Cast {
      */
     static toObject (value) {
         // Already an object?
-        if (typeof value === 'object' && !Array.isArray(value)) {
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
             return value;
         }
 
@@ -147,7 +148,11 @@ class Cast {
         }
 
         try {
-            return JSON.parse(value);
+            const parsed = JSON.parse(value);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                return parsed;
+            }
+            return Object.create(null);
         } catch (error) {
             return Object.create(null);
         }
