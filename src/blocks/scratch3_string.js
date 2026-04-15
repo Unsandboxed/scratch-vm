@@ -1,4 +1,5 @@
 const Cast = require('../util/cast.js');
+const {getOrderedExtendableValues} = require('../util/extendable-arguments');
 
 class Scratch3StringBlocks {
     constructor (runtime) {
@@ -26,6 +27,7 @@ class Scratch3StringBlocks {
     getPrimitives () {
         return {
             operator_join: this.join,
+            string_join_extends: this.joinExtends,
             operator_letter_of: this.letterOf,
             operator_letters_of: this.lettersOf,
             operator_length: this.length,
@@ -48,6 +50,12 @@ class Scratch3StringBlocks {
 
     join (args) {
         return Cast.toString(args.STRING1) + Cast.toString(args.STRING2);
+    }
+
+    joinExtends (args) {
+        return getOrderedExtendableValues(args, ['TEXT', 'STRING', 'INPUT'])
+            .map(value => Cast.toString(value))
+            .join('');
     }
 
     reverse (args) { // usb

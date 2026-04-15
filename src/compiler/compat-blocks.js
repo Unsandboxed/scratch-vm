@@ -11,6 +11,7 @@ const stacked = [
     'camera_setzoom',
     'camera_turnleft',
     'camera_turnright',
+    'control_if_else_extends',
     'looks_changestretchby',
     'looks_hideallsprites',
     'looks_sayforsecs',
@@ -38,12 +39,28 @@ const stacked = [
 ];
 
 const inputs = [
+    'operator_add_extends',
+    'operator_and_extends',
+    'operator_divide_extends',
+    'operator_equals_extends',
+    'operator_gt_equals_extends',
+    'operator_gt_extends',
+    'operator_lt_equals_extends',
+    'operator_lt_extends',
+    'operator_max_extends',
+    'operator_min_extends',
+    'operator_multiply_extends',
+    'operator_number_array_extends',
+    'operator_or_extends',
+    'operator_subtract_extends',
+    'operator_xor_extends',
     'motion_xscroll',
     'motion_yscroll',
     'sensing_loud',
     'sensing_loudness',
     'sensing_online',
     'sensing_userid',
+    'string_join_extends',
     'sound_volume'
 ];
 

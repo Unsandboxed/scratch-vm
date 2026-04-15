@@ -1,5 +1,27 @@
 const Cast = require('../util/cast');
 
+const parseBranchKinds = mutation => {
+    if (!mutation || typeof mutation !== 'object') {
+        return [];
+    }
+    const raw = mutation.branchkinds;
+    if (Array.isArray(raw)) {
+        return raw.filter(kind => typeof kind === 'string');
+    }
+    if (typeof raw !== 'string') {
+        return [];
+    }
+    try {
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) {
+            return [];
+        }
+        return parsed.filter(kind => typeof kind === 'string');
+    } catch (_error) {
+        return [];
+    }
+};
+
 class Scratch3ControlBlocks {
     constructor (runtime) {
         /**
@@ -32,6 +54,8 @@ class Scratch3ControlBlocks {
             control_wait_until: this.waitUntil,
             control_if: this.if,
             control_if_else: this.ifElse,
+            control_if_else_extends: this.ifElseExtends,
+            control_switch_case_extends: this.switchCaseExtends,
             control_stop: this.stop,
             control_break: this.break,
             control_continue: this.continue,
@@ -137,6 +161,111 @@ class Scratch3ControlBlocks {
         } else {
             util.startBranch(2, false);
         }
+    }
+
+    ifElseExtends (args, util) {
+        const branchKinds = parseBranchKinds(args.mutation);
+        if (branchKinds.length > 0) {
+            for (let i = 0; i < branchKinds.length; i++) {
+                const kind = branchKinds[i];
+                const branchNum = i + 1;
+                if (kind === 'else') {
+                    util.startBranch(branchNum, false);
+                    return;
+                }
+
+                const conditionKey = branchNum === 1 ? 'CONDITION' : `CONDITION${branchNum}`;
+                if (Cast.toBoolean(args[conditionKey])) {
+                    util.startBranch(branchNum, false);
+                    return;
+                }
+            }
+            return;
+        }
+
+        const conditionKeys = Object.keys(args)
+            .filter(key => /^CONDITION\d*$/.test(key))
+            .sort((a, b) => {
+                const aNum = a === 'CONDITION' ? 1 : parseInt(a.substring('CONDITION'.length), 10);
+                const bNum = b === 'CONDITION' ? 1 : parseInt(b.substring('CONDITION'.length), 10);
+                return aNum - bNum;
+            });
+
+        let maxBranchNum = 0;
+        for (const key of conditionKeys) {
+            const branchNum = key === 'CONDITION' ? 1 : parseInt(key.substring('CONDITION'.length), 10);
+            if (branchNum > maxBranchNum) {
+                maxBranchNum = branchNum;
+            }
+            if (Cast.toBoolean(args[key])) {
+                util.startBranch(branchNum, false);
+                return;
+            }
+        }
+
+        if (maxBranchNum > 0) {
+            util.startBranch(maxBranchNum + 1, false);
+        }
+    }
+
+    switchCaseExtends (args, util) {
+        const branchKinds = parseBranchKinds(args.mutation);
+        if (branchKinds.length === 0) {
+            return;
+        }
+
+        // Mark the switch frame as breakable so control_break exits the switch.
+        const threadFrame = util.thread && util.thread.peekStackFrame ? util.thread.peekStackFrame() : null;
+        if (threadFrame) {
+            threadFrame.isBreakable = true;
+        }
+
+        const frameState = util.stackFrame;
+
+        // Initialize fall-through start point once, then continue from saved state.
+        if (typeof frameState.nextSwitchBranchIndex === 'undefined') {
+            const switchValue = args.SWITCH_VALUE;
+            let startIndex = -1;
+            let defaultIndex = -1;
+
+            for (let i = 0; i < branchKinds.length; i++) {
+                const kind = branchKinds[i];
+                const branchNum = i + 1;
+
+                if (kind === 'default') {
+                    defaultIndex = i;
+                    continue;
+                }
+
+                const caseKey = branchNum === 1 ? 'CASE_VALUE' : `CASE_VALUE${branchNum}`;
+                if (Cast.compare(switchValue, args[caseKey]) === 0) {
+                    startIndex = i;
+                    break;
+                }
+            }
+
+            if (startIndex === -1) {
+                if (defaultIndex === -1) {
+                    return;
+                }
+                startIndex = defaultIndex;
+            }
+
+            frameState.nextSwitchBranchIndex = startIndex;
+        }
+
+        const branchIndex = frameState.nextSwitchBranchIndex;
+        if (branchIndex === null || branchIndex >= branchKinds.length) {
+            delete frameState.nextSwitchBranchIndex;
+            return;
+        }
+
+        // Prepare next fall-through target for the next switch iteration.
+        frameState.nextSwitchBranchIndex = branchIndex + 1 < branchKinds.length ?
+            branchIndex + 1 : null;
+
+        // Use loop semantics so this switch block is re-evaluated after branch ends.
+        util.startBranch(branchIndex + 1, true);
     }
 
     stop (args, util) {

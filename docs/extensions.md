@@ -130,6 +130,74 @@ circular dial
 visual keyboard.
 - Image - an inline image displayed on a block. This is a special argument type in that it does not represent a value and does not accept other blocks to be plugged-in in place of this block field. See the section below about "Adding an Inline Image".
 
+#### Extendable Blocks
+
+Some block patterns dynamically add numbered inputs, for example `NUM`, `NUM2`, `NUM3`, and so on. Extension authors can declare these directly in normal block metadata by adding an `extendable` field.
+
+Helper methods:
+
+- `Scratch.Extendable.value(options)`
+- `Scratch.Extendable.dummy(textOrOptions)`
+- `Scratch.Extendable.statement(options)`
+- `Scratch.Extendable.input(type, options)` (low-level)
+
+`extendable` supports:
+
+- `starts`: required input definitions for the base block shape.
+- `proceeds`: input definitions added on each `+` action.
+- `ends`: optional trailing definitions used with `collapse` mode.
+- `collapse`: optional boolean for tail toggling behavior.
+- `minProceedGroups`: optional minimum repeating groups (default `1`).
+
+Input definitions can use the helper methods above, or `Scratch.defineExtendableInput(type, options)` with these low-level types:
+
+- `Scratch.ExtenderInputType.INPUT_VALUE`
+- `Scratch.ExtenderInputType.INPUT_DUMMY`
+- `Scratch.ExtenderInputType.INPUT_STATEMENT`
+
+Example (spec-native inline block object):
+
+```js
+const block = {
+    opcode: 'sum',
+    blockType: Scratch.BlockType.REPORTER,
+    text: 'sum [NUM] + [NUM2]',
+    arguments: {
+        NUM: {type: Scratch.ArgumentType.NUMBER},
+        NUM2: {type: Scratch.ArgumentType.NUMBER}
+    },
+    extendable: {
+        starts: [
+            Scratch.Extendable.value({shadow: 'math_number', field: 'NUM'}),
+            Scratch.Extendable.dummy('+'),
+            Scratch.Extendable.value({shadow: 'math_number', field: 'NUM'})
+        ],
+        proceeds: [
+            Scratch.Extendable.dummy('+'),
+            Scratch.Extendable.value({shadow: 'math_number', field: 'NUM'})
+        ]
+    }
+};
+```
+
+Optional convenience: `Scratch.Extendable.block(baseBlockInfo, extendable)` is equivalent to defining `extendable` inline.
+
+When implementing the opcode, use `Scratch.getOrderedExtendableValues(args, preferredPrefixes, defaultValue)` to read values in stable order.
+
+- `args`: block arguments object passed into the opcode function.
+- `preferredPrefixes`: optional array of input prefixes to prioritize, such as `['NUM']` or `['OPERAND', 'BOOL']`.
+- `defaultValue`: optional fallback value for missing inputs. If provided, the helper uses mutation `argumentids` to include empty slots which are not present in `args`.
+
+Example:
+
+```js
+sum (args) {
+    const values = Scratch.getOrderedExtendableValues(args, ['NUM'], 0)
+        .map(value => Scratch.Cast.toNumber(value));
+    return values.reduce((acc, value) => acc + value, 0);
+}
+```
+
 #### Adding an Inline Image
 In addition to specifying block arguments (an example of string arguments shown in the code snippet above),
 you can also specify an inline image for the block. You must include a dataURI for the image. If left unspecified, blank space will be allocated for the image and a warning will be logged in the console.

@@ -6,6 +6,7 @@ if (typeof TextEncoder === 'undefined') {
 }
 const EventEmitter = require('events');
 const JSZip = require('@turbowarp/jszip');
+const UnsandboxedExtensions = require('extensions');
 
 const Buffer = require('buffer').Buffer;
 const centralDispatch = require('./dispatch/central-dispatch');
@@ -167,6 +168,61 @@ class VirtualMachine extends EventEmitter {
         this.io = {
             BLE,
             BT
+        };
+
+        this._unsandboxedDevServerReachable = null;
+
+        this._isUnsandboxedDevServerReachable = async () => {
+            if (this._unsandboxedDevServerReachable !== null) {
+                return this._unsandboxedDevServerReachable;
+            }
+
+            if (typeof fetch !== 'function') {
+                this._unsandboxedDevServerReachable = false;
+                return false;
+            }
+
+            const endpoint = 'http://localhost:8001/';
+            try {
+                this._unsandboxedDevServerReachable = true;
+                await fetch(endpoint, {cache: 'no-store'});
+                return true;
+            } catch (e) {
+                this._unsandboxedDevServerReachable = false;
+                return false;
+            }
+        };
+
+        this._getUnsandboxedDevExtensionURL = extensionID => {
+            const extensionPaths = UnsandboxedExtensions && UnsandboxedExtensions.extensionPaths;
+            if (!extensionPaths || !Object.prototype.hasOwnProperty.call(extensionPaths, extensionID)) {
+                return null;
+            }
+
+            const subPath = extensionPaths[extensionID];
+            if (typeof subPath !== 'string' || subPath.length === 0) {
+                return null;
+            }
+
+            return `http://localhost:8001/extensions/${subPath}/index.js`;
+        };
+
+        this._resolveProjectExtensionURL = async (extensionID, extensionURLs, defaultExtensionURLs) => {
+            const localDevURL = this._getUnsandboxedDevExtensionURL(extensionID);
+            if (localDevURL && await this._isUnsandboxedDevServerReachable()) {
+                return localDevURL;
+            }
+
+            const projectURL = extensionURLs.get(extensionID);
+            if (projectURL) {
+                return projectURL;
+            }
+
+            if (Object.prototype.hasOwnProperty.call(defaultExtensionURLs, extensionID)) {
+                return defaultExtensionURLs[extensionID];
+            }
+
+            return null;
         };
 
         /**
@@ -897,17 +953,23 @@ class VirtualMachine extends EventEmitter {
         const defaultExtensionURLs = require('./extension-support/tw-default-extension-urls');
         const extensionPromises = [];
         for (const extensionID of extensionIDs) {
-            if (this.extensionManager.isExtensionLoaded(extensionID)) {
+            const localDevURL = this._getUnsandboxedDevExtensionURL(extensionID);
+            if (localDevURL && await this._isUnsandboxedDevServerReachable()) {
+                if (!this.extensionManager.isExtensionLoaded(extensionID)) {
+                    if (await this.securityManager.canLoadExtensionFromProject(localDevURL)) {
+                        extensionPromises.push(this.extensionManager.loadExtensionURL(localDevURL));
+                    } else {
+                        throw new Error(`Permission to load extension denied: ${extensionID}`);
+                    }
+                }
+            } else if (this.extensionManager.isExtensionLoaded(extensionID)) {
                 // Already loaded
             } else if (this.extensionManager.isBuiltinExtension(extensionID)) {
                 // Builtin extension
                 this.extensionManager.loadExtensionIdSync(extensionID);
             } else {
                 // Custom extension
-                let url = extensionURLs.get(extensionID);
-                if (!url && Object.prototype.hasOwnProperty.call(defaultExtensionURLs, extensionID)) {
-                    url = defaultExtensionURLs[extensionID];
-                }
+                const url = await this._resolveProjectExtensionURL(extensionID, extensionURLs, defaultExtensionURLs);
                 if (!url) {
                     throw new Error(`Unknown extension: ${extensionID}`);
                 }

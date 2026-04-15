@@ -1240,6 +1240,7 @@ class Runtime extends RuntimeConstants {
             // When displaying a block in another language we'll need to run a `replace` action similar to the one
             // below, but each `[ARG]` will need to be replaced with the number in this map.
             argsMap: {},
+            placeholderOrder: [],
             blockJSON,
             categoryInfo,
             blockInfo,
@@ -1349,6 +1350,8 @@ class Runtime extends RuntimeConstants {
 
         if (blockInfo.mutator) {
             blockJSON.mutator = blockInfo.mutator;
+        } else if (blockInfo.extendable) {
+            blockJSON.mutator = 'extension_extender';
         }
 
         if (Object.prototype.hasOwnProperty.call(blockInfo, 'tooltip')) {
@@ -1420,7 +1423,23 @@ class Runtime extends RuntimeConstants {
             ++outLineNum;
         }
 
-        const mutation = blockInfo.isDynamic ? `<mutation blockInfo="${xmlEscape(JSON.stringify(blockInfo))}"/>` : '';
+        const mutationAttrs = [];
+        if (blockInfo.isDynamic) {
+            mutationAttrs.push(`blockInfo="${xmlEscape(JSON.stringify(blockInfo))}"`);
+        }
+        if (blockInfo.extendable) {
+            const resolvedExtendable = this._resolveExtendableMenuDefinitions(
+                blockInfo.extendable,
+                blockInfo.arguments,
+                categoryInfo
+            );
+            const initialArgumentIds = this._buildInitialExtendableArgumentIds(resolvedExtendable, context.placeholderOrder);
+            mutationAttrs.push(`argumentids="${xmlEscape(JSON.stringify(initialArgumentIds))}"`);
+            mutationAttrs.push(`extendCount="${xmlEscape(JSON.stringify(resolvedExtendable.initialExtendCount || 0))}"`);
+            mutationAttrs.push(`minProceedGroups="${xmlEscape(JSON.stringify(resolvedExtendable.minProceedGroups))}"`);
+            mutationAttrs.push(`extenddefs="${xmlEscape(JSON.stringify(resolvedExtendable))}"`);
+        }
+        const mutation = mutationAttrs.length > 0 ? `<mutation ${mutationAttrs.join(' ')}/>` : '';
         const inputs = context.inputList.join('');
         const toolboxIdXml = blockInfo.isDynamic && blockInfo.paletteKey ?
             ` id="${xmlEscape(blockInfo.paletteKey)}"` : '';
@@ -1439,6 +1458,128 @@ class Runtime extends RuntimeConstants {
             json: context.blockJSON,
             xml: blockXML
         };
+    }
+
+    _getExtendableInputIdPrefix (definition) {
+        if (!definition) return 'INPUT';
+        if (typeof definition.menuArgument === 'string' && definition.menuArgument.length > 0) {
+            return definition.menuArgument;
+        }
+        if (definition.type === 'input_statement') return 'SUBSTACK';
+        if (definition.type === 'input_dummy') return 'LABEL';
+        if (definition.field === 'NUM') return 'NUM';
+        if (definition.field === 'TEXT') return 'TEXT';
+        if (definition.check === 'Boolean') return 'OPERAND';
+        if (definition.check === 'Number') return 'NUM';
+        if (definition.check === 'String') return 'TEXT';
+        return 'INPUT';
+    }
+
+    _resolveExtendableMenuDefinitions (extendable, blockArguments, categoryInfo) {
+        const formatDefaultValue = argInfo => {
+            if (typeof argInfo.defaultValue === 'undefined') {
+                return null;
+            }
+            return maybeFormatMessage(argInfo.defaultValue, this.makeMessageContextForTarget()).toString();
+        };
+
+        const resolveDefinitions = definitions => {
+            if (!Array.isArray(definitions)) {
+                return [];
+            }
+            return definitions.map(definition => {
+                const resolved = Object.assign({}, definition);
+                const argumentId = typeof resolved.argument === 'string' ? resolved.argument : null;
+                const argInfo = argumentId && blockArguments ? blockArguments[argumentId] : null;
+                if (!argInfo || !argInfo.menu) {
+                    return resolved;
+                }
+
+                const menuInfo = categoryInfo && categoryInfo.menuInfo ? categoryInfo.menuInfo[argInfo.menu] : null;
+                const convertedMenu = categoryInfo && categoryInfo.convertedMenuInfo ? categoryInfo.convertedMenuInfo[argInfo.menu] : null;
+                const acceptReporters = typeof argInfo.acceptReporters !== 'undefined' ?
+                    argInfo.acceptReporters : (menuInfo && menuInfo.acceptReporters);
+
+                if (acceptReporters) {
+                    // Menu semantics from argument definitions must override
+                    // generic type defaults (e.g. STRING => text/TEXT shadow).
+                    resolved.shadow = this._makeExtensionMenuId(argInfo.menu, categoryInfo.id);
+                    resolved.field = argInfo.menu;
+                    resolved.defaultValue = formatDefaultValue(argInfo);
+                    return resolved;
+                }
+
+                resolved.type = 'input_dummy';
+                resolved.shadow = null;
+                resolved.field = null;
+                resolved.check = null;
+                resolved.menuOptions = convertedMenu ? convertedMenu.items : [];
+                resolved.menuArgument = argumentId;
+                resolved.defaultValue = formatDefaultValue(argInfo);
+                return resolved;
+            });
+        };
+
+        return {
+            starts: resolveDefinitions(extendable.starts),
+            proceeds: resolveDefinitions(extendable.proceeds),
+            ends: resolveDefinitions(extendable.ends),
+            collapse: Boolean(extendable.collapse),
+            minProceedGroups: Number.isInteger(extendable.minProceedGroups) && extendable.minProceedGroups >= 0 ?
+                extendable.minProceedGroups : 1,
+            initialExtendCount: Number.isInteger(extendable.initialExtendCount) && extendable.initialExtendCount >= 0 ?
+                extendable.initialExtendCount : 0
+        };
+    }
+
+    _generatePredictableExtendableInputId (definition, existingIds) {
+        const prefix = this._getExtendableInputIdPrefix(definition);
+        let counter = 1;
+        let candidate = prefix;
+        while (existingIds.includes(candidate)) {
+            counter += 1;
+            candidate = `${prefix}${counter}`;
+        }
+        return candidate;
+    }
+
+    _buildInitialExtendableArgumentIds (extendable, placeholderOrder) {
+        const starts = Array.isArray(extendable.starts) ? extendable.starts : [];
+        const proceeds = Array.isArray(extendable.proceeds) ? extendable.proceeds : [];
+        const initialExtendCount = Number.isInteger(extendable.initialExtendCount) && extendable.initialExtendCount > 0 ?
+            extendable.initialExtendCount : 0;
+        const ids = [];
+
+        for (const definition of starts) {
+            if (definition && typeof definition.id === 'string' && definition.id.length > 0) {
+                ids.push(definition.id);
+                continue;
+            }
+            if (definition && definition.transient) {
+                continue;
+            }
+            ids.push(this._generatePredictableExtendableInputId(definition, ids));
+        }
+
+        // Seed initial repeated groups so toolbox/flyout shape matches initialExtendCount.
+        for (let groupIndex = 0; groupIndex < initialExtendCount; groupIndex++) {
+            for (const definition of proceeds) {
+                if (definition && typeof definition.id === 'string' && definition.id.length > 0) {
+                    ids.push(this._generatePredictableExtendableInputId(definition, ids));
+                    continue;
+                }
+                if (definition && definition.transient) {
+                    continue;
+                }
+                ids.push(this._generatePredictableExtendableInputId(definition, ids));
+            }
+        }
+
+        if (ids.length === 0 && Array.isArray(placeholderOrder)) {
+            return placeholderOrder.slice();
+        }
+
+        return ids;
     }
 
     /**
@@ -1690,6 +1831,7 @@ class Runtime extends RuntimeConstants {
         if (argJSON) blockArgs.push(argJSON);
         const argNum = blockArgs.length;
         context.argsMap[placeholder] = argNum;
+        context.placeholderOrder.push(placeholder);
 
         if (customShape) {
             customShape.finalizePlaceholder(argsName, blockArgs, argJSON, argNum, context);

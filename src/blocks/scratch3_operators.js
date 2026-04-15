@@ -1,5 +1,6 @@
 const Cast = require('../util/cast.js');
 const MathUtil = require('../util/math-util.js');
+const {getOrderedExtendableValues} = require('../util/extendable-arguments');
 
 class Scratch3OperatorsBlocks {
     constructor (runtime) {
@@ -37,8 +38,137 @@ class Scratch3OperatorsBlocks {
             operator_max: this.max,
             operator_round: this.round,
             operator_mathop: this.mathop,
+            operator_add_extends: this.addExtends,
+            operator_subtract_extends: this.subtractExtends,
+            operator_multiply_extends: this.multiplyExtends,
+            operator_divide_extends: this.divideExtends,
+            operator_lt_extends: this.ltExtends,
+            operator_lt_equals_extends: this.ltEqualsExtends,
+            operator_equals_extends: this.equalsExtends,
+            operator_gt_extends: this.gtExtends,
+            operator_gt_equals_extends: this.gtEqualsExtends,
+            operator_and_extends: this.andExtends,
+            operator_or_extends: this.orExtends,
+            operator_xor_extends: this.xorExtends,
+            operator_number_array_extends: this.numberArrayExtends,
+            operator_min_extends: this.minExtends,
+            operator_max_extends: this.maxExtends,
             checkbox: this.checkbox
         };
+    }
+
+    addExtends (args) {
+        const values = getOrderedExtendableValues(args, ['NUM']).map(value => Cast.toNumber(value));
+        return values.reduce((sum, value) => sum + value, 0);
+    }
+
+    subtractExtends (args) {
+        const values = getOrderedExtendableValues(args, ['NUM']).map(value => Cast.toNumber(value));
+        if (values.length === 0) return 0;
+        return values.slice(1).reduce((result, value) => result - value, values[0]);
+    }
+
+    multiplyExtends (args) {
+        const values = getOrderedExtendableValues(args, ['NUM']).map(value => Cast.toNumber(value));
+        if (values.length === 0) return 1;
+        return values.reduce((result, value) => result * value, 1);
+    }
+
+    divideExtends (args) {
+        const values = getOrderedExtendableValues(args, ['NUM']).map(value => Cast.toNumber(value));
+        if (values.length === 0) return 1;
+        return values.slice(1).reduce((result, value) => result / value, values[0]);
+    }
+
+    ltExtends (args) {
+        const values = getOrderedExtendableValues(args, ['OPERAND', 'TEXT', 'INPUT']);
+        if (values.length < 2) return false;
+        for (let i = 1; i < values.length; i++) {
+            if (!(Cast.compare(values[i - 1], values[i]) < 0)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    ltEqualsExtends (args) {
+        const values = getOrderedExtendableValues(args, ['OPERAND', 'TEXT', 'INPUT']);
+        if (values.length < 2) return false;
+        for (let i = 1; i < values.length; i++) {
+            if (!(Cast.compare(values[i - 1], values[i]) <= 0)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    equalsExtends (args) {
+        const values = getOrderedExtendableValues(args, ['OPERAND', 'TEXT', 'INPUT']);
+        if (values.length < 2) return false;
+        for (let i = 1; i < values.length; i++) {
+            if (Cast.compare(values[i - 1], values[i]) !== 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    gtExtends (args) {
+        const values = getOrderedExtendableValues(args, ['OPERAND', 'TEXT', 'INPUT']);
+        if (values.length < 2) return false;
+        for (let i = 1; i < values.length; i++) {
+            if (!(Cast.compare(values[i - 1], values[i]) > 0)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    gtEqualsExtends (args) {
+        const values = getOrderedExtendableValues(args, ['OPERAND', 'TEXT', 'INPUT']);
+        if (values.length < 2) return false;
+        for (let i = 1; i < values.length; i++) {
+            if (!(Cast.compare(values[i - 1], values[i]) >= 0)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    andExtends (args) {
+        const values = getOrderedExtendableValues(args, ['OPERAND', 'BOOL', 'INPUT'], false).map(value => Cast.toBoolean(value));
+        if (values.length === 0) return false;
+        return values.every(Boolean);
+    }
+
+    orExtends (args) {
+        const values = getOrderedExtendableValues(args, ['OPERAND', 'BOOL', 'INPUT'], false).map(value => Cast.toBoolean(value));
+        return values.some(Boolean);
+    }
+
+    xorExtends (args) {
+        const values = getOrderedExtendableValues(args, ['OPERAND', 'BOOL', 'INPUT'], false).map(value => Cast.toBoolean(value));
+        let trueCount = 0;
+        for (const value of values) {
+            if (value) trueCount++;
+        }
+        return (trueCount % 2) === 1;
+    }
+
+    numberArrayExtends (args) {
+        return getOrderedExtendableValues(args, ['NUM']).map(value => Cast.toNumber(value));
+    }
+
+    minExtends (args) {
+        const values = Cast.toArray(args.ARRAY).map(value => Cast.toNumber(value));
+        if (values.length === 0) return 0;
+        return Math.min(...values);
+    }
+
+    maxExtends (args) {
+        const values = Cast.toArray(args.ARRAY).map(value => Cast.toNumber(value));
+        if (values.length === 0) return 0;
+        return Math.max(...values);
     }
 
     checkbox () {
