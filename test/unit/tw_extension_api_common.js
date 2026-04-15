@@ -42,3 +42,79 @@ test('external', t => {
         });
     });
 });
+
+test('getOrderedExtendableValues', t => {
+    t.same(
+        ScratchCommon.getOrderedExtendableValues(
+            {NUM2: '2', mutation: {argumentids: '["NUM","NUM2"]'}, NUM: '1'},
+            ['NUM']
+        ),
+        ['1', '2']
+    );
+
+    t.same(
+        ScratchCommon.getOrderedExtendableValues(
+            {NUM: '1', mutation: {argumentids: '["NUM","NUM2","LABEL"]'}},
+            ['NUM'],
+            0
+        ),
+        ['1', 0]
+    );
+
+    t.same(
+        ScratchCommon.getOrderedExtendableValues(null),
+        []
+    );
+
+    t.end();
+});
+
+test('extendable block helper API', t => {
+    t.equal(ScratchCommon.ExtenderInputType.INPUT_VALUE, 'input_value');
+    t.equal(ScratchCommon.ExtenderInputType.INPUT_DUMMY, 'input_dummy');
+    t.equal(ScratchCommon.ExtenderInputType.INPUT_STATEMENT, 'input_statement');
+
+    const definition = ScratchCommon.defineExtendableInput(
+        ScratchCommon.ExtenderInputType.INPUT_VALUE,
+        {shadow: 'math_number', field: 'NUM', check: 'Number'}
+    );
+    t.same(definition, {
+        type: 'input_value',
+        shadow: 'math_number',
+        field: 'NUM',
+        check: 'Number',
+        transient: false,
+        forceNewRow: false,
+        fieldLabel: null
+    });
+
+    const block = ScratchCommon.createExtendableBlock(
+        {opcode: 'sum', text: 'sum [NUM] + [NUM2]'},
+        {starts: [definition], proceeds: []}
+    );
+    t.equal(block.opcode, 'sum');
+    t.same(block.extendable.starts, [definition]);
+
+    const dummy = ScratchCommon.Extendable.dummy('+');
+    t.same(dummy, {
+        type: 'input_dummy',
+        shadow: null,
+        field: null,
+        check: null,
+        transient: false,
+        forceNewRow: false,
+        fieldLabel: '+'
+    });
+
+    const value = ScratchCommon.Extendable.value({shadow: 'math_number', field: 'NUM'});
+    t.equal(value.type, 'input_value');
+    t.equal(value.shadow, 'math_number');
+
+    const blockViaNamespace = ScratchCommon.Extendable.block(
+        {opcode: 'sum2'},
+        {starts: [value], proceeds: [dummy]}
+    );
+    t.same(blockViaNamespace.extendable.proceeds[0], dummy);
+
+    t.end();
+});

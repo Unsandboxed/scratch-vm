@@ -79,6 +79,31 @@ const testExtensionInfo = {
                     type: ArgumentType.NUMBER
                 }
             }
+        },
+        {
+            opcode: 'extendableSum',
+            blockType: BlockType.REPORTER,
+            text: 'sum [NUM] + [NUM2]',
+            arguments: {
+                NUM: {
+                    type: ArgumentType.NUMBER
+                },
+                NUM2: {
+                    type: ArgumentType.NUMBER
+                }
+            },
+            extendable: {
+                starts: [
+                    {type: 'input_value', shadow: 'math_number', field: 'NUM'},
+                    {type: 'input_dummy', field: '+'},
+                    {type: 'input_value', shadow: 'math_number', field: 'NUM'}
+                ],
+                proceeds: [
+                    {type: 'input_dummy', field: '+'},
+                    {type: 'input_value', shadow: 'math_number', field: 'NUM'}
+                ],
+                minProceedGroups: 1
+            }
         }
     ]
 };
@@ -272,6 +297,15 @@ const testLoop = function (t, loop) {
         '<block type="test_loop"><value name="MANY"><shadow type="math_number"></shadow></value></block>');
 };
 
+const testExtendable = function (t, extendable) {
+    t.equal(extendable.json.type, 'test_extendableSum');
+    testCategoryInfo(t, extendable);
+    t.equal(extendable.json.mutator, 'extension_extender');
+    t.match(extendable.xml, /<mutation /);
+    t.match(extendable.xml, /argumentids="\[&quot;NUM&quot;,&quot;LABEL&quot;,&quot;NUM2&quot;\]"/);
+    t.match(extendable.xml, /extenddefs="/);
+};
+
 test('registerExtensionPrimitives', t => {
     const runtime = new Runtime();
 
@@ -285,7 +319,7 @@ test('registerExtensionPrimitives', t => {
         });
 
         // Note that this also implicitly tests that block order is preserved
-        const [button, reporter, inlineImage, separator, command, conditional, loop] = blocksInfo;
+        const [button, reporter, inlineImage, separator, command, conditional, loop, extendable] = blocksInfo;
 
         testButton(t, button);
         testReporter(t, reporter);
@@ -294,6 +328,7 @@ test('registerExtensionPrimitives', t => {
         testCommand(t, command);
         testConditional(t, conditional);
         testLoop(t, loop);
+        testExtendable(t, extendable);
 
         t.end();
     });

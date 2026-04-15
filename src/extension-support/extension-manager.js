@@ -3,6 +3,7 @@ const dispatch = require('../dispatch/central-dispatch');
 const log = require('../util/log');
 const maybeFormatMessage = require('../util/maybe-format-message');
 
+const ArgumentType = require('./argument-type');
 const BlockType = require('./block-type');
 const SecurityManager = require('./tw-security-manager');
 
@@ -566,6 +567,18 @@ class ExtensionManager {
         }, blockInfo);
         blockInfo.text = blockInfo.text || blockInfo.opcode;
 
+        if (blockInfo.extendable) {
+            const isBranchBlock =
+                blockInfo.blockType === BlockType.CONDITIONAL ||
+                blockInfo.blockType === BlockType.LOOP ||
+                blockInfo.blockType === BlockType.INLINE;
+            if (isBranchBlock) {
+                throw new Error('extendable is not supported for branch block types yet');
+            }
+            blockInfo.extendable = this._normalizeExtendableInfo(blockInfo.extendable, blockInfo.arguments, blockInfo.text);
+            blockInfo.mutator = blockInfo.mutator || 'extension_extender';
+        }
+
         if (blockInfo.customContextMenu && blockInfo.customContextMenu.length > 0) {
             // Replace all the string callback names of the context menu items
             // with the actual function call.
@@ -649,13 +662,239 @@ class ExtensionManager {
         return blockInfo;
     }
 
+    _normalizeExtendableInfo (extendableInfo, blockArguments, blockText) {
+        const argumentTypeToInputDefaults = {
+            [ArgumentType.ANGLE]: {
+                shadow: 'math_angle',
+                field: 'NUM'
+            },
+            [ArgumentType.COLOR]: {
+                shadow: 'colour_picker',
+                field: 'COLOUR'
+            },
+            [ArgumentType.NUMBER]: {
+                shadow: 'math_number',
+                field: 'NUM'
+            },
+            [ArgumentType.STRING]: {
+                shadow: 'text',
+                field: 'TEXT'
+            },
+            [ArgumentType.BOOLEAN]: {
+                check: 'Boolean'
+            },
+            [ArgumentType.ARRAY]: {
+                check: 'Array'
+            },
+            [ArgumentType.OBJECT]: {
+                check: 'Object'
+            },
+            [ArgumentType.MATRIX]: {
+                shadow: 'matrix',
+                field: 'MATRIX'
+            },
+            [ArgumentType.NOTE]: {
+                shadow: 'note',
+                field: 'NOTE'
+            },
+            [ArgumentType.COSTUME]: {
+                shadow: 'looks_costume',
+                field: 'COSTUME'
+            },
+            [ArgumentType.SOUND]: {
+                shadow: 'sound_sounds_menu',
+                field: 'SOUND_MENU'
+            },
+            [ArgumentType.PARAMETER]: {
+                shadow: 'argument_reporter_string_number',
+                field: 'VALUE'
+            }
+        };
+
+        const resolveArgumentDefinitions = (argumentId, options) => {
+            const opts = Object.assign({includeArgumentLabel: true}, options);
+            const argumentInfo = (blockArguments && blockArguments[argumentId]) || null;
+            if (!argumentInfo || typeof argumentInfo !== 'object') {
+                throw new Error(`Unknown extendable argument: ${String(argumentId)}`);
+            }
+
+            const definitions = [];
+            const label = opts.includeArgumentLabel && typeof argumentInfo.label === 'string' ? argumentInfo.label : null;
+            const includeValue = typeof opts.includeValue === 'boolean' ? opts.includeValue : !label;
+            if (label) {
+                definitions.push({
+                    type: 'input_dummy',
+                    fieldLabel: label
+                });
+            }
+
+            const defaults = argumentTypeToInputDefaults[argumentInfo.type] || {};
+            const canCreateValueInput = argumentInfo.type &&
+                argumentInfo.type !== ArgumentType.LABEL &&
+                argumentInfo.type !== ArgumentType.IMAGE;
+
+            if (canCreateValueInput && includeValue) {
+                definitions.push({
+                    type: 'input_value',
+                    argument: argumentId,
+                    shadow: defaults.shadow || null,
+                    field: defaults.field || null,
+                    check: defaults.check || null
+                });
+            } else if (!label) {
+                const fallbackLabel = typeof argumentInfo.defaultValue === 'string' ? argumentInfo.defaultValue : argumentId;
+                definitions.push({
+                    type: 'input_dummy',
+                    fieldLabel: fallbackLabel
+                });
+            }
+
+            return definitions;
+        };
+
+        const normalizeTextSegment = segment => {
+            if (typeof segment !== 'string') {
+                return '';
+            }
+            return segment.replace(/\s+/g, ' ').trim();
+        };
+
+        const resolveTextStarts = () => {
+            const textLines = Array.isArray(blockText) ? blockText : [blockText];
+            const starts = [];
+            for (const line of textLines) {
+                if (typeof line !== 'string') {
+                    continue;
+                }
+
+                const placeholderPattern = /\[([^\[\]]+)\]/g;
+                let cursor = 0;
+                let match;
+                while ((match = placeholderPattern.exec(line)) !== null) {
+                    const leadingText = normalizeTextSegment(line.slice(cursor, match.index));
+                    if (leadingText) {
+                        starts.push({
+                            type: 'input_dummy',
+                            fieldLabel: leadingText
+                        });
+                    }
+
+                    const argumentId = match[1];
+                    starts.push(...resolveArgumentDefinitions(argumentId, {
+                        includeArgumentLabel: false,
+                        includeValue: true
+                    }));
+                    cursor = match.index + match[0].length;
+                }
+
+                const trailingText = normalizeTextSegment(line.slice(cursor));
+                if (trailingText) {
+                    starts.push({
+                        type: 'input_dummy',
+                        fieldLabel: trailingText
+                    });
+                }
+            }
+            return starts;
+        };
+
+        const resolveDefinitionSpecs = definitionSpec => {
+            if (typeof definitionSpec === 'string') {
+                return resolveArgumentDefinitions(definitionSpec);
+            }
+
+            if (!definitionSpec || typeof definitionSpec !== 'object') {
+                throw new Error(`Invalid extendable definition: ${String(definitionSpec)}`);
+            }
+
+            if (typeof definitionSpec.argument === 'string') {
+                const resolveOptions = {};
+                if (typeof definitionSpec.includeValue === 'boolean') {
+                    resolveOptions.includeValue = definitionSpec.includeValue;
+                }
+                if (typeof definitionSpec.includeArgumentLabel === 'boolean') {
+                    resolveOptions.includeArgumentLabel = definitionSpec.includeArgumentLabel;
+                }
+                const resolved = resolveArgumentDefinitions(definitionSpec.argument, resolveOptions);
+                const overrides = Object.assign({}, definitionSpec);
+                delete overrides.argument;
+                delete overrides.includeValue;
+                delete overrides.includeArgumentLabel;
+
+                if (Object.keys(overrides).length > 0) {
+                    const targetIndex = resolved.findIndex(def => def.type !== 'input_dummy');
+                    const indexToPatch = targetIndex >= 0 ? targetIndex : (resolved.length - 1);
+                    resolved[indexToPatch] = Object.assign({}, resolved[indexToPatch], overrides);
+                }
+
+                return resolved;
+            }
+
+            return [definitionSpec];
+        };
+
+        const normalizeDefinitions = definitions => {
+            if (!Array.isArray(definitions)) {
+                return [];
+            }
+
+            const expandedDefinitions = [];
+            for (const definitionSpec of definitions) {
+                expandedDefinitions.push(...resolveDefinitionSpecs(definitionSpec));
+            }
+
+            return expandedDefinitions.map(definition => {
+                const mapped = Object.assign({}, definition);
+                const rawType = typeof mapped.type === 'string' ? mapped.type.toLowerCase() : mapped.type;
+                if (rawType === 'value' || rawType === 'input_value') {
+                    mapped.type = 'input_value';
+                } else if (rawType === 'dummy' || rawType === 'input_dummy') {
+                    mapped.type = 'input_dummy';
+                } else if (rawType === 'statement' || rawType === 'input_statement') {
+                    mapped.type = 'input_statement';
+                } else {
+                    throw new Error(`Invalid extendable input type: ${String(mapped.type)}`);
+                }
+
+                mapped.shadow = typeof mapped.shadow === 'string' ? mapped.shadow : null;
+                mapped.field = (typeof mapped.field === 'string' || mapped.field === null) ? mapped.field : null;
+                mapped.fieldLabel = typeof mapped.fieldLabel === 'string' ? mapped.fieldLabel : null;
+                if (mapped.type === 'input_dummy' && !mapped.fieldLabel && mapped.field) {
+                    mapped.fieldLabel = mapped.field;
+                }
+                mapped.check = (typeof mapped.check === 'string' || mapped.check === null) ? mapped.check : null;
+                mapped.transient = Boolean(mapped.transient);
+                mapped.forceNewRow = Boolean(mapped.forceNewRow);
+                return mapped;
+            });
+        };
+
+        const textStarts = resolveTextStarts();
+
+        const normalized = {
+            starts: [
+                ...normalizeDefinitions(textStarts),
+                ...normalizeDefinitions(extendableInfo.starts)
+            ],
+            proceeds: normalizeDefinitions(extendableInfo.proceeds),
+            ends: normalizeDefinitions(extendableInfo.ends),
+            collapse: Boolean(extendableInfo.collapse),
+            minProceedGroups: Number.isInteger(extendableInfo.minProceedGroups) && extendableInfo.minProceedGroups >= 0 ?
+                extendableInfo.minProceedGroups : 1,
+            initialExtendCount: Number.isInteger(extendableInfo.initialExtendCount) && extendableInfo.initialExtendCount >= 0 ?
+                extendableInfo.initialExtendCount : 0
+        };
+
+        if (normalized.starts.length === 0 && normalized.proceeds.length === 0 && normalized.ends.length === 0) {
+            throw new Error('extendable must define at least one input in starts, proceeds, or ends');
+        }
+
+        return normalized;
+    }
+
     getExtensionURLs () {
         const extensionURLs = {};
         for (const [extensionId, serviceName] of this._loadedExtensions.entries()) {
-            if (Object.prototype.hasOwnProperty.call(this.builtinExtensions, extensionId)) {
-                continue;
-            }
-
             // Service names for extension workers are in the format "extension.WORKER_ID.EXTENSION_ID"
             const workerId = +serviceName.split('.')[1];
             const extensionURL = this.workerURLs[workerId];
