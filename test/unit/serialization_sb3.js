@@ -190,6 +190,35 @@ test('serialize and deserialize frames in sb3', t => {
         });
 });
 
+test('serialize and deserialize target tags in sb3', t => {
+    const vm = new VirtualMachine();
+    vm.loadProject(readFileToBuffer(exampleProjectPath))
+        .then(() => {
+            const stage = vm.runtime.targets.find(target => target.isStage);
+            const sprite = vm.runtime.targets.find(target => !target.isStage);
+
+            stage.tags = ['stage-tag'];
+            sprite.tags = ['sprite-tag-a', 'sprite-tag-b'];
+
+            const serialized = sb3.serialize(vm.runtime);
+            const serializedStage = serialized.targets.find(target => target.isStage);
+            const serializedSprite = serialized.targets.find(target => !target.isStage);
+
+            t.same(serializedStage.tags, ['stage-tag']);
+            t.same(serializedSprite.tags, ['sprite-tag-a', 'sprite-tag-b']);
+
+            return sb3.deserialize(JSON.parse(JSON.stringify(serialized)), new Runtime(), null, false)
+                .then(({targets}) => {
+                    const deserializedStage = targets.find(target => target.isStage);
+                    const deserializedSprite = targets.find(target => !target.isStage);
+
+                    t.same(deserializedStage.tags, ['stage-tag']);
+                    t.same(deserializedSprite.tags, ['sprite-tag-a', 'sprite-tag-b']);
+                    t.end();
+                });
+        });
+});
+
 test('serializing and deserializing sb3 preserves sprite layer order', t => {
     const vm = new VirtualMachine();
     vm.attachRenderer(new FakeRenderer());

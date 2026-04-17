@@ -63,6 +63,12 @@ class Target extends EventEmitter {
          */
         this.frames = {};
         /**
+         * Array of user-defined tags associated with this target.
+         * Kept on the VM model so tags can be serialized and copied by clone logic.
+         * @type {string[]}
+         */
+        this.tags = [];
+        /**
          * Dictionary of custom state for this target.
          * This can be used to store target-specific custom state for blocks which need it.
          * TODO: do we want to persist this in SB3 files?

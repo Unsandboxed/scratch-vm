@@ -598,6 +598,7 @@ E.serializeTarget = function (target, extensions) {
     [obj.blocks, targetExtensions] = E.serializeBlocks(target.blocks);
     obj.comments = E.serializeComments(target.comments);
     obj.frames = E.serializeFrames(target.frames || {});
+    obj.tags = Array.isArray(target.tags) ? target.tags.slice() : [];
 
     // TODO remove this check/patch when (#1901) is fixed
     if (target.currentCostume < 0 || target.currentCostume >= target.costumes.length) {
@@ -1319,6 +1320,9 @@ E.parseScratchObject = function (object, runtime, extensions, zip, assets) {
                 locked: Boolean(frame.locked)
             };
         }
+    }
+    if (Object.prototype.hasOwnProperty.call(object, 'tags')) {
+        target.tags = Array.isArray(object.tags) ? object.tags.slice() : [];
     }
     if (Object.prototype.hasOwnProperty.call(object, 'x')) {
         target.x = object.x;

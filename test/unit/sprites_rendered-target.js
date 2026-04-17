@@ -444,6 +444,31 @@ test('#toJSON returns the sounds and costumes', t => {
     t.end();
 });
 
+test('#toJSON includes tags', t => {
+    const r = new Runtime();
+    const spr = new Sprite(null, r);
+    const a = new RenderedTarget(spr, r);
+    a.tags = ['player', 'enemy'];
+    t.same(a.toJSON().tags, ['player', 'enemy']);
+    t.end();
+});
+
+test('#makeClone copies tags array by value', t => {
+    const r = new Runtime();
+    const spr = new Sprite(null, r);
+    const original = spr.createClone();
+    original.tags = ['alpha'];
+
+    const clone = original.makeClone();
+    t.ok(clone);
+    t.same(clone.tags, ['alpha']);
+    t.not(clone.tags, original.tags);
+
+    original.tags.push('beta');
+    t.same(clone.tags, ['alpha']);
+    t.end();
+});
+
 test('#addSound does not duplicate names', t => {
     const r = new Runtime();
     const spr = new Sprite(null, r);
