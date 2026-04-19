@@ -297,7 +297,15 @@ E.compressInputTree = function (block, blocks) {
  * @param {!string} opcode The opcode to examine for extension.
  * @return {?string} The extension ID, if it exists and is not a core extension.
  */
-E.getExtensionIdForOpcode = function (opcode) {
+E.getExtensionIdForOpcode = function (opcode, runtime) {
+    if (runtime && runtime.extensionManager &&
+        typeof runtime.extensionManager.getRequiredBlockOwnerForOpcode === 'function') {
+        const requiredOwner = runtime.extensionManager.getRequiredBlockOwnerForOpcode(opcode);
+        if (requiredOwner) {
+            return requiredOwner;
+        }
+    }
+
     // Allowed ID characters are those matching the regular expression [\w-]: A-Z, a-z, 0-9, and hyphen ("-").
     const index = opcode.indexOf('_');
     const forbiddenSymbols = /[^\w-]/g;
@@ -305,6 +313,18 @@ E.getExtensionIdForOpcode = function (opcode) {
     if (E.CORE_EXTENSIONS.indexOf(prefix) === -1) {
         if (prefix !== '') return prefix;
     }
+};
+
+E.shouldTrackExtensionID = function (extensionID, extensions) {
+    if (!extensionID || !extensions) {
+        return false;
+    }
+
+    if (!extensions.declaredExtensionIDs || extensions.declaredExtensionIDs.size === 0) {
+        return true;
+    }
+
+    return extensions.declaredExtensionIDs.has(extensionID);
 };
 
 /**
@@ -348,13 +368,13 @@ E.getExtensionURLsToSave = (extensionIDs, runtime) => {
  * compressed primitives and the list of all extension IDs present
  * in the serialized blocks.
  */
-E.serializeBlocks = function (blocks) {
+E.serializeBlocks = function (blocks, runtime) {
     const obj = Object.create(null);
     const extensionIDs = new Set();
     for (const blockID in blocks) {
         if (!Object.prototype.hasOwnProperty.call(blocks, blockID)) continue;
         obj[blockID] = E.serializeBlock(blocks[blockID], blocks);
-        const extensionID = E.getExtensionIdForOpcode(blocks[blockID].opcode);
+        const extensionID = E.getExtensionIdForOpcode(blocks[blockID].opcode, runtime);
         if (extensionID) {
             extensionIDs.add(extensionID);
         }
@@ -423,7 +443,7 @@ E.deserializeStandaloneBlocks = blocks => {
 E.serializeStandaloneBlocks = (blocks, runtime) => {
     const extensionIDs = new Set();
     for (const block of blocks) {
-        const extensionID = E.getExtensionIdForOpcode(block.opcode);
+        const extensionID = E.getExtensionIdForOpcode(block.opcode, runtime);
         if (extensionID) {
             extensionIDs.add(extensionID);
         }
@@ -584,9 +604,10 @@ E.serializeFrames = function (frames) {
  * for saving and loading this target.
  * @param {object} target The target to be serialized.
  * @param {Set} extensions A set of extensions to add extension IDs to
+ * @param {Runtime} runtime Runtime used for extension ownership inference
  * @return {object} A serialized representation of the given target.
  */
-E.serializeTarget = function (target, extensions) {
+E.serializeTarget = function (target, extensions, runtime) {
     const obj = Object.create(null);
     let targetExtensions = [];
     obj.isStage = target.isStage;
@@ -595,7 +616,7 @@ E.serializeTarget = function (target, extensions) {
     obj.variables = vars.variables;
     obj.lists = vars.lists;
     obj.broadcasts = vars.broadcasts;
-    [obj.blocks, targetExtensions] = E.serializeBlocks(target.blocks);
+    [obj.blocks, targetExtensions] = E.serializeBlocks(target.blocks, runtime);
     obj.comments = E.serializeComments(target.comments);
     obj.frames = E.serializeFrames(target.frames || {});
     obj.tags = Array.isArray(target.tags) ? target.tags.slice() : [];
@@ -674,7 +695,7 @@ E.serializeMonitors = function (monitors, runtime, extensions) {
         // Don't include hidden monitors from extensions
         // https://github.com/LLK/scratch-vm/issues/2331
         .filter(monitorData => {
-            const extensionID = E.getExtensionIdForOpcode(monitorData.opcode);
+            const extensionID = E.getExtensionIdForOpcode(monitorData.opcode, runtime);
             if (!extensionID) {
                 // Native block, always safe
                 return true;
@@ -739,7 +760,7 @@ E.serialize = function (runtime, targetId, {allowOptimization = true} = {}) {
         });
     }
 
-    const serializedTargets = flattenedOriginalTargets.map(t => E.serializeTarget(t, extensions))
+    const serializedTargets = flattenedOriginalTargets.map(t => E.serializeTarget(t, extensions, runtime))
         .map((serialized, index) => {
             // can't serialize extensionStorage until the list of used extensions is fully known
             const target = originalTargetsToSerialize[index];
@@ -1206,7 +1227,7 @@ E.parseScratchObject = function (object, runtime, extensions, zip, assets) {
 
             // If the block is from an extension, record it.
             const extensionID = E.getExtensionIdForOpcode(blockJSON.opcode);
-            if (extensionID) {
+            if (E.shouldTrackExtensionID(extensionID, extensions)) {
                 extensions.extensionIDs.add(extensionID);
             }
         }
@@ -1489,7 +1510,7 @@ E.deserializeMonitor = function (monitorData, runtime, targets, extensions) {
 
         // If the block is from an extension, record it.
         const extensionID = E.getExtensionIdForOpcode(monitorBlock.opcode);
-        if (extensionID) {
+        if (E.shouldTrackExtensionID(extensionID, extensions)) {
             extensions.extensionIDs.add(extensionID);
         }
     }
@@ -1587,8 +1608,16 @@ E.deserialize = async function (json, runtime, zip, isSingleSprite) {
 
     const extensions = {
         extensionIDs: new Set(),
-        extensionURLs: new Map()
+        extensionURLs: new Map(),
+        declaredExtensionIDs: null
     };
+
+    if (Array.isArray(json.extensions)) {
+        extensions.declaredExtensionIDs = new Set(json.extensions);
+        for (const extensionID of extensions.declaredExtensionIDs) {
+            extensions.extensionIDs.add(extensionID);
+        }
+    }
 
     // Store the origin field (e.g. project originated at CSFirst) so that we can save it again.
     if (json.meta && json.meta.origin) {

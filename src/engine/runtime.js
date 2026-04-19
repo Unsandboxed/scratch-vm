@@ -1220,7 +1220,10 @@ class Runtime extends RuntimeConstants {
      * @private
      */
     _convertBlockForScratchBlocks (blockInfo, categoryInfo) {
-        const extendedOpcode = `${categoryInfo.id}_${blockInfo.opcode}`;
+        const extendedOpcode =
+            (typeof blockInfo.extendedOpcode === 'string' && blockInfo.extendedOpcode.length > 0) ?
+                blockInfo.extendedOpcode :
+                `${categoryInfo.id}_${blockInfo.opcode}`;
 
         blockInfo = this._mapColours(blockInfo, false, categoryInfo);
 
