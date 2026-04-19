@@ -445,6 +445,9 @@ class ExtensionManager {
 
         for (const providerId of Object.keys(extensionInfo.requires)) {
             const providerIsLoaded = providerId !== extensionInfo.id && this._loadedExtensions.has(providerId);
+            if (providerIsLoaded) {
+                continue;
+            }
 
             const requestedBlocks = extensionInfo.requires[providerId];
             if (!Array.isArray(requestedBlocks) || requestedBlocks.length === 0) {
