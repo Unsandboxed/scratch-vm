@@ -491,9 +491,7 @@ class ExtensionManager {
                     providerBlock,
                     merged.menus,
                     provider.extensionInfo.menus || {},
-                    extensionInfo,
-                    provider.extensionInfo,
-                    providerIsLoaded
+                    provider.extensionInfo
                 );
 
                 this._requiredBlockOpcodeOwners.set(importedExtendedOpcode, extensionInfo.id);
@@ -638,22 +636,18 @@ class ExtensionManager {
         return null;
     }
 
-    _cloneRequiredBlockInfo (providerId, providerBlock, consumerMenus, providerMenus, consumerInfo, providerInfo,
-        providerIsLoaded) {
+    _cloneRequiredBlockInfo (providerId, providerBlock, consumerMenus, providerMenus, providerInfo) {
         const clonedBlock = Object.assign({}, providerBlock);
         clonedBlock.arguments = Object.assign({}, providerBlock.arguments || {});
         clonedBlock.extendedOpcode = `${providerId}_${providerBlock.opcode}`;
 
-        // Borrowed blocks use consumer colors until the provider is loaded.
-        const paletteSource = providerIsLoaded ? providerInfo : consumerInfo;
-        const color1 = paletteSource && paletteSource.color1;
-        const color2 = (paletteSource && paletteSource.color2) || color1;
-        const color3 = (paletteSource && paletteSource.color3) || color2;
-        const color4 = (paletteSource && paletteSource.color4) || color3;
-        clonedBlock.color1 = clonedBlock.color1 || color1;
-        clonedBlock.color2 = clonedBlock.color2 || color2;
-        clonedBlock.color3 = clonedBlock.color3 || color3;
-        clonedBlock.color4 = clonedBlock.color4 || color4;
+        const resolvedColors = this._resolveRequiredBlockColors(providerBlock, providerInfo);
+        if (resolvedColors) {
+            clonedBlock.color1 = resolvedColors.color1;
+            clonedBlock.color2 = resolvedColors.color2;
+            clonedBlock.color3 = resolvedColors.color3;
+            clonedBlock.color4 = resolvedColors.color4;
+        }
 
         for (const argumentName of Object.keys(clonedBlock.arguments)) {
             const argumentInfo = clonedBlock.arguments[argumentName];
@@ -664,12 +658,12 @@ class ExtensionManager {
             const clonedArgument = Object.assign({}, argumentInfo);
             if (typeof clonedArgument.menu === 'string') {
                 const sourceMenuName = clonedArgument.menu;
-                const importedMenuName = `required__${providerId}__${sourceMenuName}`;
-                clonedArgument.menu = importedMenuName;
-
-                if (!Object.prototype.hasOwnProperty.call(consumerMenus, importedMenuName) &&
+                if (!Object.prototype.hasOwnProperty.call(consumerMenus, sourceMenuName) &&
                     Object.prototype.hasOwnProperty.call(providerMenus, sourceMenuName)) {
-                    consumerMenus[importedMenuName] = providerMenus[sourceMenuName];
+                    const clonedMenuInfo = Object.assign({}, providerMenus[sourceMenuName], {
+                        extensionId: providerId
+                    });
+                    consumerMenus[sourceMenuName] = clonedMenuInfo;
                 }
             }
 
@@ -677,6 +671,23 @@ class ExtensionManager {
         }
 
         return clonedBlock;
+    }
+
+    _resolveRequiredBlockColors (providerBlock, providerInfo) {
+        if (!this.runtime || typeof this.runtime._mapColours !== 'function') {
+            return null;
+        }
+
+        const blockForColorMapping = Object.assign({}, providerBlock);
+        const providerFallbackColors = Object.assign({}, providerInfo || {});
+        const resolved = this.runtime._mapColours(blockForColorMapping, false, providerFallbackColors);
+
+        return {
+            color1: resolved.color1,
+            color2: resolved.color2,
+            color3: resolved.color3,
+            color4: resolved.color4
+        };
     }
 
     getRequiredBlockOwnerForOpcode (opcode) {

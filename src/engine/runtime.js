@@ -1105,7 +1105,10 @@ class Runtime extends RuntimeConstants {
      * @private
      */
     _buildMenuForScratchBlocks (menuName, menuInfo, categoryInfo) {
-        const menuId = this._makeExtensionMenuId(menuName, categoryInfo.id);
+        const menuExtensionId =
+            (menuInfo && typeof menuInfo.extensionId === 'string' && menuInfo.extensionId.length > 0) ?
+                menuInfo.extensionId : categoryInfo.id;
+        const menuId = this._makeExtensionMenuId(menuName, menuExtensionId);
         const menuItems = this._convertMenuItems(menuInfo.items);
         const acceptInput = (menuInfo.acceptText || menuInfo.acceptNumber);
         const type = menuInfo.acceptText ?
@@ -1515,13 +1518,16 @@ class Runtime extends RuntimeConstants {
 
                 const menuInfo = categoryInfo && categoryInfo.menuInfo ? categoryInfo.menuInfo[argInfo.menu] : null;
                 const convertedMenu = categoryInfo && categoryInfo.convertedMenuInfo ? categoryInfo.convertedMenuInfo[argInfo.menu] : null;
+                const menuExtensionId =
+                    (menuInfo && typeof menuInfo.extensionId === 'string' && menuInfo.extensionId.length > 0) ?
+                        menuInfo.extensionId : categoryInfo.id;
                 const acceptReporters = typeof argInfo.acceptReporters !== 'undefined' ?
                     argInfo.acceptReporters : (menuInfo && menuInfo.acceptReporters);
 
                 if (acceptReporters) {
                     // Menu semantics from argument definitions must override
                     // generic type defaults (e.g. STRING => text/TEXT shadow).
-                    resolved.shadow = this._makeExtensionMenuId(argInfo.menu, categoryInfo.id);
+                    resolved.shadow = this._makeExtensionMenuId(argInfo.menu, menuExtensionId);
                     resolved.field = argInfo.menu;
                     resolved.defaultValue = formatDefaultValue(argInfo);
                     return resolved;
@@ -1788,6 +1794,9 @@ class Runtime extends RuntimeConstants {
             let fieldName;
             if (argInfo.menu) {
                 const menuInfo = context.categoryInfo.menuInfo[argInfo.menu];
+                const menuExtensionId =
+                    (menuInfo && typeof menuInfo.extensionId === 'string' && menuInfo.extensionId.length > 0) ?
+                        menuInfo.extensionId : context.categoryInfo.id;
 
                 let acceptReporters = false;
                 if (typeof argInfo.acceptReporters !== 'undefined') {
@@ -1798,7 +1807,7 @@ class Runtime extends RuntimeConstants {
 
                 if (acceptReporters) {
                     valueName = placeholder;
-                    shadowType = this._makeExtensionMenuId(argInfo.menu, context.categoryInfo.id);
+                    shadowType = this._makeExtensionMenuId(argInfo.menu, menuExtensionId);
                     fieldName = argInfo.menu;
                 } else {
                     argJSON.type = 'field_dropdown';
