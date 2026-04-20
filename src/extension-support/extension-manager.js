@@ -207,6 +207,7 @@ class ExtensionManager {
         this._loadedExtensions.set(extensionId, serviceName);
         this._requiredBlockProviders.delete(extensionId);
         this._refreshRequiredBlockConsumers(extensionId);
+        this._refreshProvidedBlockTargets(extensionId);
         this.runtime.compilerRegisterExtension(extensionId, extensionInstance);
     }
 
@@ -317,7 +318,9 @@ class ExtensionManager {
         const refresh = serviceName => dispatch.call(serviceName, 'getInfo')
             .then(info => {
                 info = this._prepareExtensionInfo(serviceName, info);
+                info = this._applyProvidesSourceVisibility(info);
                 info = this._injectRequiredBlocks(info);
+                info = this._injectProvidedBlocks(info);
                 dispatch.call('runtime', '_refreshExtensionPrimitives', info);
             })
             .catch(e => {
@@ -360,6 +363,7 @@ class ExtensionManager {
             this._registerExtensionInfo(serviceName, info);
             this._requiredBlockProviders.delete(info.id);
             this._refreshRequiredBlockConsumers(info.id);
+            this._refreshProvidedBlockTargets(info.id);
             this._finishedLoadingExtensionScript();
         });
     }
@@ -419,10 +423,137 @@ class ExtensionManager {
      */
     _registerExtensionInfo (serviceName, extensionInfo) {
         extensionInfo = this._prepareExtensionInfo(serviceName, extensionInfo);
+        extensionInfo = this._applyProvidesSourceVisibility(extensionInfo);
         extensionInfo = this._injectRequiredBlocks(extensionInfo);
+        extensionInfo = this._injectProvidedBlocks(extensionInfo);
         dispatch.call('runtime', '_registerExtensionPrimitives', extensionInfo).catch(e => {
             log.error(`Failed to register primitives for extension on service ${serviceName}:`, e);
         });
+    }
+
+    _applyProvidesSourceVisibility (extensionInfo) {
+        if (!extensionInfo || !extensionInfo.provides || typeof extensionInfo.provides !== 'object') {
+            return extensionInfo;
+        }
+
+        const providedOpcodes = new Set();
+        for (const targetId of Object.keys(extensionInfo.provides)) {
+            const opcodes = extensionInfo.provides[targetId];
+            if (!Array.isArray(opcodes)) {
+                continue;
+            }
+
+            for (const opcode of opcodes) {
+                providedOpcodes.add(String(opcode));
+            }
+        }
+
+        if (providedOpcodes.size === 0 || !Array.isArray(extensionInfo.blocks)) {
+            return extensionInfo;
+        }
+
+        const nextBlocks = extensionInfo.blocks.map(blockInfo => {
+            if (!blockInfo || blockInfo === '---' || typeof blockInfo !== 'object') {
+                return blockInfo;
+            }
+
+            if (!providedOpcodes.has(blockInfo.opcode)) {
+                return blockInfo;
+            }
+
+            return Object.assign({}, blockInfo, {
+                hideFromPalette: true
+            });
+        });
+
+        return Object.assign({}, extensionInfo, {
+            blocks: nextBlocks
+        });
+    }
+
+    _injectProvidedBlocks (extensionInfo) {
+        if (!extensionInfo || !extensionInfo.id) {
+            return extensionInfo;
+        }
+
+        const merged = Object.assign({}, extensionInfo, {
+            blocks: Array.isArray(extensionInfo.blocks) ? extensionInfo.blocks.slice() : [],
+            menus: Object.assign({}, extensionInfo.menus || {})
+        });
+
+        let insertedAny = false;
+
+        for (const [providerId, providerService] of this._loadedExtensions.entries()) {
+            if (providerId === extensionInfo.id) {
+                continue;
+            }
+
+            let providerInfo;
+            try {
+                providerInfo = this._prepareExtensionInfo(providerService, dispatch.callSync(providerService, 'getInfo'));
+            } catch (e) {
+                log.warn(`Failed to inspect provides metadata from ${providerId}: ${e.message}`);
+                continue;
+            }
+
+            if (!providerInfo || !providerInfo.provides || typeof providerInfo.provides !== 'object') {
+                continue;
+            }
+
+            const providedOpcodes = providerInfo.provides[extensionInfo.id];
+            if (!Array.isArray(providedOpcodes) || providedOpcodes.length === 0) {
+                continue;
+            }
+
+            const providerBlocks = providerInfo.blocks || [];
+
+            for (const providedOpcode of providedOpcodes) {
+                const blockOpcode = String(providedOpcode);
+                const providedExtendedOpcode = `${providerId}_${blockOpcode}`;
+
+                const alreadyInTarget = merged.blocks.some(block =>
+                    block &&
+                    typeof block === 'object' &&
+                    block.extendedOpcode === providedExtendedOpcode
+                );
+                if (alreadyInTarget) {
+                    continue;
+                }
+
+                const providerBlock = providerBlocks.find(block =>
+                    block &&
+                    block !== '---' &&
+                    block.opcode === blockOpcode
+                );
+                if (!providerBlock) {
+                    log.warn(`Provided block ${providedExtendedOpcode} was not found in provider ${providerId}`);
+                    continue;
+                }
+
+                const providedBlock = this._cloneRequiredBlockInfo(
+                    providerId,
+                    providerBlock,
+                    merged.menus,
+                    providerInfo.menus || {},
+                    providerInfo,
+                    {
+                        forceShowInPalette: true,
+                        colorSourceInfo: extensionInfo
+                    }
+                );
+
+                if (!insertedAny) {
+                    if (merged.blocks.length > 0 && merged.blocks[merged.blocks.length - 1] !== '---') {
+                        merged.blocks.push('---');
+                    }
+                    insertedAny = true;
+                }
+
+                merged.blocks.push(providedBlock);
+            }
+        }
+
+        return merged;
     }
 
     _injectRequiredBlocks (extensionInfo) {
@@ -533,6 +664,30 @@ class ExtensionManager {
         }
     }
 
+    _refreshProvidedBlockTargets (providerId) {
+        const providerService = this._loadedExtensions.get(providerId);
+        if (!providerService) {
+            return;
+        }
+
+        dispatch.call(providerService, 'getInfo')
+            .then(info => {
+                if (!info || !info.provides || typeof info.provides !== 'object') {
+                    return;
+                }
+
+                for (const targetId of Object.keys(info.provides)) {
+                    if (!this._loadedExtensions.has(targetId)) {
+                        continue;
+                    }
+                    this.refreshBlocks(targetId);
+                }
+            })
+            .catch(e => {
+                log.warn(`Failed to refresh provided block targets for ${providerId}: ${e.message}`);
+            });
+    }
+
     _getRequiredBlockProvider (providerId) {
         if (this._requiredBlockProviders.has(providerId)) {
             return this._requiredBlockProviders.get(providerId);
@@ -636,12 +791,17 @@ class ExtensionManager {
         return null;
     }
 
-    _cloneRequiredBlockInfo (providerId, providerBlock, consumerMenus, providerMenus, providerInfo) {
+    _cloneRequiredBlockInfo (providerId, providerBlock, consumerMenus, providerMenus, providerInfo, options) {
         const clonedBlock = Object.assign({}, providerBlock);
         clonedBlock.arguments = Object.assign({}, providerBlock.arguments || {});
         clonedBlock.extendedOpcode = `${providerId}_${providerBlock.opcode}`;
 
-        const resolvedColors = this._resolveRequiredBlockColors(providerBlock, providerInfo);
+        if (options && options.forceShowInPalette) {
+            clonedBlock.hideFromPalette = false;
+        }
+
+        const colorSourceInfo = (options && options.colorSourceInfo) || providerInfo;
+        const resolvedColors = this._resolveRequiredBlockColors(providerBlock, colorSourceInfo);
         if (resolvedColors) {
             clonedBlock.color1 = resolvedColors.color1;
             clonedBlock.color2 = resolvedColors.color2;
