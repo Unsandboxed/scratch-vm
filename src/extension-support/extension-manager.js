@@ -133,6 +133,20 @@ class ExtensionManager {
 
         this.builtinExtensions = Object.assign({}, ExtensionManager.defaultBuiltinExtensions);
 
+        /**
+         * Hidden provider extension services used only for required block imports.
+         * Map key is extension ID.
+         * @type {Map<string, {serviceName: string, extensionInfo: ExtensionInfo}>}
+         */
+        this._requiredBlockProviders = new Map();
+
+        /**
+         * Map imported required opcode => consumer extension ID.
+         * Used by serialization to persist consumer ownership without changing runtime opcode semantics.
+         * @type {Map<string, string>}
+         */
+        this._requiredBlockOpcodeOwners = new Map();
+
         dispatch.setService('extensions', ExtensionManager.createExtensionService(this)).catch(e => {
             log.error(`ExtensionManager was unable to register extension service: ${JSON.stringify(e)}`);
         });
@@ -191,6 +205,9 @@ class ExtensionManager {
         const extensionInstance = new extension(this.runtime);
         const serviceName = this._registerInternalExtension(extensionInstance);
         this._loadedExtensions.set(extensionId, serviceName);
+        this._requiredBlockProviders.delete(extensionId);
+        this._refreshRequiredBlockConsumers(extensionId);
+        this._refreshProvidedBlockTargets(extensionId);
         this.runtime.compilerRegisterExtension(extensionId, extensionInstance);
     }
 
@@ -301,6 +318,9 @@ class ExtensionManager {
         const refresh = serviceName => dispatch.call(serviceName, 'getInfo')
             .then(info => {
                 info = this._prepareExtensionInfo(serviceName, info);
+                info = this._applyProvidesSourceVisibility(info);
+                info = this._injectRequiredBlocks(info);
+                info = this._injectProvidedBlocks(info);
                 dispatch.call('runtime', '_refreshExtensionPrimitives', info);
             })
             .catch(e => {
@@ -341,6 +361,9 @@ class ExtensionManager {
         dispatch.call(serviceName, 'getInfo').then(info => {
             this._loadedExtensions.set(info.id, serviceName);
             this._registerExtensionInfo(serviceName, info);
+            this._requiredBlockProviders.delete(info.id);
+            this._refreshRequiredBlockConsumers(info.id);
+            this._refreshProvidedBlockTargets(info.id);
             this._finishedLoadingExtensionScript();
         });
     }
@@ -400,9 +423,435 @@ class ExtensionManager {
      */
     _registerExtensionInfo (serviceName, extensionInfo) {
         extensionInfo = this._prepareExtensionInfo(serviceName, extensionInfo);
+        extensionInfo = this._applyProvidesSourceVisibility(extensionInfo);
+        extensionInfo = this._injectRequiredBlocks(extensionInfo);
+        extensionInfo = this._injectProvidedBlocks(extensionInfo);
         dispatch.call('runtime', '_registerExtensionPrimitives', extensionInfo).catch(e => {
             log.error(`Failed to register primitives for extension on service ${serviceName}:`, e);
         });
+    }
+
+    _applyProvidesSourceVisibility (extensionInfo) {
+        if (!extensionInfo || !extensionInfo.provides || typeof extensionInfo.provides !== 'object') {
+            return extensionInfo;
+        }
+
+        const providedOpcodes = new Set();
+        for (const targetId of Object.keys(extensionInfo.provides)) {
+            const opcodes = extensionInfo.provides[targetId];
+            if (!Array.isArray(opcodes)) {
+                continue;
+            }
+
+            for (const opcode of opcodes) {
+                providedOpcodes.add(String(opcode));
+            }
+        }
+
+        if (providedOpcodes.size === 0 || !Array.isArray(extensionInfo.blocks)) {
+            return extensionInfo;
+        }
+
+        const nextBlocks = extensionInfo.blocks.map(blockInfo => {
+            if (!blockInfo || blockInfo === '---' || typeof blockInfo !== 'object') {
+                return blockInfo;
+            }
+
+            if (!providedOpcodes.has(blockInfo.opcode)) {
+                return blockInfo;
+            }
+
+            return Object.assign({}, blockInfo, {
+                hideFromPalette: true
+            });
+        });
+
+        return Object.assign({}, extensionInfo, {
+            blocks: nextBlocks
+        });
+    }
+
+    _injectProvidedBlocks (extensionInfo) {
+        if (!extensionInfo || !extensionInfo.id) {
+            return extensionInfo;
+        }
+
+        const merged = Object.assign({}, extensionInfo, {
+            blocks: Array.isArray(extensionInfo.blocks) ? extensionInfo.blocks.slice() : [],
+            menus: Object.assign({}, extensionInfo.menus || {})
+        });
+
+        let insertedAny = false;
+
+        for (const [providerId, providerService] of this._loadedExtensions.entries()) {
+            if (providerId === extensionInfo.id) {
+                continue;
+            }
+
+            let providerInfo;
+            try {
+                providerInfo = this._prepareExtensionInfo(providerService, dispatch.callSync(providerService, 'getInfo'));
+            } catch (e) {
+                log.warn(`Failed to inspect provides metadata from ${providerId}: ${e.message}`);
+                continue;
+            }
+
+            if (!providerInfo || !providerInfo.provides || typeof providerInfo.provides !== 'object') {
+                continue;
+            }
+
+            const providedOpcodes = providerInfo.provides[extensionInfo.id];
+            if (!Array.isArray(providedOpcodes) || providedOpcodes.length === 0) {
+                continue;
+            }
+
+            const providerBlocks = providerInfo.blocks || [];
+
+            for (const providedOpcode of providedOpcodes) {
+                const blockOpcode = String(providedOpcode);
+                const providedExtendedOpcode = `${providerId}_${blockOpcode}`;
+
+                const alreadyInTarget = merged.blocks.some(block =>
+                    block &&
+                    typeof block === 'object' &&
+                    block.extendedOpcode === providedExtendedOpcode
+                );
+                if (alreadyInTarget) {
+                    continue;
+                }
+
+                const providerBlock = providerBlocks.find(block =>
+                    block &&
+                    block !== '---' &&
+                    block.opcode === blockOpcode
+                );
+                if (!providerBlock) {
+                    log.warn(`Provided block ${providedExtendedOpcode} was not found in provider ${providerId}`);
+                    continue;
+                }
+
+                const providedBlock = this._cloneRequiredBlockInfo(
+                    providerId,
+                    providerBlock,
+                    merged.menus,
+                    providerInfo.menus || {},
+                    providerInfo,
+                    {
+                        forceShowInPalette: true,
+                        colorSourceInfo: extensionInfo
+                    }
+                );
+
+                if (!insertedAny) {
+                    if (merged.blocks.length > 0 && merged.blocks[merged.blocks.length - 1] !== '---') {
+                        merged.blocks.push('---');
+                    }
+                    insertedAny = true;
+                }
+
+                merged.blocks.push(providedBlock);
+            }
+        }
+
+        return merged;
+    }
+
+    _injectRequiredBlocks (extensionInfo) {
+        if (!extensionInfo || !extensionInfo.requires || typeof extensionInfo.requires !== 'object') {
+            return extensionInfo;
+        }
+
+        for (const [opcode, ownerId] of this._requiredBlockOpcodeOwners.entries()) {
+            if (ownerId === extensionInfo.id) {
+                this._requiredBlockOpcodeOwners.delete(opcode);
+            }
+        }
+
+        const merged = Object.assign({}, extensionInfo, {
+            blocks: Array.isArray(extensionInfo.blocks) ? extensionInfo.blocks.slice() : [],
+            menus: Object.assign({}, extensionInfo.menus || {})
+        });
+
+        let insertedAny = false;
+
+        for (const providerId of Object.keys(extensionInfo.requires)) {
+            const providerIsLoaded = providerId !== extensionInfo.id && this._loadedExtensions.has(providerId);
+            if (providerIsLoaded) {
+                continue;
+            }
+
+            const requestedBlocks = extensionInfo.requires[providerId];
+            if (!Array.isArray(requestedBlocks) || requestedBlocks.length === 0) {
+                continue;
+            }
+
+            const provider = this._getRequiredBlockProvider(providerId);
+            if (!provider) {
+                log.warn(`Unable to load required block provider: ${providerId}`);
+                continue;
+            }
+
+            const providerBlocks = provider.extensionInfo.blocks || [];
+
+            for (const requestedOpcode of requestedBlocks) {
+                const blockOpcode = String(requestedOpcode);
+                const importedExtendedOpcode = `${providerId}_${blockOpcode}`;
+
+                const alreadyImported = merged.blocks.some(block =>
+                    block &&
+                    typeof block === 'object' &&
+                    block.extendedOpcode === importedExtendedOpcode
+                );
+                if (alreadyImported) {
+                    continue;
+                }
+
+                const providerBlock = providerBlocks.find(block =>
+                    block &&
+                    block !== '---' &&
+                    block.opcode === blockOpcode
+                );
+
+                if (!providerBlock) {
+                    log.warn(`Required block ${importedExtendedOpcode} was not found in provider ${providerId}`);
+                    continue;
+                }
+
+                const importedBlock = this._cloneRequiredBlockInfo(
+                    providerId,
+                    providerBlock,
+                    merged.menus,
+                    provider.extensionInfo.menus || {},
+                    provider.extensionInfo
+                );
+
+                this._requiredBlockOpcodeOwners.set(importedExtendedOpcode, extensionInfo.id);
+
+                if (!insertedAny) {
+                    if (merged.blocks.length > 0 && merged.blocks[merged.blocks.length - 1] !== '---') {
+                        merged.blocks.push('---');
+                    }
+                    insertedAny = true;
+                }
+                merged.blocks.push(importedBlock);
+            }
+        }
+
+        return merged;
+    }
+
+    _refreshRequiredBlockConsumers (providerId) {
+        for (const [extensionId, serviceName] of this._loadedExtensions.entries()) {
+            if (extensionId === providerId) {
+                continue;
+            }
+
+            dispatch.call(serviceName, 'getInfo')
+                .then(info => {
+                    if (!info || !info.requires || typeof info.requires !== 'object') {
+                        return;
+                    }
+
+                    if (!Object.prototype.hasOwnProperty.call(info.requires, providerId)) {
+                        return;
+                    }
+
+                    return this.refreshBlocks(extensionId);
+                })
+                .catch(e => {
+                    log.warn(`Failed to refresh required block consumer ${extensionId} for provider ${providerId}: ${e.message}`);
+                });
+        }
+    }
+
+    _refreshProvidedBlockTargets (providerId) {
+        const providerService = this._loadedExtensions.get(providerId);
+        if (!providerService) {
+            return;
+        }
+
+        dispatch.call(providerService, 'getInfo')
+            .then(info => {
+                if (!info || !info.provides || typeof info.provides !== 'object') {
+                    return;
+                }
+
+                for (const targetId of Object.keys(info.provides)) {
+                    if (!this._loadedExtensions.has(targetId)) {
+                        continue;
+                    }
+                    this.refreshBlocks(targetId);
+                }
+            })
+            .catch(e => {
+                log.warn(`Failed to refresh provided block targets for ${providerId}: ${e.message}`);
+            });
+    }
+
+    _getRequiredBlockProvider (providerId) {
+        if (this._requiredBlockProviders.has(providerId)) {
+            return this._requiredBlockProviders.get(providerId);
+        }
+
+        // Reuse already loaded providers when available.
+        if (this._loadedExtensions.has(providerId)) {
+            const loadedService = this._loadedExtensions.get(providerId);
+            try {
+                const loadedInfo = this._prepareExtensionInfo(loadedService, dispatch.callSync(loadedService, 'getInfo'));
+                const loadedProvider = {
+                    serviceName: loadedService,
+                    extensionInfo: loadedInfo
+                };
+                this._requiredBlockProviders.set(providerId, loadedProvider);
+                return loadedProvider;
+            } catch (e) {
+                log.warn(`Failed to inspect loaded provider ${providerId}: ${e.message}`);
+            }
+        }
+
+        if (!this.isBuiltinExtension(providerId)) {
+            return null;
+        }
+
+        try {
+            const extensionModule = this.builtinExtensions[providerId]();
+            const extensionInstance = this._instantiateRequiredProvider(extensionModule);
+
+            if (!extensionInstance || typeof extensionInstance.getInfo !== 'function') {
+                log.warn(`Failed to instantiate required provider ${providerId}`);
+                return null;
+            }
+
+            const extensionInfo = extensionInstance.getInfo();
+            const fakeWorkerId = this.nextExtensionWorker++;
+            const serviceName = `required_${fakeWorkerId}_${providerId}`;
+            dispatch.setServiceSync(serviceName, extensionInstance);
+
+            const preparedInfo = this._prepareExtensionInfo(serviceName, extensionInfo);
+            const provider = {
+                serviceName,
+                extensionInfo: preparedInfo
+            };
+
+            this._requiredBlockProviders.set(providerId, provider);
+            return provider;
+        } catch (e) {
+            log.error(`Failed to create required block provider ${providerId}: ${e.message}`);
+            return null;
+        }
+    }
+
+    _instantiateRequiredProvider (extensionModule) {
+        const candidates = [
+            extensionModule,
+            extensionModule && extensionModule.default
+        ];
+
+        for (const candidate of candidates) {
+            const instance = this._toProviderInstance(candidate);
+            if (instance) {
+                return instance;
+            }
+        }
+
+        return null;
+    }
+
+    _toProviderInstance (candidate) {
+        if (!candidate) {
+            return null;
+        }
+
+        if (typeof candidate.getInfo === 'function') {
+            return candidate;
+        }
+
+        if (typeof candidate !== 'function') {
+            return null;
+        }
+
+        try {
+            const constructed = new candidate(this.runtime);
+            if (constructed && typeof constructed.getInfo === 'function') {
+                return constructed;
+            }
+        } catch (e) {
+            // Some modules export a plain function factory instead of a class.
+        }
+
+        try {
+            const created = candidate(this.runtime);
+            if (created && typeof created.getInfo === 'function') {
+                return created;
+            }
+        } catch (e) {
+            return null;
+        }
+
+        return null;
+    }
+
+    _cloneRequiredBlockInfo (providerId, providerBlock, consumerMenus, providerMenus, providerInfo, options) {
+        const clonedBlock = Object.assign({}, providerBlock);
+        clonedBlock.arguments = Object.assign({}, providerBlock.arguments || {});
+        clonedBlock.extendedOpcode = `${providerId}_${providerBlock.opcode}`;
+
+        if (options && options.forceShowInPalette) {
+            clonedBlock.hideFromPalette = false;
+        }
+
+        const colorSourceInfo = (options && options.colorSourceInfo) || providerInfo;
+        const resolvedColors = this._resolveRequiredBlockColors(providerBlock, colorSourceInfo);
+        if (resolvedColors) {
+            clonedBlock.color1 = resolvedColors.color1;
+            clonedBlock.color2 = resolvedColors.color2;
+            clonedBlock.color3 = resolvedColors.color3;
+            clonedBlock.color4 = resolvedColors.color4;
+        }
+
+        for (const argumentName of Object.keys(clonedBlock.arguments)) {
+            const argumentInfo = clonedBlock.arguments[argumentName];
+            if (!argumentInfo || typeof argumentInfo !== 'object') {
+                continue;
+            }
+
+            const clonedArgument = Object.assign({}, argumentInfo);
+            if (typeof clonedArgument.menu === 'string') {
+                const sourceMenuName = clonedArgument.menu;
+                if (!Object.prototype.hasOwnProperty.call(consumerMenus, sourceMenuName) &&
+                    Object.prototype.hasOwnProperty.call(providerMenus, sourceMenuName)) {
+                    const clonedMenuInfo = Object.assign({}, providerMenus[sourceMenuName], {
+                        extensionId: providerId
+                    });
+                    consumerMenus[sourceMenuName] = clonedMenuInfo;
+                }
+            }
+
+            clonedBlock.arguments[argumentName] = clonedArgument;
+        }
+
+        return clonedBlock;
+    }
+
+    _resolveRequiredBlockColors (providerBlock, providerInfo) {
+        if (!this.runtime || typeof this.runtime._mapColours !== 'function') {
+            return null;
+        }
+
+        const blockForColorMapping = Object.assign({}, providerBlock);
+        const providerFallbackColors = Object.assign({}, providerInfo || {});
+        const resolved = this.runtime._mapColours(blockForColorMapping, false, providerFallbackColors);
+
+        return {
+            color1: resolved.color1,
+            color2: resolved.color2,
+            color3: resolved.color3,
+            color4: resolved.color4
+        };
+    }
+
+    getRequiredBlockOwnerForOpcode (opcode) {
+        return this._requiredBlockOpcodeOwners.get(opcode) || null;
     }
 
     /**
