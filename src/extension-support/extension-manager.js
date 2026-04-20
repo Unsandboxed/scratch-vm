@@ -563,6 +563,7 @@ class ExtensionManager {
             type === BlockType.REPORTER ||
             type === BlockType.BOOLEAN ||
             type === BlockType.ARRAY ||
+            type === BlockType.VECTOR ||
             type === BlockType.OBJECT;
         const hasBranchCount = info => Number.isInteger(info.branchCount) && info.branchCount > 0;
         const isInlineLikeBlock = info => isInputBlockType(info.blockType) && hasBranchCount(info);
@@ -716,6 +717,9 @@ class ExtensionManager {
             },
             [ArgumentType.ARRAY]: {
                 check: 'Array'
+            },
+            [ArgumentType.VECTOR]: {
+                check: ['Vector', 'Array']
             },
             [ArgumentType.OBJECT]: {
                 check: 'Object'

@@ -76,7 +76,12 @@ const ArgumentType = {
     /**
      * Name of variable in the current specified target(s)
      */
-    VARIABLE: 'variable'
+    VARIABLE: 'variable',
+
+    /**
+     * A cosmetic vector value. Semantically treated as an array.
+     */
+    VECTOR: 'vector'
 };
 
 module.exports = ArgumentType;

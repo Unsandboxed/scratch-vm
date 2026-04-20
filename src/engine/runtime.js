@@ -112,6 +112,12 @@ const RuntimeInternals = {
             check: 'Boolean'
         };
         map[ArgumentType.ARRAY] = {
+            shadow: {
+                type: 'array'
+            },
+            check: 'Array'
+        };
+        map[ArgumentType.VECTOR] = {
             check: 'Array'
         };
         map[ArgumentType.OBJECT] = {
@@ -1288,6 +1294,7 @@ class Runtime extends RuntimeConstants {
             (blockInfo.blockType === BlockType.REPORTER ||
                 blockInfo.blockType === BlockType.BOOLEAN ||
                 blockInfo.blockType === BlockType.ARRAY ||
+                blockInfo.blockType === BlockType.VECTOR ||
                 blockInfo.blockType === BlockType.OBJECT) &&
             Number.isInteger(blockInfo.branchCount) &&
             blockInfo.branchCount > 0;
@@ -1329,6 +1336,10 @@ class Runtime extends RuntimeConstants {
         case BlockType.ARRAY:
             blockJSON.output = 'Array';
             blockJSON.outputShape = ScratchBlocksConstants.OUTPUT_SHAPE_SQUARE;
+            break;
+        case BlockType.VECTOR:
+            blockJSON.output = 'Array';
+            blockJSON.outputShape = ScratchBlocksConstants.OUTPUT_SHAPE_VECTOR;
             break;
         case BlockType.OBJECT:
             blockJSON.output = 'Object';
@@ -1411,6 +1422,7 @@ class Runtime extends RuntimeConstants {
             blockInfo.blockType === BlockType.REPORTER ||
             blockInfo.blockType === BlockType.BOOLEAN ||
             blockInfo.blockType === BlockType.ARRAY ||
+            blockInfo.blockType === BlockType.VECTOR ||
             blockInfo.blockType === BlockType.OBJECT
         );
 
@@ -1778,6 +1790,11 @@ class Runtime extends RuntimeConstants {
                 // input slot on the block accepts Boolean reporters, so it should be
                 // shaped like a hexagon
                 argJSON.check = argTypeInfo.check;
+            }
+
+            if (argInfo.type === ArgumentType.VECTOR) {
+                // Vector is runtime-compatible with arrays, but we want vector-shaped sockets.
+                argJSON.outputShape = ScratchBlocksConstants.OUTPUT_SHAPE_VECTOR;
             }
 
             let valueName;

@@ -24,10 +24,22 @@ const ScratchBlocksConstants = {
     OUTPUT_SHAPE_SQUARE: 3,
 
     /**
+     * ENUM for output shape: array alias.
+     * @const
+     */
+    OUTPUT_SHAPE_ARRAY: 3,
+
+    /**
      * ENUM for output shape: object (objects).
      * @const
      */
     OUTPUT_SHAPE_OBJECT: 4,
+
+    /**
+     * ENUM for output shape: vector.
+     * @const
+     */
+    OUTPUT_SHAPE_VECTOR: 5,
 
     RETURN_TYPE_HAT: 3
 };

@@ -68,6 +68,11 @@ const BlockType = {
     REPORTER: 'reporter',
 
     /**
+     * Cosmetic vector reporter. Semantically treated as an array.
+     */
+    VECTOR: 'vector',
+
+    /**
      * Arbitrary scratch-blocks XML.
      */
     XML: 'xml'

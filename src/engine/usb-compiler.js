@@ -188,6 +188,7 @@ class Compiler {
         this.bt_inputs = new Set([
             BlockType.REPORTER,
             BlockType.ARRAY,
+            BlockType.VECTOR,
             BlockType.OBJECT,
             BlockType.BOOLEAN
         ]);
@@ -200,6 +201,7 @@ class Compiler {
             [BlockType.REPORTER, enums.InputType.ANY],
             [BlockType.BOOLEAN, enums.InputType.BOOLEAN_INTERPRETABLE],
             [BlockType.ARRAY, enums.InputType.ARRAY],
+            [BlockType.VECTOR, enums.InputType.ARRAY],
             [BlockType.OBJECT, enums.InputType.OBJECT]
         ]);
 
