@@ -142,14 +142,34 @@ class ScriptTreeGenerator {
             return null;
         }
         const categoryInfo = this.runtime._blockInfo.find(ci => ci.id === category);
-        if (!categoryInfo) {
-            return null;
+        if (categoryInfo) {
+            const blockInfo = categoryInfo.blocks.find(b => b && b.info && b.info.opcode === opcode);
+            if (blockInfo) {
+                return blockInfo;
+            }
         }
-        const blockInfo = categoryInfo.blocks.find(b => b.info.opcode === opcode);
-        if (!blockInfo) {
-            return null;
+
+        // Required blocks may have an extended opcode whose provider category
+        // does not map 1:1 to the currently registered category entry. Fallback to
+        // an exact full-opcode match across all converted extension blocks.
+        for (const ci of this.runtime._blockInfo) {
+            for (const block of ci.blocks) {
+                if (!block || !block.info || !block.json) {
+                    continue;
+                }
+
+                const extendedOpcode =
+                    (typeof block.info.extendedOpcode === 'string' && block.info.extendedOpcode.length > 0) ?
+                        block.info.extendedOpcode :
+                        `${ci.id}_${block.info.opcode}`;
+
+                if (extendedOpcode === fullOpcode || block.json.type === fullOpcode) {
+                    return block;
+                }
+            }
         }
-        return blockInfo;
+
+        return null;
     }
 
     createConstantInput (constant, preserveStrings = false) {
