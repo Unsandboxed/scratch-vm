@@ -118,6 +118,17 @@ const RuntimeInternals = {
             check: 'Array'
         };
         map[ArgumentType.VECTOR] = {
+            shadow: {
+                type: 'math_vector2',
+                fieldName: 'VEC'
+            },
+            check: 'Array'
+        };
+        map[ArgumentType.POSITION] = {
+            shadow: {
+                type: 'math_position',
+                fieldName: 'POS'
+            },
             check: 'Array'
         };
         map[ArgumentType.OBJECT] = {
@@ -1801,8 +1812,8 @@ class Runtime extends RuntimeConstants {
                 argJSON.check = argTypeInfo.check;
             }
 
-            if (argInfo.type === ArgumentType.VECTOR) {
-                // Vector is runtime-compatible with arrays, but we want vector-shaped sockets.
+            if (argInfo.type === ArgumentType.VECTOR || argInfo.type === ArgumentType.POSITION) {
+                // Vector/position are runtime-compatible with arrays, but we want vector-shaped sockets.
                 argJSON.outputShape = ScratchBlocksConstants.OUTPUT_SHAPE_VECTOR;
             }
 
@@ -3563,7 +3574,7 @@ class Runtime extends RuntimeConstants {
     /**
      * Emit value for reporter to show in the blocks.
      * @param {string} blockId ID for the block.
-     * @param {string} value Value to show associated with the block.
+        * @param {*} value Value to show associated with the block.
      * @param {Target} target The target that the block was run in.
      */
     visualReport (blockId, value, target) {
@@ -3576,11 +3587,23 @@ class Runtime extends RuntimeConstants {
         if (target !== this.getEditingTarget()) {
             console.warn('Tried to emit from a target other than the current editing target.');
         }
+
+        let visualReportType = null;
+        let reportValue = value;
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+            const wrappedType = value.visualReportType || value.__visualReportType;
+            if (typeof wrappedType === 'string' && Object.prototype.hasOwnProperty.call(value, 'value')) {
+                visualReportType = wrappedType;
+                reportValue = value.value;
+            }
+        }
+
         this.emit(RuntimeConstants.VISUAL_REPORT, {
             id: blockId,
             value: (
-                (typeof value === 'object') ? value : Cast.toString(value)),
-            type: typeof value
+                (typeof reportValue === 'object') ? reportValue : Cast.toString(reportValue)),
+            type: visualReportType || typeof reportValue,
+            visualReportType: visualReportType
         });
     }
 

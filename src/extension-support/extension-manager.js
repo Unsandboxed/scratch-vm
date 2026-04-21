@@ -1168,6 +1168,13 @@ class ExtensionManager {
                 check: 'Array'
             },
             [ArgumentType.VECTOR]: {
+                shadow: 'math_vector2',
+                field: 'VEC',
+                check: ['Vector', 'Array']
+            },
+            [ArgumentType.POSITION]: {
+                shadow: 'math_position',
+                field: 'POS',
                 check: ['Vector', 'Array']
             },
             [ArgumentType.OBJECT]: {

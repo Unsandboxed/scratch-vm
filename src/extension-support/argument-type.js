@@ -64,6 +64,11 @@ const ArgumentType = {
     PARAMETER: 'parameter',
 
     /**
+     * A stage/world position value. Semantically treated as an array.
+     */
+    POSITION: 'position',
+
+    /**
      * Name of sound in the current target
      */
     SOUND: 'sound',
