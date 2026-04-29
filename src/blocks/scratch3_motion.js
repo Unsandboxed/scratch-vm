@@ -34,6 +34,7 @@ class Scratch3MotionBlocks {
             motion_setx: this.setX,
             motion_changeyby: this.changeY,
             motion_sety: this.setY,
+            motion_position: this.getPosition,
             motion_xposition: this.getX,
             motion_yposition: this.getY,
             motion_direction: this.getDirection,
@@ -114,8 +115,7 @@ class Scratch3MotionBlocks {
                 targetY, false, 1, true, targetX, 1
             );
         } else {
-            targetName = Cast.toString(targetName);
-            const goToTarget = this.runtime.getSpriteTargetByName(targetName);
+            const goToTarget = util.resolveTarget(targetName);
             if (!goToTarget) return;
             targetX = goToTarget.x;
             targetY = goToTarget.y;
@@ -164,8 +164,7 @@ class Scratch3MotionBlocks {
             util.target.setDirection(Math.round(Math.random() * 360) - 180);
             return;
         } else {
-            args.TOWARDS = Cast.toString(args.TOWARDS);
-            const pointTarget = this.runtime.getSpriteTargetByName(args.TOWARDS);
+            const pointTarget = util.resolveTarget(args.TOWARDS);
             if (!pointTarget) return;
             targetX = pointTarget.x;
             targetY = pointTarget.y;
@@ -315,6 +314,13 @@ class Scratch3MotionBlocks {
 
     getY (args, util) {
         return this.limitPrecision(util.target.y);
+    }
+
+    getPosition (args, util) {
+        return this.runtime.createBuiltInCustomTypeValue('position', [
+            this.limitPrecision(util.target.x),
+            this.limitPrecision(util.target.y)
+        ]);
     }
 
     getDirection (args, util) {

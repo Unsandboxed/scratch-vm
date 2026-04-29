@@ -69,7 +69,22 @@ test('toString', t => {
 
     // Undefined & object
     t.strictEqual(cast.toString(undefined), 'undefined');
-    t.strictEqual(cast.toString({}), '[object Object]');
+    t.strictEqual(cast.toString({}), '{}');
+
+    class CustomDisplay {
+        toString () {
+            return 'Sprite1 (clone)';
+        }
+    }
+
+    class PrimitiveDisplay {
+        [Symbol.toPrimitive] () {
+            return 'Sprite1 (deleted)';
+        }
+    }
+
+    t.strictEqual(cast.toString(new CustomDisplay()), 'Sprite1 (clone)');
+    t.strictEqual(cast.toString(new PrimitiveDisplay()), 'Sprite1 (deleted)');
     t.end();
 });
 

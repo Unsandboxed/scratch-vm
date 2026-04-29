@@ -24,3 +24,18 @@ test('Coordinates have limited precision', t => {
     t.equals(motion.getY({}, util), 1);
     t.end();
 });
+
+test('position reporter returns semantic position value', t => {
+    const rt = new Runtime();
+    const motion = new Motion(rt);
+    const sprite = new Sprite(null, rt);
+    const target = new RenderedTarget(sprite, rt);
+    const util = {target};
+
+    target.setXY(12.25, -7.5);
+
+    const value = motion.getPosition({}, util);
+    t.equal(rt.getCustomTypeIdForValue(value), 'position');
+    t.same(value.toJSON(), {x: 12.25, y: -7.5});
+    t.end();
+});

@@ -2,6 +2,7 @@ const test = require('tap').test;
 const path = require('path');
 const VirtualMachine = require('../../src/index');
 const Runtime = require('../../src/engine/runtime');
+const Variable = require('../../src/engine/variable');
 const sb3 = require('../../src/serialization/sb3');
 const readFileToBuffer = require('../fixtures/readProjectFile').readFileToBuffer;
 const exampleProjectPath = path.resolve(__dirname, '../fixtures/clone-cleanup.sb2');
@@ -428,5 +429,149 @@ test('do not serialize origin value if it is not present', t => {
             const result = sb3.serialize(vm.runtime);
             t.equal(result.meta.origin, undefined);
             t.end();
+        });
+});
+
+test('custom type serialization leaves plain scalar and list values intact', t => {
+    const vm = new VirtualMachine();
+    return vm.loadProject(readFileToBuffer(exampleProjectPath))
+        .then(() => {
+            const stage = vm.runtime.targets.find(target => target.isStage);
+            stage.createVariable('plain-scalar-id', 'plain scalar', Variable.SCALAR_TYPE, false);
+            stage.createVariable('plain-list-id', 'plain list', Variable.LIST_TYPE, false);
+
+            stage.variables['plain-scalar-id'].value = 'hello world';
+            stage.variables['plain-list-id'].value = [1, 'two', 3];
+
+            const serialized = sb3.serialize(vm.runtime);
+            const runtime = new Runtime();
+            return sb3.deserialize(JSON.parse(JSON.stringify(serialized)), runtime, null, false)
+                .then(({targets}) => {
+                    const stageTarget = targets.find(target => target.isStage);
+                    const scalar = Object.values(stageTarget.variables).find(variable => variable.name === 'plain scalar');
+                    const list = Object.values(stageTarget.variables).find(variable => variable.name === 'plain list');
+
+                    t.equal(scalar.value, 'hello world');
+                    t.same(list.value, [1, 'two', 3]);
+                });
+        });
+});
+
+test('custom type wrapper with type=object deserializes to plain object value', t => {
+    const vm = new VirtualMachine();
+    return vm.loadProject(readFileToBuffer(exampleProjectPath))
+        .then(() => {
+            const serialized = sb3.serialize(vm.runtime);
+            const stage = serialized.targets.find(target => target.isStage);
+            stage.variables['wrapped-object-id'] = [
+                'wrapped object',
+                {
+                    type: 'object',
+                    value: {
+                        hello: 'world',
+                        nested: [1, 2, 3]
+                    }
+                }
+            ];
+
+            const runtime = new Runtime();
+            return sb3.deserialize(JSON.parse(JSON.stringify(serialized)), runtime, null, false)
+                .then(({targets}) => {
+                    const stageTarget = targets.find(target => target.isStage);
+                    const wrapped = Object.values(stageTarget.variables)
+                        .find(variable => variable.name === 'wrapped object');
+
+                    t.type(wrapped.value, 'object');
+                    t.equal(wrapped.value.hello, 'world');
+                    t.same(wrapped.value.nested, [1, 2, 3]);
+                });
+        });
+});
+
+test('registered custom class round-trips through scalar, list, and project storage', t => {
+    class UnitPoint {
+        constructor (x, y) {
+            this.x = x;
+            this.y = y;
+        }
+    }
+
+    const registerPointType = runtime => runtime.registerCustomTypeFromClass('unit_point', UnitPoint, {
+        serialize: value => ({x: value.x, y: value.y}),
+        deserialize: value => new UnitPoint(value.x, value.y)
+    });
+
+    const vm = new VirtualMachine();
+    return vm.loadProject(readFileToBuffer(exampleProjectPath))
+        .then(() => {
+            registerPointType(vm.runtime);
+
+            const stage = vm.runtime.targets.find(target => target.isStage);
+            stage.createVariable('point-scalar-id', 'point scalar', Variable.SCALAR_TYPE, false);
+            stage.createVariable('point-list-id', 'point list', Variable.LIST_TYPE, false);
+
+            stage.variables['point-scalar-id'].value = new UnitPoint(3, 4);
+            stage.variables['point-list-id'].value = [new UnitPoint(5, 6), {label: 'ok'}];
+
+            vm.runtime.store.unsafe$setProjectStorage({
+                payload: {
+                    one: new UnitPoint(7, 8),
+                    many: [new UnitPoint(9, 10)]
+                }
+            });
+
+            const serialized = sb3.serialize(vm.runtime);
+            const serializedStage = serialized.targets.find(target => target.isStage);
+            t.equal(serializedStage.variables['point-scalar-id'][1].type, 'unit_point');
+            t.equal(serializedStage.lists['point-list-id'][1][0].type, 'unit_point');
+            t.equal(serialized.projectStorage.type, 'object');
+            t.equal(serialized.projectStorage.value.payload.type, 'object');
+            t.equal(serialized.projectStorage.value.payload.value.one.type, 'unit_point');
+
+            const runtime = new Runtime();
+            registerPointType(runtime);
+
+            return sb3.deserialize(JSON.parse(JSON.stringify(serialized)), runtime, null, false)
+                .then(({targets}) => {
+                    const stageTarget = targets.find(target => target.isStage);
+                    const scalar = Object.values(stageTarget.variables)
+                        .find(variable => variable.name === 'point scalar');
+                    const list = Object.values(stageTarget.variables)
+                        .find(variable => variable.name === 'point list');
+
+                    t.ok(scalar.value instanceof UnitPoint);
+                    t.ok(list.value[0] instanceof UnitPoint);
+                });
+        });
+});
+
+test('deserialize without meta.ubp keeps custom-type wrappers as raw values', t => {
+    const vm = new VirtualMachine();
+    return vm.loadProject(readFileToBuffer(exampleProjectPath))
+        .then(() => {
+            const serialized = sb3.serialize(vm.runtime);
+            delete serialized.meta.ubp;
+
+            const stage = serialized.targets.find(target => target.isStage);
+            stage.variables['legacy-wrapped-id'] = [
+                'legacy wrapped',
+                {
+                    type: 'object',
+                    value: {
+                        fruit: 'apple'
+                    }
+                }
+            ];
+
+            const runtime = new Runtime();
+            return sb3.deserialize(JSON.parse(JSON.stringify(serialized)), runtime, null, false)
+                .then(({targets}) => {
+                    const stageTarget = targets.find(target => target.isStage);
+                    const wrapped = Object.values(stageTarget.variables)
+                        .find(variable => variable.name === 'legacy wrapped');
+
+                    t.equal(wrapped.value.type, 'object');
+                    t.equal(wrapped.value.value.fruit, 'apple');
+                });
         });
 });

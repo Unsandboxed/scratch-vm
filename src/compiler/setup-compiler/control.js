@@ -4,6 +4,7 @@ module.exports = function (compilerData, {
     IntermediateInput,
     IntermediateStack,
     StackOpcode,
+    InputOpcode,
     InputType,
     Frame,
     SCALAR_TYPE
@@ -58,11 +59,23 @@ module.exports = function (compilerData, {
         input: false
     });
     compilerData.registerBlock('control_create_clone_of', function (stg, block) {
+        const targetInput = stg.descendInputOfBlock(block, 'CLONE_OPTION');
+        if (targetInput.opcode === InputOpcode.CONSTANT && targetInput.isConstant('_myself_')) {
+            return new IntermediateStackBlock('control_create_clone_of_myself');
+        }
         return new IntermediateStackBlock(this.ir_opcode, {
-            target: stg.descendInputOfBlock(block, 'CLONE_OPTION').toType(InputType.STRING)
+            target: targetInput
         });
     }, function (jsg, block) {
-        jsg.source += `runtime.ext_scratch3_control._createClone(${jsg.descendInput(block.inputs.target)}, target);\n`;
+        if (block.opcode === 'control_create_clone_of_myself') {
+            jsg.source += 'const newClone = target.makeClone();\n';
+            jsg.source += 'if (newClone) {\n';
+            jsg.source += '  runtime.addTarget(newClone);\n';
+            jsg.source += '  newClone.goBehindOther(target);\n';
+            jsg.source += '}\n';
+            return;
+        }
+        jsg.source += `runtime.ext_scratch3_control._createClone(${jsg.descendInput(block.inputs.target)}, target, globalState.blockUtility);\n`;
     }, {
         input: false
     });

@@ -43,6 +43,7 @@ class Scratch3CameraBlocks {
             camera_turnright: this.turnRight,
             camera_turnleft: this.turnLeft,
             camera_pointindirection: this.pointInDirection,
+            camera_position: this.getCameraPosition,
             camera_xposition: this.getCameraX,
             camera_yposition: this.getCameraY,
             camera_zoom: this.getCameraZoom,
@@ -120,6 +121,13 @@ class Scratch3CameraBlocks {
 
     getCameraY () {
         return this.runtime.camera.y;
+    }
+
+    getCameraPosition () {
+        return this.runtime.createBuiltInCustomTypeValue('position', [
+            this.runtime.camera.x,
+            this.runtime.camera.y
+        ]);
     }
 
     getCameraZoom () {

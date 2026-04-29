@@ -275,6 +275,36 @@ test('get attribute of variable that does not exist', t => {
     t.end();
 });
 
+test('mouse position reporter returns semantic position value', t => {
+    const rt = new Runtime();
+    const sensing = new Sensing(rt);
+
+    rt.ioDevices.mouse.getScratchX = () => 18;
+    rt.ioDevices.mouse.getScratchY = () => -24;
+
+    const value = sensing.getMousePosition();
+    t.equal(rt.getCustomTypeIdForValue(value), 'position');
+    t.same(value.toJSON(), {x: 18, y: -24});
+    t.end();
+});
+
+test('get attribute of semantic target position', t => {
+    const rt = new Runtime();
+    const sensing = new Sensing(rt);
+    const sprite = new Sprite(null, rt);
+    const target = new RenderedTarget(sprite, rt);
+
+    target.setXY(33, -12);
+    rt.targets = [target];
+
+    const spriteValue = rt.createBuiltInCustomTypeValue('sprite', target);
+    const value = sensing.getAttributeOf({OBJECT: spriteValue, PROPERTY: 'position'});
+
+    t.equal(rt.getCustomTypeIdForValue(value), 'position');
+    t.same(value.toJSON(), {x: 33, y: -12});
+    t.end();
+});
+
 test('username block', t => {
     const rt = new Runtime();
     const sensing = new Sensing(rt);

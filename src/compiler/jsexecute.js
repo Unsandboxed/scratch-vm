@@ -148,15 +148,15 @@ const executeInCompatibilityLayer = function*(inputs, blockFunction, isWarp, use
         if (branchInfo) {
             if (typeof returnValue === 'undefined' && blockUtility._startedBranch && blockUtility._startedBranch[0]) {
                 branchInfo.isLoop = blockUtility._startedBranch[0][1];
-                return blockUtility._startedBranch[0][0];
+                return normalizeValue(blockUtility._startedBranch[0][0]);
             }
             branchInfo.isLoop = branchInfo.defaultIsLoop;
             if (typeof returnValue === 'undefined') {
                 return '';
             }
-            return returnValue;
+            return normalizeValue(returnValue);
         }
-        return returnValue;
+        return normalizeValue(returnValue);
     };
 
     const executeBlock = () => {
@@ -270,7 +270,33 @@ runtimeFunctions.asBoolean = `;const asBoolean = value => {
  * @returns {string} The value cast to a string
  */
 runtimeFunctions.asString = `;const asString = value => {
-    if (typeof value === 'object') {
+    if (typeof value === 'object' && value !== null) {
+        const prototype = Object.getPrototypeOf(value);
+        const isPlainObject = prototype === Object.prototype || prototype === null;
+
+        if (!isPlainObject) {
+            try {
+                const primitive = value[Symbol.toPrimitive];
+                if (typeof primitive === 'function') {
+                    const primitiveValue = primitive.call(value, 'string');
+                    if (typeof primitiveValue === 'string') {
+                        return primitiveValue;
+                    }
+                }
+            } catch {
+                // Ignore and keep fallback behavior.
+            }
+
+            try {
+                const stringified = value.toString();
+                if (typeof stringified === 'string' && stringified !== '[object Object]') {
+                    return stringified;
+                }
+            } catch {
+                // Ignore and keep fallback behavior.
+            }
+        }
+
         try {
             return JSON.stringify(value);
         } catch {
@@ -282,6 +308,27 @@ runtimeFunctions.asString = `;const asString = value => {
 
 baseRuntime += `;const asArray = globalState.Cast.toArray.bind(globalState.Cast);`;
 baseRuntime += `;const asObject = globalState.Cast.toObject.bind(globalState.Cast);`;
+
+/**
+ * Normalize a value by calling its toValue() method if present.
+ * This prevents raw VM objects (e.g. RenderedTarget) from leaking to extension reporters,
+ * monitors, say blocks, and other consumers.
+ * @param {*} value Runtime value.
+ * @returns {*} Normalized value (via toValue() if present), or the original value.
+ */
+runtimeFunctions.normalizeValue = `const normalizeValue = value => {
+    if (value && typeof value === 'object' && typeof value.toValue === 'function') {
+        try {
+            return value.toValue();
+        } catch (e) {
+            globalState.log.warn('normalizeValue: toValue() threw an error', e);
+            return value;
+        }
+    }
+    return value;
+};`;
+
+baseRuntime += ';' + runtimeFunctions.normalizeValue;
 
 /**
  * If a number is very close to a whole number, round to that whole number.
@@ -429,7 +476,7 @@ runtimeFunctions.distance = `const distance = menu => {
         targetX = thread.target.runtime.camera.x;
         targetY = thread.target.runtime.camera.y;
     } else {
-        const distTarget = thread.target.runtime.getSpriteTargetByName(menu);
+        const distTarget = globalState.blockUtility.resolveTarget(menu);
         if (!distTarget) return 10000;
         targetX = distTarget.x;
         targetY = distTarget.y;

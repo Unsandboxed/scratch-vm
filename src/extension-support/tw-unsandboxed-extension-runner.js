@@ -43,8 +43,17 @@ E.setupUnsandboxedExtensionAPI = (vm, pre) => new Promise(resolve => {
     Scratch.UnsandboxedMod = createUnsandboxed(vm, pre);
     Scratch.extensions = {
         unsandboxed: true,
-        register
+        register,
+        registerCustomType: (typeId, registration) => vm.runtime.registerCustomType(typeId, registration),
+        registerCustomTypeFromClass: (typeId, classConstructor, options) =>
+            vm.runtime.registerCustomTypeFromClass(typeId, classConstructor, options),
+        unregisterCustomType: typeId => vm.runtime.unregisterCustomType(typeId),
+        getCustomTypeIds: () => vm.runtime.getCustomTypeIds()
     };
+    Scratch.registerCustomType = Scratch.extensions.registerCustomType;
+    Scratch.registerCustomTypeFromClass = Scratch.extensions.registerCustomTypeFromClass;
+    Scratch.unregisterCustomType = Scratch.extensions.unregisterCustomType;
+    Scratch.getCustomTypeIds = Scratch.extensions.getCustomTypeIds;
     Scratch.vm = vm;
     Scratch.renderer = vm.runtime.renderer;
 

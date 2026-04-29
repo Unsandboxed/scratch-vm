@@ -42,6 +42,14 @@ module.exports = function (vm, isAprematureLoad) {
         Color: vmD.util.Color(),
         Cast: vmD.util.Cast(),
 
+        customTypes: {
+            register: (typeId, registration) => vm.runtime.registerCustomType(typeId, registration),
+            registerFromClass: (typeId, classConstructor, options) =>
+                vm.runtime.registerCustomTypeFromClass(typeId, classConstructor, options),
+            unregister: typeId => vm.runtime.unregisterCustomType(typeId),
+            list: () => vm.runtime.getCustomTypeIds()
+        },
+
         resolves: vm.resolversTool,
 
         helpers: Object.assign({

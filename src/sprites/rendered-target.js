@@ -216,6 +216,18 @@ class RenderedTarget extends Target {
     }
 
     /**
+     * Convert this rendered target to a safe value for return from extension reporters.
+     * Used by the runtime to prevent raw RenderedTarget instances from leaking to extensions,
+     * monitors, say blocks, or any other downstream consumer.
+     * @returns {*} A safe representation of this target (typically a sprite custom type value).
+     */
+    toValue () {
+        // Import here to avoid circular dependency at module load time.
+        const {TargetValue} = require('../engine/custom-types');
+        return new TargetValue(this, this.runtime);
+    }
+
+    /**
      * Rotation style for "all around"/spinning.
      * @type {string}
      */
@@ -1158,7 +1170,7 @@ class RenderedTarget extends Target {
             rotationStyle: this.rotationStyle,
             comments: this.comments,
             frames: this.frames,
-            tags: this.tags,
+            tags: Array.isArray(this.tags) ? this.tags.slice() : [],
             blocks: this.blocks._blocks,
             variables: this.variables,
             costumes: costumes,

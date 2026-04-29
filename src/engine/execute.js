@@ -62,14 +62,16 @@ ExecuteInternals.handleReport = function (resolvedValue, sequencer, thread, bloc
     const isConditional = blockCached._isConditional;
     const isLoop = blockCached._isLoop;
 
-    thread.pushReportedValue(resolvedValue);
+    const normalizedValue = sequencer.runtime.normalizeBuiltInCustomTypeValue(resolvedValue);
+
+    thread.pushReportedValue(normalizedValue);
     if (isHat) {
         // Hat predicate was evaluated.
         if (thread.stackClick) {
             thread.setStatus(Thread.STATUS_RUNNING);
         } else if (sequencer.runtime.getIsEdgeActivatedHat(opcode)) {
             if (sequencer.runtime.getIsAlwaysActivatedHat(opcode) || isHatAlwaysActivated) {
-                if (resolvedValue) {
+                if (normalizedValue) {
                     thread.setStatus(Thread.STATUS_RUNNING);
                 } else {
                     sequencer.retireThread(thread);
@@ -83,30 +85,30 @@ ExecuteInternals.handleReport = function (resolvedValue, sequencer, thread, bloc
             const hasOldEdgeValue = thread.target.hasEdgeActivatedValue(currentBlockId);
             const oldEdgeValue = thread.target.updateEdgeActivatedValue(
                 currentBlockId,
-                resolvedValue
+                    normalizedValue
             );
 
-            const edgeWasActivated = hasOldEdgeValue ? (!oldEdgeValue && resolvedValue) : resolvedValue;
+            const edgeWasActivated = hasOldEdgeValue ? (!oldEdgeValue && normalizedValue) : normalizedValue;
             if (edgeWasActivated) {
                 thread.setStatus(Thread.STATUS_RUNNING);
             } else {
                 sequencer.retireThread(thread);
             }
-        } else if (resolvedValue) {
+        } else if (normalizedValue) {
             // Predicate returned true: allow the script to run.
             thread.setStatus(Thread.STATUS_RUNNING);
         } else {
             // Predicate returned false: do not allow script to run
             sequencer.retireThread(thread);
         }
-    } else if ((isConditional || isLoop) && typeof resolvedValue !== 'undefined') {
-        sequencer.stepToBranch(thread, Cast.toNumber(resolvedValue), isLoop);
+    } else if ((isConditional || isLoop) && typeof normalizedValue !== 'undefined') {
+        sequencer.stepToBranch(thread, Cast.toNumber(normalizedValue), isLoop);
     } else {
         // In a non-hat, report the value visually if necessary if
         // at the top of the thread stack.
-        if (lastOperation && typeof resolvedValue !== 'undefined' && thread.atStackTop()) {
+        if (lastOperation && typeof normalizedValue !== 'undefined' && thread.atStackTop()) {
             if (thread.stackClick) {
-                sequencer.runtime.visualReport(currentBlockId, resolvedValue, thread.target);
+                sequencer.runtime.visualReport(currentBlockId, normalizedValue, thread.target);
             }
             if (thread.updateMonitor) {
                 const targetId = sequencer.runtime.monitorBlocks.getBlock(currentBlockId).targetId;
@@ -114,10 +116,19 @@ ExecuteInternals.handleReport = function (resolvedValue, sequencer, thread, bloc
                     // Target no longer exists
                     return;
                 }
+
+                // Monitors diff by Object.is; convert non-list object values into their
+                // user-facing string form so in-place object mutations still refresh.
+                const monitorValue = (
+                    normalizedValue &&
+                    typeof normalizedValue === 'object' &&
+                    !Array.isArray(normalizedValue)
+                ) ? Cast.toString(normalizedValue) : normalizedValue;
+
                 sequencer.runtime.requestUpdateMonitor({
                     id: currentBlockId,
                     spriteName: targetId ? sequencer.runtime.getTargetById(targetId).getName() : null,
-                    value: resolvedValue
+                    value: monitorValue
                 });
             }
         }

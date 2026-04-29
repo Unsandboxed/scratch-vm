@@ -518,11 +518,12 @@ E.serializeSound = function (sound) {
 /**
  * Serialize the given variables object.
  * @param {object} variables The variables to be serialized.
+ * @param {Runtime=} runtime Optional runtime used for custom value encoding.
  * @return {object} A serialized representation of the variables. They get
  * separated by type to compress the representation of each given variable and
  * reduce duplicate information.
  */
-E.serializeVariables = function (variables) {
+E.serializeVariables = function (variables, runtime) {
     const obj = Object.create(null);
     // separate out variables into types at the top level so we don't have
     // keep track of a type for each
@@ -536,12 +537,20 @@ E.serializeVariables = function (variables) {
             continue;
         }
         if (v.type === Variable.LIST_TYPE) {
-            obj.lists[varId] = [v.name, v.value, v.locked];
+            let listValue = v.value;
+            if (runtime && typeof runtime.serializeCustomTypeValueDeep === 'function') {
+                listValue = runtime.serializeCustomTypeValueDeep(listValue);
+            }
+            obj.lists[varId] = [v.name, listValue, v.locked];
             continue;
         }
 
         // otherwise should be a scalar type
-        obj.variables[varId] = [v.name, v.value];
+        let scalarValue = v.value;
+        if (runtime && typeof runtime.serializeCustomTypeValueDeep === 'function') {
+            scalarValue = runtime.serializeCustomTypeValueDeep(scalarValue);
+        }
+        obj.variables[varId] = [v.name, scalarValue];
         // only scalar vars have the potential to be cloud vars
         if (v.isCloud) obj.variables[varId].push(true);
     }
@@ -612,7 +621,7 @@ E.serializeTarget = function (target, extensions, runtime) {
     let targetExtensions = [];
     obj.isStage = target.isStage;
     obj.name = obj.isStage ? 'Stage' : target.name;
-    const vars = E.serializeVariables(target.variables);
+    const vars = E.serializeVariables(target.variables, runtime);
     obj.variables = vars.variables;
     obj.lists = vars.lists;
     obj.broadcasts = vars.broadcasts;
@@ -673,7 +682,7 @@ E.serializeExtensionStorage = (extensionStorage, extensions) => {
     for (const [key, value] of Object.entries(extensionStorage)) {
         if (extensions.has(key) && value !== null && typeof value !== 'undefined') {
             isEmpty = false;
-            result[key] = extensionStorage[key];
+            result[key] = value;
         }
     }
     if (isEmpty) {
@@ -711,7 +720,9 @@ E.serializeMonitors = function (monitors, runtime, extensions) {
                 id: monitorData.id,
                 mode: monitorData.mode,
                 opcode: monitorData.opcode,
-                params: monitorData.params,
+                params: runtime && typeof runtime.serializeCustomTypeValueDeep === 'function' ?
+                    runtime.serializeCustomTypeValueDeep(monitorData.params) :
+                    monitorData.params,
                 spriteName: monitorData.spriteName,
                 value: Array.isArray(monitorData.value) ? [] : 0,
                 // value: monitorData.value,
@@ -769,9 +780,16 @@ E.serialize = function (runtime, targetId, {allowOptimization = true} = {}) {
                 extensions
             );
             if (targetExtensionStorage) {
-                serialized.extensionStorage = targetExtensionStorage;
+                serialized.extensionStorage =
+                    runtime && typeof runtime.serializeCustomTypeValueDeep === 'function' ?
+                        runtime.serializeCustomTypeValueDeep(targetExtensionStorage) :
+                        targetExtensionStorage;
             }
-            serialized.projectStorage = target.store.unsafe$getProjectStorage();
+            const targetProjectStorage = target.store.unsafe$getProjectStorage();
+            serialized.projectStorage =
+                runtime && typeof runtime.serializeCustomTypeValueDeep === 'function' ?
+                    runtime.serializeCustomTypeValueDeep(targetProjectStorage) :
+                    targetProjectStorage;
             return serialized;
         });
 
@@ -795,9 +813,14 @@ E.serialize = function (runtime, targetId, {allowOptimization = true} = {}) {
 
     const globalExtensionStorage = E.serializeExtensionStorage(runtime.store.unsafe$getExtensionStorage(), extensions);
     if (globalExtensionStorage) {
-        obj.extensionStorage = globalExtensionStorage;
+        obj.extensionStorage = runtime && typeof runtime.serializeCustomTypeValueDeep === 'function' ?
+            runtime.serializeCustomTypeValueDeep(globalExtensionStorage) :
+            globalExtensionStorage;
     }
-    obj.projectStorage = runtime.store.unsafe$getProjectStorage();
+    const runtimeProjectStorage = runtime.store.unsafe$getProjectStorage();
+    obj.projectStorage = runtime && typeof runtime.serializeCustomTypeValueDeep === 'function' ?
+        runtime.serializeCustomTypeValueDeep(runtimeProjectStorage) :
+        runtimeProjectStorage;
 
     obj.targets = serializedTargets;
 
@@ -818,6 +841,7 @@ E.serialize = function (runtime, targetId, {allowOptimization = true} = {}) {
     meta.semver = '3.0.0';
     // TW: There isn't a good reason to put the full version number in the json, so we don't.
     meta.vm = '0.2.0';
+    meta.ubp = 1;
     if (runtime.origin) {
         meta.origin = runtime.origin;
     }
@@ -1216,7 +1240,7 @@ const fixSporkCompatibility = function (blocks) {
  *   into costumes and sounds
  * @return {!Promise.<Target>} Promise for the target created (stage or sprite), or null for unsupported objects.
  */
-E.parseScratchObject = function (object, runtime, extensions, zip, assets) {
+E.parseScratchObject = function (object, runtime, extensions, zip, assets, customTypesEnabled = false) {
     if (!Object.prototype.hasOwnProperty.call(object, 'name')) {
         // Watcher/monitor - skip this object until those are implemented in VM.
         // @todo
@@ -1297,7 +1321,12 @@ E.parseScratchObject = function (object, runtime, extensions, zip, assets) {
                 isCloud
             );
             if (isCloud) runtime.addCloudVariable();
-            newVariable.value = variable[1];
+            const rawValue = variable[1];
+            if (customTypesEnabled && runtime && typeof runtime.deserializeCustomTypeValueDeep === 'function') {
+                newVariable.value = runtime.deserializeCustomTypeValueDeep(rawValue);
+            } else {
+                newVariable.value = rawValue;
+            }
             target.variables[newVariable.id] = newVariable;
         }
     }
@@ -1310,7 +1339,12 @@ E.parseScratchObject = function (object, runtime, extensions, zip, assets) {
                 Variable.LIST_TYPE,
                 false
             );
-            newList.value = list[1];
+            const rawListValue = list[1];
+            if (customTypesEnabled && runtime && typeof runtime.deserializeCustomTypeValueDeep === 'function') {
+                newList.value = runtime.deserializeCustomTypeValueDeep(rawListValue);
+            } else {
+                newList.value = rawListValue;
+            }
             newList.locked = list[2] || false;
             target.variables[newList.id] = newList;
 
@@ -1407,8 +1441,19 @@ E.parseScratchObject = function (object, runtime, extensions, zip, assets) {
     if (Object.prototype.hasOwnProperty.call(object, 'draggable')) {
         target.draggable = object.draggable;
     }
+    if (Object.prototype.hasOwnProperty.call(object, 'projectStorage')) {
+        const decodedProjectStorage =
+            customTypesEnabled && runtime && typeof runtime.deserializeCustomTypeValueDeep === 'function' ?
+                runtime.deserializeCustomTypeValueDeep(object.projectStorage) :
+                object.projectStorage;
+        target.store.unsafe$setProjectStorage(Object.assign(Object.create(null), decodedProjectStorage || {}));
+    }
     if (Object.prototype.hasOwnProperty.call(object, 'extensionStorage')) {
-        target.store.unsafe$setProjectStorage(Object.assign(Object.create(null), object));
+        const decodedExtensionStorage =
+            customTypesEnabled && runtime && typeof runtime.deserializeCustomTypeValueDeep === 'function' ?
+                runtime.deserializeCustomTypeValueDeep(object.extensionStorage) :
+                object.extensionStorage;
+        target.store.unsafe$setExtensionStorage(Object.assign(Object.create(null), decodedExtensionStorage || {}));
     }
     Promise.all(costumePromises).then(costumes => {
         sprite.costumes = costumes;
@@ -1428,7 +1473,13 @@ E.parseScratchObject = function (object, runtime, extensions, zip, assets) {
     return Promise.all(costumePromises.concat(soundPromises)).then(() => target);
 };
 
-E.deserializeMonitor = function (monitorData, runtime, targets, extensions) {
+const hasUBPMetadata = json => Boolean(
+    json &&
+    json.meta &&
+    Object.prototype.hasOwnProperty.call(json.meta, 'ubp')
+);
+
+E.deserializeMonitor = function (monitorData, runtime, targets, extensions, customTypesEnabled = false) {
     // Monitors position is always stored as position from top-left corner in 480x360 stage.
     const xOffset = (runtime.stageWidth - 480) / 2;
     const yOffset = (runtime.stageHeight - 360) / 2;
@@ -1473,7 +1524,9 @@ E.deserializeMonitor = function (monitorData, runtime, targets, extensions) {
     for (const paramKey in monitorData.params) {
         const field = {
             name: paramKey,
-            value: monitorData.params[paramKey]
+            value: customTypesEnabled && runtime && typeof runtime.deserializeCustomTypeValueDeep === 'function' ?
+                runtime.deserializeCustomTypeValueDeep(monitorData.params[paramKey]) :
+                monitorData.params[paramKey]
         };
         fields[paramKey] = field;
     }
@@ -1524,11 +1577,23 @@ E.deserializeMonitor = function (monitorData, runtime, targets, extensions) {
         // stored in their fields, update this info in the
         // monitor block fields
         if (monitorData.opcode === 'data_variable') {
-            const field = monitorBlock.fields.VARIABLE;
+            const field = monitorBlock.fields.VARIABLE || {
+                name: 'VARIABLE',
+                value: monitorData.params && Object.prototype.hasOwnProperty.call(monitorData.params, 'VARIABLE') ?
+                    monitorData.params.VARIABLE :
+                    ''
+            };
+            monitorBlock.fields.VARIABLE = field;
             field.id = monitorData.id;
             field.variableType = Variable.SCALAR_TYPE;
         } else if (monitorData.opcode === 'data_listcontents' || monitorData.opcode === 'data_listarraycontents') {
-            const field = monitorBlock.fields.LIST;
+            const field = monitorBlock.fields.LIST || {
+                name: 'LIST',
+                value: monitorData.params && Object.prototype.hasOwnProperty.call(monitorData.params, 'LIST') ?
+                    monitorData.params.LIST :
+                    ''
+            };
+            monitorBlock.fields.LIST = field;
             field.id = monitorData.id;
             field.variableType = Variable.LIST_TYPE;
         }
@@ -1631,6 +1696,8 @@ E.applyCompatibilityOptions = runtime => {
  * @returns {Promise.<ImportedProject>} Promise that resolves to the list of targets after the project is deserialized
  */
 E.deserialize = async function (json, runtime, zip, isSingleSprite) {
+    const customTypesEnabled = hasUBPMetadata(json);
+
     await E.checkPlatformCompatibility(json, runtime);
 
     const extensions = {
@@ -1686,7 +1753,7 @@ E.deserialize = async function (json, runtime, zip, isSingleSprite) {
         .then(assets => Promise.resolve(assets))
         .then(assets => Promise.all(targetObjects
             .map((target, index) =>
-                E.parseScratchObject(target, runtime, extensions, zip, assets[index]))))
+                E.parseScratchObject(target, runtime, extensions, zip, assets[index], customTypesEnabled))))
         .then(targets => targets // Re-sort targets back into original sprite-pane ordering
             .map((t, i) => {
                 // Add layer order property to deserialized targets.
@@ -1704,9 +1771,21 @@ E.deserialize = async function (json, runtime, zip, isSingleSprite) {
             }))
         .then(targets => E.replaceUnsafeCharsInVariableIds(targets))
         .then(targets => {
-            monitorObjects.map(monitorDesc => E.deserializeMonitor(monitorDesc, runtime, targets, extensions));
+            monitorObjects.map(monitorDesc =>
+                E.deserializeMonitor(monitorDesc, runtime, targets, extensions, customTypesEnabled));
             if (Object.prototype.hasOwnProperty.call(json, 'extensionStorage')) {
-                runtime.store.unsafe$setProjectStorage(Object.assign(Object.create(null), json.extensionStorage));
+                const decodedExtensionStorage =
+                    customTypesEnabled && runtime && typeof runtime.deserializeCustomTypeValueDeep === 'function' ?
+                        runtime.deserializeCustomTypeValueDeep(json.extensionStorage) :
+                        json.extensionStorage;
+                runtime.store.unsafe$setExtensionStorage(Object.assign(Object.create(null), decodedExtensionStorage || {}));
+            }
+            if (Object.prototype.hasOwnProperty.call(json, 'projectStorage')) {
+                const decodedProjectStorage =
+                    customTypesEnabled && runtime && typeof runtime.deserializeCustomTypeValueDeep === 'function' ?
+                        runtime.deserializeCustomTypeValueDeep(json.projectStorage) :
+                        json.projectStorage;
+                runtime.store.unsafe$setProjectStorage(Object.assign(Object.create(null), decodedProjectStorage || {}));
             }
             return targets;
         })

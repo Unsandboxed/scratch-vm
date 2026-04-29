@@ -534,4 +534,34 @@ module.exports = function (compilerData, {
         input: true,
         type: InputType.NUMBER_OR_NAN
     });
+    compilerData.registerBlock('math_vector2', function (stg, block) {
+        const str = String((block.fields.VEC && block.fields.VEC.value) || '0, 0');
+        const match = str.trim().match(/^([+-]?(?:\d+\.?\d*|\d*\.\d+))\s*[, ]\s*([+-]?(?:\d+\.?\d*|\d*\.\d+))$/);
+        const x = match ? Number(match[1]) : 0;
+        const y = match ? Number(match[2]) : 0;
+        return new IntermediateInput(this.ir_opcode, this.type, {
+            x: stg.createConstantInput(x),
+            y: stg.createConstantInput(y)
+        });
+    }, function (jsg, block) {
+        return `[${jsg.descendInput(block.inputs.x)}, ${jsg.descendInput(block.inputs.y)}]`;
+    }, {
+        input: true,
+        type: InputType.ARRAY
+    });
+    compilerData.registerBlock('math_position', function (stg, block) {
+        const str = String((block.fields.POS && block.fields.POS.value) || '0, 0');
+        const match = str.trim().match(/^([+-]?(?:\d+\.?\d*|\d*\.\d+))\s*[, ]\s*([+-]?(?:\d+\.?\d*|\d*\.\d+))$/);
+        const x = match ? Number(match[1]) : 0;
+        const y = match ? Number(match[2]) : 0;
+        return new IntermediateInput(this.ir_opcode, this.type, {
+            x: stg.createConstantInput(x),
+            y: stg.createConstantInput(y)
+        });
+    }, function (jsg, block) {
+        return `[${jsg.descendInput(block.inputs.x)}, ${jsg.descendInput(block.inputs.y)}]`;
+    }, {
+        input: true,
+        type: InputType.ARRAY
+    });
 };

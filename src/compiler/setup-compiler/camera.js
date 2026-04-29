@@ -94,4 +94,10 @@ module.exports = function (compilerData, {
         input: true,
         type: InputType.NUMBER
     });
+    compilerData.registerBlock('camera_position', function () {
+        return new IntermediateInput(this.ir_opcode, this.type);
+    }, `runtime.createBuiltInCustomTypeValue("position", [runtime.camera.x, runtime.camera.y])`, {
+        input: true,
+        type: InputType.ANY
+    });
 };

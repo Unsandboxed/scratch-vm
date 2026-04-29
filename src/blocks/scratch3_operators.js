@@ -53,6 +53,9 @@ class Scratch3OperatorsBlocks {
             operator_number_array_extends: this.numberArrayExtends,
             operator_min_extends: this.minExtends,
             operator_max_extends: this.maxExtends,
+            math_vector2: this.mathVector2,
+            math_position: this.mathPosition,
+            array: this.arrayBlock,
             checkbox: this.checkbox
         };
     }
@@ -157,6 +160,24 @@ class Scratch3OperatorsBlocks {
 
     numberArrayExtends (args) {
         return getOrderedExtendableValues(args, ['NUM']).map(value => Cast.toNumber(value));
+    }
+
+    mathVector2 (args) {
+        const str = String(args.VEC || '0, 0');
+        const match = str.trim().match(/^([+-]?(?:\d+\.?\d*|\d*\.\d+))\s*[, ]\s*([+-]?(?:\d+\.?\d*|\d*\.\d+))$/);
+        if (match) return [Number(match[1]), Number(match[2])];
+        return [0, 0];
+    }
+
+    mathPosition (args) {
+        const str = String(args.POS || '0, 0');
+        const match = str.trim().match(/^([+-]?(?:\d+\.?\d*|\d*\.\d+))\s*[, ]\s*([+-]?(?:\d+\.?\d*|\d*\.\d+))$/);
+        if (match) return [Number(match[1]), Number(match[2])];
+        return [0, 0];
+    }
+
+    arrayBlock (args) {
+        return getOrderedExtendableValues(args, ['TEXT']);
     }
 
     minExtends (args) {

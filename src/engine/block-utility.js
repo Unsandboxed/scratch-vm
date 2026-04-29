@@ -1,5 +1,6 @@
 const Thread = require('./thread');
 const Timer = require('../util/timer');
+const {TargetValue: TargetType} = require('./custom-types');
 
 /**
  * @fileoverview
@@ -111,6 +112,171 @@ class BlockUtility {
             }
         }
         return v;
+    }
+
+    /**
+     * Resolve an ambiguous value into a runtime target.
+     *
+     * Accepted input forms:
+     * - Target-like object: return that target (or runtime-rebound target by id).
+     * - Target custom-type value object: {spriteId|targetId|id|name, ...}
+     * - String target id: return the exact target.
+     * - String sprite name: return the parent/original sprite target.
+     *
+     * @param {*} value Ambiguous target reference.
+     * @return {?Target} Resolved target, if found.
+     */
+    resolveTarget (value) {
+        const runtime = this.runtime;
+        if (!runtime || value === null || typeof value === 'undefined') {
+            return null;
+        }
+
+        const getTargetById = targetId => {
+            if (typeof targetId !== 'string' || !targetId) {
+                return null;
+            }
+            return runtime.getTargetById(targetId) || null;
+        };
+
+        const getParentSpriteTarget = target => {
+            if (!target) {
+                return null;
+            }
+            if (target.isStage) {
+                return target;
+            }
+            const clones = target.sprite && Array.isArray(target.sprite.clones) ? target.sprite.clones : null;
+            if (clones && clones.length > 0) {
+                return clones[0] || target;
+            }
+            return target;
+        };
+
+        const getBySpriteName = spriteName => {
+            if (typeof spriteName !== 'string' || !spriteName) {
+                return null;
+            }
+            const byName = runtime.getSpriteTargetByName(spriteName);
+            return getParentSpriteTarget(byName);
+        };
+
+        if (typeof value === 'string') {
+            return getTargetById(value) || getBySpriteName(value);
+        }
+
+        if (typeof value !== 'object') {
+            return null;
+        }
+
+        // Handle target custom type instances explicitly.
+        if (value instanceof TargetType) {
+            if (value._liveTarget && typeof value._liveTarget.id === 'string') {
+                const reboundLive = getTargetById(value._liveTarget.id);
+                if (reboundLive) {
+                    return reboundLive;
+                }
+            }
+            if (typeof value.spriteId === 'string') {
+                const byCustomSpriteId = getTargetById(value.spriteId);
+                if (byCustomSpriteId) {
+                    return byCustomSpriteId;
+                }
+            }
+        }
+
+        // Direct target object, or a target-like object with an id.
+        if (typeof value.id === 'string') {
+            const rebound = getTargetById(value.id);
+            if (rebound) {
+                return rebound;
+            }
+            if (value.sprite || typeof value.isStage === 'boolean') {
+                return value;
+            }
+        }
+
+        // Fallback for plain object payloads with custom-type-like fields.
+        if (value._liveTarget && typeof value._liveTarget.id === 'string') {
+            const reboundLive = getTargetById(value._liveTarget.id);
+            return reboundLive || value._liveTarget;
+        }
+
+        // Target custom-type serialized/value shapes.
+        if (typeof value.targetId === 'string') {
+            const byTargetId = getTargetById(value.targetId);
+            if (byTargetId) {
+                return byTargetId;
+            }
+        }
+        if (typeof value.spriteId === 'string') {
+            const bySpriteId = getTargetById(value.spriteId);
+            if (bySpriteId) {
+                return bySpriteId;
+            }
+        }
+        if (typeof value.name === 'string') {
+            const byName = getBySpriteName(value.name);
+            if (byName) {
+                return byName;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve a parameter input on the currently executing block.
+     *
+     * - If the input is empty or unsupported, returns the provided fallback name.
+     * - If the input is a parameter reporter, returns its parameter name.
+     * - If the input is a variable/temporary-data reporter, returns that block model.
+     *
+     * @param {string} inputName Input name on the active block.
+     * @param {string=} fallbackName Fallback parameter name.
+     * @return {string|object} Parameter name string or reporter block model.
+     */
+    resolveParameterArgument (inputName, fallbackName = '') {
+        const fallback = String(fallbackName || '');
+        if (!this.thread || !this.target || !this.target.blocks || !this.thread.peekStack) {
+            return fallback;
+        }
+
+        const blockId = this.thread.peekStack();
+        if (!blockId) {
+            return fallback;
+        }
+
+        const block = this.target.blocks.getBlock(blockId);
+        if (!block || !block.inputs || !block.inputs[inputName]) {
+            return fallback;
+        }
+
+        const input = block.inputs[inputName];
+        if (!input || !input.block) {
+            return fallback;
+        }
+
+        const inputBlock = this.target.blocks.getBlock(input.block);
+        if (!inputBlock) {
+            return fallback;
+        }
+
+        if (inputBlock.opcode === 'argument_reporter_string_number') {
+            const valueField = inputBlock.fields && inputBlock.fields.VALUE;
+            const value = valueField ? valueField.value : null;
+            if (typeof value === 'undefined' || value === null || value === '') {
+                return fallback;
+            }
+            return String(value);
+        }
+
+        // TODO: We really shouldn't reference extension opcodes internally.
+        if (inputBlock.opcode === 'data_variable' || inputBlock.opcode === 'usbTemporaryData_get') {
+            return inputBlock;
+        }
+
+        return fallback;
     }
 
     /**

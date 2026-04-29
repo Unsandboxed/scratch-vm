@@ -60,6 +60,7 @@ class Scratch3SensingBlocks {
             sensing_timer: this.getTimer,
             sensing_resettimer: this.resetTimer,
             sensing_of: this.getAttributeOf,
+            sensing_mouseposition: this.getMousePosition,
             sensing_mousex: this.getMouseX,
             sensing_mousey: this.getMouseY,
             sensing_setdragmode: this.setDragMode,
@@ -211,10 +212,7 @@ class Scratch3SensingBlocks {
             targetX = this.runtime.camera.x;
             targetY = this.runtime.camera.y;
         } else {
-            args.DISTANCETOMENU = Cast.toString(args.DISTANCETOMENU);
-            const distTarget = this.runtime.getSpriteTargetByName(
-                args.DISTANCETOMENU
-            );
+            const distTarget = util.resolveTarget(args.DISTANCETOMENU);
             if (!distTarget) return 10000;
             targetX = distTarget.x;
             targetY = distTarget.y;
@@ -299,14 +297,24 @@ class Scratch3SensingBlocks {
         return this.getLoudness() > 10;
     }
 
-    getAttributeOf (args) {
+    getMousePosition () {
+        return this.runtime.createBuiltInCustomTypeValue('position', [
+            this.runtime.ioDevices.mouse.getScratchX(),
+            this.runtime.ioDevices.mouse.getScratchY()
+        ]);
+    }
+
+    getAttributeOf (args, util) {
         let attrTarget;
 
         if (args.OBJECT === '_stage_') {
             attrTarget = this.runtime.getTargetForStage();
+        } else if (util && typeof util.resolveTarget === 'function') {
+            attrTarget = util.resolveTarget(args.OBJECT);
         } else {
-            args.OBJECT = Cast.toString(args.OBJECT);
-            attrTarget = this.runtime.getSpriteTargetByName(args.OBJECT);
+            attrTarget = this.runtime.getTargetById(args.OBJECT?.spriteId) ||
+                this.runtime.getTargetById(Cast.toString(args.OBJECT)) ||
+                this.runtime.getSpriteTargetByName(Cast.toString(args.OBJECT));
         }
 
         // attrTarget can be undefined if the target does not exist
@@ -327,6 +335,11 @@ class Scratch3SensingBlocks {
             }
         } else {
             switch (args.PROPERTY) {
+            case 'position':
+                return this.runtime.createBuiltInCustomTypeValue('position', [
+                    attrTarget.x,
+                    attrTarget.y
+                ]);
             case 'x position': return attrTarget.x;
             case 'y position': return attrTarget.y;
             case 'direction': return attrTarget.direction;

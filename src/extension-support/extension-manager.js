@@ -1225,12 +1225,17 @@ class ExtensionManager {
                 argumentInfo.type !== ArgumentType.IMAGE;
 
             if (canCreateValueInput && includeValue) {
+                const hasTextDefinition = typeof argumentInfo.text !== 'undefined';
+                const shadow = hasTextDefinition ? 'shadow_label' : (defaults.shadow || null);
+                const field = hasTextDefinition ? 'TEXT' : (defaults.field || null);
+                const defaultValue = hasTextDefinition ? String(argumentInfo.text) : null;
                 definitions.push({
                     type: 'input_value',
                     argument: argumentId,
-                    shadow: defaults.shadow || null,
-                    field: defaults.field || null,
-                    check: defaults.check || null
+                    shadow,
+                    field,
+                    check: defaults.check || null,
+                    defaultValue
                 });
             } else if (!label) {
                 const fallbackLabel = typeof argumentInfo.defaultValue === 'string' ? argumentInfo.defaultValue : argumentId;

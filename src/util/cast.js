@@ -164,7 +164,33 @@ class Cast {
      * @return {any} Sanitized json value.
      */
     static sanitize (value) {
-        if (typeof value === 'object') {
+        if (value && typeof value === 'object') {
+            // Prefer custom user-facing stringification for non-plain objects.
+            const prototype = Object.getPrototypeOf(value);
+            const isPlainObject = prototype === Object.prototype || prototype === null;
+            if (!isPlainObject) {
+                try {
+                    const primitive = value[Symbol.toPrimitive];
+                    if (typeof primitive === 'function') {
+                        const primitiveValue = primitive.call(value, 'string');
+                        if (typeof primitiveValue === 'string') {
+                            return primitiveValue;
+                        }
+                    }
+                } catch (e) {
+                    // Ignore and keep fallback behavior.
+                }
+
+                try {
+                    const stringified = value.toString();
+                    if (typeof stringified === 'string' && stringified !== '[object Object]') {
+                        return stringified;
+                    }
+                } catch (e) {
+                    // Ignore and keep fallback behavior.
+                }
+            }
+
             return JSON.stringify(value);
         }
         return value;

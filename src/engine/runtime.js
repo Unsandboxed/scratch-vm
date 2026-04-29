@@ -62,6 +62,12 @@ const FrameLoop = require('./tw-frame-loop');
 const MonitorRecord = require('./monitor-record.js');
 const Camera = require('./camera');
 const Cast = require('../util/cast.js');
+const {
+    BUILT_IN_CUSTOM_TYPE_IDS,
+    isBuiltInCustomTypeId,
+    getBuiltInCustomType,
+    CustomType
+} = require('./custom-types');
 
 const RuntimeInternals = {
     CORE_BLOCKS: [],
@@ -700,6 +706,19 @@ class Runtime extends RuntimeConstants {
         };
 
         this.store = new (Storage.StorageProvider)(this, this);
+
+        /**
+         * Registry of custom variable value types used by unsandboxed extensions.
+         * @type {Map<string, {
+         *   classConstructor: ?Function,
+         *   test: function(*):boolean,
+         *   serialize: function(*):*,
+         *   deserialize: function(*):*
+         * }>}
+         */
+        this._customTypeRegistry = new Map();
+        this._builtInCustomTypeIds = BUILT_IN_CUSTOM_TYPE_IDS.slice();
+
         /**
          * NOTE: Kept for compatibility with upstream TurboWarp.
          * @deprecated
@@ -741,6 +760,463 @@ class Runtime extends RuntimeConstants {
 
     // -----------------------------------------------------------------------------
     // -----------------------------------------------------------------------------
+
+    /**
+     * Register a custom runtime value type used for SB3 variable persistence.
+     * @param {string} typeId Custom type id (recommended: extension-prefixed).
+     * @param {Function|object} registration Class constructor or registration object.
+     * @returns {boolean} True when registration succeeds.
+     */
+    registerCustomType (typeId, registration) {
+        if (typeof typeId !== 'string') {
+            return false;
+        }
+
+        const trimmedType = typeId.trim();
+        if (!trimmedType || trimmedType === 'object' || isBuiltInCustomTypeId(trimmedType)) {
+            return false;
+        }
+
+        let classConstructor = null;
+        let test = null;
+        let serialize = null;
+        let deserialize = null;
+
+        if (typeof registration === 'function') {
+            classConstructor = registration;
+        } else if (registration && typeof registration === 'object') {
+            classConstructor = typeof registration.class === 'function' ? registration.class : null;
+            test = typeof registration.test === 'function' ? registration.test : null;
+            serialize = typeof registration.serialize === 'function' ? registration.serialize : null;
+            deserialize = typeof registration.deserialize === 'function' ? registration.deserialize : null;
+        }
+
+        if (!test) {
+            if (classConstructor) {
+                test = value => value instanceof classConstructor;
+            } else {
+                return false;
+            }
+        }
+
+        if (!serialize) {
+            serialize = value => {
+                if (value && typeof value.toJSON === 'function') {
+                    return value.toJSON();
+                }
+                return value;
+            };
+        }
+
+        if (!deserialize) {
+            if (classConstructor && typeof classConstructor.fromJSON === 'function') {
+                deserialize = value => classConstructor.fromJSON(value);
+            } else {
+                deserialize = value => value;
+            }
+        }
+
+        this._customTypeRegistry.set(trimmedType, {
+            classConstructor,
+            test,
+            serialize,
+            deserialize
+        });
+        return true;
+    }
+
+    /**
+     * Register a custom runtime value type backed by a class constructor.
+     * @param {string} typeId Custom type id (recommended: extension-prefixed).
+     * @param {Function} classConstructor Class constructor.
+     * @param {object=} options Optional test/serialize/deserialize overrides.
+     * @returns {boolean} True when registration succeeds.
+     */
+    registerCustomTypeFromClass (typeId, classConstructor, options = null) {
+        if (typeof classConstructor !== 'function') {
+            return false;
+        }
+        const registration = Object.assign({}, options || {}, {
+            class: classConstructor
+        });
+        return this.registerCustomType(typeId, registration);
+    }
+
+    /**
+     * Unregister a previously registered custom runtime value type.
+     * @param {string} typeId Registered custom type id.
+     * @returns {boolean} True when a type existed and was removed.
+     */
+    unregisterCustomType (typeId) {
+        if (typeof typeId !== 'string') {
+            return false;
+        }
+        if (isBuiltInCustomTypeId(typeId)) {
+            return false;
+        }
+        return this._customTypeRegistry.delete(typeId);
+    }
+
+    /**
+     * List currently registered custom runtime value type ids.
+     * @returns {Array<string>} Registered custom type ids.
+     */
+    getCustomTypeIds () {
+        return this._builtInCustomTypeIds.concat(Array.from(this._customTypeRegistry.keys()));
+    }
+
+    /**
+     * Resolve a registered custom type id for a runtime value.
+     * @param {*} value Runtime value.
+     * @returns {?string} Matching custom type id or null.
+     */
+    getCustomTypeIdForValue (value) {
+        if (!value || typeof value !== 'object') {
+            return null;
+        }
+
+        for (const typeId of this._builtInCustomTypeIds) {
+            const builtInType = getBuiltInCustomType(typeId);
+            if (!builtInType || typeof builtInType.test !== 'function') {
+                continue;
+            }
+            try {
+                if (builtInType.test(value)) {
+                    return typeId;
+                }
+            } catch (e) {
+                // Ignore matcher errors so other types still run.
+            }
+        }
+
+        for (const [typeId, registration] of this._customTypeRegistry.entries()) {
+            if (!registration || typeof registration.test !== 'function') {
+                continue;
+            }
+            try {
+                if (registration.test(value)) {
+                    return typeId;
+                }
+            } catch (e) {
+                // Ignore matcher errors so other types still run.
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Construct a built-in custom type value from payload.
+     * @param {string} typeId Built-in custom type id.
+     * @param {*} payload Type payload.
+     * @returns {*} Built-in custom type instance or payload fallback.
+     */
+    createBuiltInCustomTypeValue (typeId, payload) {
+        if (!isBuiltInCustomTypeId(typeId)) {
+            return payload;
+        }
+
+        const builtInType = getBuiltInCustomType(typeId);
+        if (!builtInType || typeof builtInType.deserialize !== 'function') {
+            return payload;
+        }
+
+        try {
+            return builtInType.deserialize(payload, this);
+        } catch (e) {
+            log.warn(`createBuiltInCustomTypeValue: failed for "${typeId}"`, e);
+            return payload;
+        }
+    }
+
+    /**
+     * Construct any registered custom type value from payload.
+     * @param {string} typeId Custom type id.
+     * @param {*} payload Type payload.
+     * @returns {*} Custom type instance or payload fallback.
+     */
+    createCustomTypeValue (typeId, payload) {
+        if (isBuiltInCustomTypeId(typeId)) {
+            return this.createBuiltInCustomTypeValue(typeId, payload);
+        }
+
+        const registration = this._customTypeRegistry.get(typeId);
+        if (!registration || typeof registration.deserialize !== 'function') {
+            return payload;
+        }
+
+        try {
+            return registration.deserialize(payload, this);
+        } catch (e) {
+            log.warn(`createCustomTypeValue: failed for "${typeId}"`, e);
+            return payload;
+        }
+    }
+
+    /**
+     * Normalize a runtime value by calling its toValue() method if present.
+     * This prevents raw VM objects (e.g. RenderedTarget) from leaking to extension reporters,
+     * monitors, say blocks, and other consumers.
+     * @param {*} value Runtime value.
+     * @returns {*} Normalized value (via toValue() if present), or the original value.
+     */
+    normalizeBuiltInCustomTypeValue (value) {
+        if (!value || typeof value !== 'object' || Array.isArray(value) || this.isSerializedCustomTypeValue(value)) {
+            return value;
+        }
+
+        // Call toValue() if the object provides it (e.g., RenderedTarget).
+        if (typeof value.toValue === 'function') {
+            try {
+                return value.toValue();
+            } catch (e) {
+                log.warn('normalizeBuiltInCustomTypeValue: toValue() threw an error', e);
+                return value;
+            }
+        }
+
+        return value;
+    }
+
+    /**
+     * Test whether a value is a serialized custom type wrapper.
+     * @param {*} value Candidate value.
+     * @returns {boolean} True when value matches the wrapper shape.
+     */
+    isSerializedCustomTypeValue (value) {
+        return Boolean(
+            value &&
+            typeof value === 'object' &&
+            !Array.isArray(value) &&
+            typeof value.type === 'string' &&
+            Object.prototype.hasOwnProperty.call(value, 'value')
+        );
+    }
+
+    /**
+     * Encode a runtime value for SB3 storage while preserving custom types.
+     * @param {*} value Runtime value.
+     * @returns {*} SB3-safe value.
+     */
+    serializeCustomTypeValue (value) {
+        if (this.isSerializedCustomTypeValue(value)) {
+            return value;
+        }
+
+        if (!value || typeof value !== 'object') {
+            return value;
+        }
+
+        for (const typeId of this._builtInCustomTypeIds) {
+            const builtInType = getBuiltInCustomType(typeId);
+            if (!builtInType || typeof builtInType.test !== 'function') {
+                continue;
+            }
+
+            let matches = false;
+            try {
+                matches = Boolean(builtInType.test(value));
+            } catch (e) {
+                matches = false;
+            }
+            if (!matches) {
+                continue;
+            }
+
+            try {
+                return {
+                    type: typeId,
+                    value: builtInType.serialize(value)
+                };
+            } catch (e) {
+                log.warn(`Failed to serialize built-in custom type value for "${typeId}"`, e);
+                return value;
+            }
+        }
+
+        for (const [typeId, registration] of this._customTypeRegistry.entries()) {
+            let matches = false;
+            try {
+                matches = Boolean(registration.test(value));
+            } catch (e) {
+                matches = false;
+            }
+            if (!matches) {
+                continue;
+            }
+
+            try {
+                return {
+                    type: typeId,
+                    value: registration.serialize(value)
+                };
+            } catch (e) {
+                log.warn(`Failed to serialize custom type value for "${typeId}"`, e);
+                return value;
+            }
+        }
+
+        if (Array.isArray(value)) {
+            return value;
+        }
+
+        return {
+            type: 'object',
+            value
+        };
+    }
+
+    /**
+     * Decode a value loaded from SB3 storage into a runtime value.
+     * @param {*} value Serialized SB3 value.
+     * @returns {*} Decoded runtime value.
+     */
+    deserializeCustomTypeValue (value) {
+        if (!this.isSerializedCustomTypeValue(value)) {
+            return value;
+        }
+
+        if (value.type === 'object') {
+            return value.value;
+        }
+
+        const builtInType = getBuiltInCustomType(value.type);
+        if (builtInType) {
+            try {
+                const decodedPayload = this.deserializeCustomTypeValueDeep(value.value);
+                return builtInType.deserialize(decodedPayload, this);
+            } catch (e) {
+                log.warn(`Failed to deserialize built-in custom type value for "${value.type}"`, e);
+                return value.value;
+            }
+        }
+
+        const registration = this._customTypeRegistry.get(value.type);
+        if (!registration) {
+            return value;
+        }
+
+        try {
+            const decodedPayload = this.deserializeCustomTypeValueDeep(value.value);
+            return registration.deserialize(decodedPayload, this);
+        } catch (e) {
+            log.warn(`Failed to deserialize custom type value for "${value.type}"`, e);
+            return value;
+        }
+    }
+
+    /**
+     * Encode nested structures for SB3 storage while preserving custom types.
+     * @param {*} value Runtime value.
+     * @returns {*} SB3-safe value.
+     */
+    serializeCustomTypeValueDeep (value) {
+        const seen = new WeakSet();
+
+        const isPlainObject = objectValue => {
+            if (!objectValue || typeof objectValue !== 'object') {
+                return false;
+            }
+            const prototype = Object.getPrototypeOf(objectValue);
+            return prototype === Object.prototype || prototype === null;
+        };
+
+        const walk = input => {
+            if (!input || typeof input !== 'object') {
+                return input;
+            }
+
+            if (seen.has(input)) {
+                return null;
+            }
+            seen.add(input);
+
+            const encoded = this.serializeCustomTypeValue(input);
+            if (this.isSerializedCustomTypeValue(encoded)) {
+                let payload;
+                if (encoded.value === input && isPlainObject(input)) {
+                    // Plain object wrappers point at the same object, so
+                    // walk fields directly instead of recursing to the same node.
+                    payload = Object.create(null);
+                    for (const [key, item] of Object.entries(input)) {
+                        payload[key] = walk(item);
+                    }
+                } else {
+                    payload = walk(encoded.value);
+                }
+                return {
+                    type: encoded.type,
+                    value: payload
+                };
+            }
+
+            if (Array.isArray(encoded)) {
+                return encoded.map(item => walk(item));
+            }
+
+            if (isPlainObject(encoded)) {
+                const output = Object.create(null);
+                for (const [key, item] of Object.entries(encoded)) {
+                    output[key] = walk(item);
+                }
+                return output;
+            }
+
+            return encoded;
+        };
+
+        return walk(value);
+    }
+
+    /**
+     * Decode nested structures loaded from SB3 storage.
+     * @param {*} value Serialized SB3 value.
+     * @returns {*} Decoded runtime value.
+     */
+    deserializeCustomTypeValueDeep (value) {
+        const seen = new WeakSet();
+
+        const isPlainObject = objectValue => {
+            if (!objectValue || typeof objectValue !== 'object') {
+                return false;
+            }
+            const prototype = Object.getPrototypeOf(objectValue);
+            return prototype === Object.prototype || prototype === null;
+        };
+
+        const walk = input => {
+            if (!input || typeof input !== 'object') {
+                return input;
+            }
+
+            if (seen.has(input)) {
+                return input;
+            }
+            seen.add(input);
+
+            const decoded = this.deserializeCustomTypeValue(input);
+
+            if (decoded !== input) {
+                return walk(decoded);
+            }
+
+            if (Array.isArray(decoded)) {
+                return decoded.map(item => walk(item));
+            }
+
+            if (isPlainObject(decoded)) {
+                const output = Object.create(null);
+                for (const [key, item] of Object.entries(decoded)) {
+                    output[key] = walk(item);
+                }
+                return output;
+            }
+
+            return decoded;
+        };
+
+        return walk(value);
+    }
 
     // Helper function for initializing the addCloudVariable function
     _initializeAddCloudVariable (newCloudDataManager) {
@@ -1804,6 +2280,9 @@ class Runtime extends RuntimeConstants {
             const defaultValue =
                 typeof argInfo.defaultValue === 'undefined' ? null :
                     maybeFormatMessage(argInfo.defaultValue, this.makeMessageContextForTarget()).toString();
+            const argumentText =
+                typeof argInfo.text === 'undefined' ? null :
+                    maybeFormatMessage(argInfo.text, this.makeMessageContextForTarget()).toString();
 
             if (argTypeInfo.check) {
                 // Right now the only type of 'check' we have specifies that the
@@ -1820,6 +2299,8 @@ class Runtime extends RuntimeConstants {
             let valueName;
             let shadowType;
             let fieldName;
+            let fieldValue = defaultValue;
+            let shadowMutationAttrs = '';
             if (argInfo.menu) {
                 const menuInfo = context.categoryInfo.menuInfo[argInfo.menu];
                 const menuExtensionId =
@@ -1850,9 +2331,39 @@ class Runtime extends RuntimeConstants {
                 shadowType = null;
                 fieldName = placeholder;
             } else {
+                const mapShadow = (argTypeInfo && argTypeInfo.shadow) || null;
+                let resolvedShadow = mapShadow;
+                if (Object.prototype.hasOwnProperty.call(argInfo, 'shadow')) {
+                    if (argInfo.shadow === null) {
+                        resolvedShadow = null;
+                    } else if (typeof argInfo.shadow === 'string') {
+                        resolvedShadow = {
+                            type: argInfo.shadow
+                        };
+                    } else if (typeof argInfo.shadow === 'object' && argInfo.shadow) {
+                        resolvedShadow = Object.assign({}, mapShadow || {}, argInfo.shadow);
+                    }
+                }
+                if (argumentText !== null) {
+                    resolvedShadow = Object.assign({}, resolvedShadow || {}, {
+                        type: 'shadow_label',
+                        fieldName: 'TEXT'
+                    });
+                    fieldValue = argumentText;
+                }
                 valueName = placeholder;
-                shadowType = (argTypeInfo.shadow && argTypeInfo.shadow.type) || null;
-                fieldName = (argTypeInfo.shadow && argTypeInfo.shadow.fieldName) || null;
+                shadowType = (resolvedShadow && resolvedShadow.type) || null;
+                fieldName = (resolvedShadow && resolvedShadow.fieldName) || null;
+                if (resolvedShadow && resolvedShadow.mutation && typeof resolvedShadow.mutation === 'object') {
+                    const attrs = [];
+                    for (const [key, value] of Object.entries(resolvedShadow.mutation)) {
+                        if (typeof value === 'undefined') continue;
+                        attrs.push(`${xmlEscape(String(key))}="${xmlEscape(String(value))}"`);
+                    }
+                    if (attrs.length > 0) {
+                        shadowMutationAttrs = `<mutation ${attrs.join(' ')}/>`;
+                    }
+                }
             }
 
             // <value> is the ScratchBlocks name for a block input.
@@ -1864,12 +2375,15 @@ class Runtime extends RuntimeConstants {
             // Boolean inputs don't need to specify a shadow in the XML.
             if (shadowType) {
                 context.inputList.push(`<shadow type="${xmlEscape(shadowType)}">`);
+                if (shadowMutationAttrs) {
+                    context.inputList.push(shadowMutationAttrs);
+                }
             }
 
             // A <field> displays a dynamic value: a user-editable text field, a drop-down menu, etc.
             // Leave out the field if defaultValue or fieldName are not specified
-            if (defaultValue !== null && fieldName) {
-                context.inputList.push(`<field name="${xmlEscape(fieldName)}">${xmlEscape(defaultValue)}</field>`);
+            if (fieldValue !== null && fieldName) {
+                context.inputList.push(`<field name="${xmlEscape(fieldName)}">${xmlEscape(fieldValue)}</field>`);
             }
 
             if (shadowType) {
@@ -3589,12 +4103,11 @@ class Runtime extends RuntimeConstants {
         }
 
         let visualReportType = null;
-        let reportValue = value;
-        if (value && typeof value === 'object' && !Array.isArray(value)) {
-            const wrappedType = value.visualReportType || value.__visualReportType;
-            if (typeof wrappedType === 'string' && Object.prototype.hasOwnProperty.call(value, 'value')) {
-                visualReportType = wrappedType;
-                reportValue = value.value;
+        let reportValue = this.normalizeBuiltInCustomTypeValue(value);
+        if (reportValue instanceof CustomType) {
+            visualReportType = reportValue.visualReportType;
+            if ('value' in reportValue) {
+                reportValue = reportValue.value;
             }
         }
 
@@ -4165,13 +4678,18 @@ class Runtime extends RuntimeConstants {
      * @returns {boolean} Did any changes occur?
      */
     _updateGlobalProcedures (targets) {
+        const setDifference = (left, right) => new Set(Array.from(left).filter(value => !right.has(value)));
+        const setUnion = (left, right) => new Set([...left, ...right]);
+
         // get a list of targets to refresh, if we dont get any then just refresh them all
         if (targets === (void 0) || targets === null) targets = this.targets;
         else targets = [].concat(targets);
         targets = new Set(targets.map(t => t.id));
 
-        const deadTargets = (new Set(Object.values(this._globalProcedures)))
-            .difference(new Set(this.targets.map(t => t.id)));
+        const deadTargets = setDifference(
+            new Set(Object.values(this._globalProcedures)),
+            new Set(this.targets.map(t => t.id))
+        );
 
         // keep track of what procedures used to exist and exist now
         // (this is used for cleanup)
@@ -4209,10 +4727,10 @@ class Runtime extends RuntimeConstants {
             target.blocks.resetCache(); // Reset the cache because the procedures might be dirty now.
         }
 
-        Premoved = Premoved.union(Pold.difference(Pexists));
+        Premoved = setUnion(Premoved, setDifference(Pold, Pexists));
 
         let res = false;
-        const changed = Array.from(Pnew.union(Premoved));
+        const changed = Array.from(setUnion(Pnew, Premoved));
 
         if (deadTargets.size > 0) {
             changed.push(...Object.keys(this._globalProcedures).flatMap(proccode => {

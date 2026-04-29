@@ -94,9 +94,24 @@ module.exports = function (compilerData, {
         input: true,
         type: InputType.NUMBER
     });
+    compilerData.registerBlock('sensing_mouseposition', function () {
+        return new IntermediateInput(this.ir_opcode, this.type);
+    }, `runtime.createBuiltInCustomTypeValue("position", [runtime.ioDevices.mouse.getScratchX(), runtime.ioDevices.mouse.getScratchY()])`, {
+        input: true,
+        type: InputType.ANY
+    });
     compilerData.registerBlock('sensing_distanceto', function (stg, block) {
+        const distanceTarget = stg.descendInputOfBlock(block, 'DISTANCETOMENU');
+        if (distanceTarget.opcode === InputOpcode.CONSTANT) {
+            if (distanceTarget.isConstant('_mouse_')) {
+                return new IntermediateInput('sensing.distanceto.mouse', this.type);
+            }
+            if (distanceTarget.isConstant('_camera_')) {
+                return new IntermediateInput('sensing.distanceto.camera', this.type);
+            }
+        }
         return new IntermediateInput(this.ir_opcode, this.type, {
-            target: stg.descendInputOfBlock(block, 'DISTANCETOMENU').toType(InputType.STRING)
+            target: distanceTarget
         });
     }, function (jsg, block) {
         // TODO: on stages, this can be computed at compile time
@@ -105,6 +120,13 @@ module.exports = function (compilerData, {
         input: true,
         type: InputType.NUMBER_POS_REAL | InputType.NUMBER_ZERO
     });
+    compilerData.registerCompileFn([
+        'sensing.distanceto.mouse',
+        'sensing.distanceto.camera'
+    ], [
+        () => `(target.isStage ? 10000 : (() => { const dx = target.x - runtime.ioDevices.mouse.getScratchX(); const dy = target.y - runtime.ioDevices.mouse.getScratchY(); return Math.sqrt((dx * dx) + (dy * dy)); })())`,
+        () => `(target.isStage ? 10000 : (() => { const dx = target.x - runtime.camera.x; const dy = target.y - runtime.camera.y; return Math.sqrt((dx * dx) + (dy * dy)); })())`
+    ]);
     compilerData.registerBlock('sensing_keypressed', function (stg, block) {
         return new IntermediateInput(this.ir_opcode, this.type, {
             key: stg.descendInputOfBlock(block, 'KEY_OPTION', true)
@@ -123,8 +145,8 @@ module.exports = function (compilerData, {
     });
     compilerData.registerBlock('sensing_of', function (stg, block) {
         const property = block.fields.PROPERTY.value;
-        const object = stg.descendInputOfBlock(block, 'OBJECT').toType(InputType.STRING);
-        if (object.opcode !== InputOpcode.CONSTANT) {
+        const object = stg.descendInputOfBlock(block, 'OBJECT');
+        if (!object.isAlwaysType(InputType.STRING) || object.opcode !== InputOpcode.CONSTANT) {
             return new IntermediateInput('sensing.of', this.type, {object, property});
         }
         if (property === 'volume') {
@@ -143,6 +165,9 @@ module.exports = function (compilerData, {
             }
         } else {
             switch (property) {
+            case 'position':
+                this.type = InputType.ANY;
+                return new IntermediateInput('sensing.of.position', this.type, {object});
             case 'x position':
                 this.type = InputType.NUMBER_REAL;
                 return new IntermediateInput('sensing.of.pos_x', this.type, {object});
@@ -168,7 +193,7 @@ module.exports = function (compilerData, {
         const node = block.inputs;
         return `runtime.ext_scratch3_sensing.getAttributeOf({OBJECT: ${
             jsg.descendInput(node.object)
-        }, PROPERTY: "${sanitize(node.property)}" })`;
+        }, PROPERTY: "${sanitize(node.property)}" }, globalState.blockUtility)`;
     }, {
         input: true,
         type: InputType.ANY,
@@ -178,6 +203,7 @@ module.exports = function (compilerData, {
         'sensing.of.volume',
         'sensing.of.backdrop_number',
         'sensing.of.backdrop_name',
+        'sensing.of.position',
         'sensing.of.pos_x',
         'sensing.of.pos_y',
         'sensing.of.direction',
@@ -192,6 +218,10 @@ module.exports = function (compilerData, {
         },
         () => `(stage.currentCostume + 1)`,
         () => `stage.getCostumes()[stage.currentCostume].name`,
+        function (jsg, block) {
+            const targetRef = jsg.descendTargetReference(block.inputs.object);
+            return `(${targetRef} ? runtime.createBuiltInCustomTypeValue("position", [${targetRef}.x, ${targetRef}.y]) : 0)`;
+        },
         function (jsg, block) {
             const targetRef = jsg.descendTargetReference(block.inputs.object);
             return `(${targetRef} ? ${targetRef}.x : 0)`;

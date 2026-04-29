@@ -39,6 +39,7 @@ const stacked = [
 ];
 
 const inputs = [
+    'array',
     'operator_add_extends',
     'operator_and_extends',
     'operator_divide_extends',

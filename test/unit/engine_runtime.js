@@ -4,6 +4,19 @@ const readFileToBuffer = require('../fixtures/readProjectFile').readFileToBuffer
 const VirtualMachine = require('../../src/virtual-machine');
 const Runtime = require('../../src/engine/runtime');
 const MonitorRecord = require('../../src/engine/monitor-record');
+const RenderedTarget = require('../../src/sprites/rendered-target');
+const Variable = require('../../src/engine/variable');
+const {
+    BUILT_IN_CUSTOM_TYPES,
+    TargetValue,
+    CostumeValue,
+    SoundValue,
+    ScriptValue,
+    VariableValue,
+    ListValue,
+    VectorValue,
+    PositionValue
+} = require('../../src/engine/custom-types');
 
 const test = tap.test;
 
@@ -77,6 +90,185 @@ test('monitorStateDoesNotEqual', t => {
     t.equals(String(24), r._monitorState.get(id).value);
     t.equals(params, r._monitorState.get(id).params);
 
+    t.end();
+});
+
+test('built-in custom types include sprite by default', t => {
+    const r = new Runtime();
+    t.same(r.getCustomTypeIds(), ['sprite', 'costume', 'sound', 'script', 'variable', 'list', 'vector', 'position']);
+    t.end();
+});
+
+test('built-in custom type IDs are reserved', t => {
+    const r = new Runtime();
+
+    t.equal(r.registerCustomType('sprite', {
+        test: () => true,
+        serialize: value => value,
+        deserialize: value => value
+    }), false);
+
+    t.equal(r.unregisterCustomType('sprite'), false);
+    t.end();
+});
+
+test('deserialize built-in custom type wrapper returns sprite value', t => {
+    const r = new Runtime();
+    const payload = {
+        spriteId: 'target-id',
+        snapshot: {name: 'Sprite1'}
+    };
+
+    const deserialized = r.deserializeCustomTypeValue({
+        type: 'sprite',
+        value: payload
+    });
+
+    t.equal(deserialized.visualReportType, 'sprite');
+    t.equal(deserialized.spriteId, 'target-id');
+    t.same(deserialized.value, {
+        spriteId: 'target-id',
+        name: 'Sprite1',
+        isClone: false,
+        deleted: false,
+        image: ''
+    });
+    t.end();
+});
+
+test('sprite built-in custom type is declared', t => {
+    t.type(BUILT_IN_CUSTOM_TYPES.sprite, 'object');
+    t.equal(BUILT_IN_CUSTOM_TYPES.sprite.id, 'sprite');
+    t.type(BUILT_IN_CUSTOM_TYPES.sprite.serialize, 'function');
+    t.type(BUILT_IN_CUSTOM_TYPES.sprite.deserialize, 'function');
+    t.end();
+});
+
+test('sprite-shaped values round-trip through built-in sprite type', t => {
+    const r = new Runtime();
+    const runtimeValue = new TargetValue({
+        spriteId: 'target-id',
+        snapshot: {
+            name: 'Sprite1',
+            x: 12,
+            y: -3
+        }
+    }, r);
+
+    const serialized = r.serializeCustomTypeValue(runtimeValue);
+    t.equal(serialized.type, 'sprite');
+    t.same(serialized.value, {
+        spriteId: 'target-id',
+        snapshot: {
+            name: 'Sprite1',
+            x: 12,
+            y: -3
+        }
+    });
+
+    const deserialized = r.deserializeCustomTypeValue(serialized);
+    t.equal(deserialized.visualReportType, 'sprite');
+    t.equal(deserialized.spriteId, 'target-id');
+    t.equal(deserialized.toString(), 'Sprite1');
+    t.same(deserialized.value, {
+        spriteId: 'target-id',
+        name: 'Sprite1',
+        isClone: false,
+        deleted: false,
+        image: ''
+    });
+    t.end();
+});
+
+test('new built-in custom value types serialize and deserialize', t => {
+    const r = new Runtime();
+    const values = [
+        new CostumeValue({costumeName: 'Costume 1'}, r),
+        new SoundValue({soundName: 'Sound 1'}, r),
+        new ScriptValue({source: 'when flag clicked'}),
+        new VariableValue({variableId: 'var-id'}, r),
+        new ListValue({listId: 'list-id'}, r),
+        new VectorValue([1, 2]),
+        new PositionValue([3, 4])
+    ];
+
+    const serializedTypes = values.map(value => r.serializeCustomTypeValue(value).type);
+    t.same(serializedTypes, ['costume', 'sound', 'script', 'variable', 'list', 'vector', 'position']);
+
+    t.type(r.deserializeCustomTypeValue(r.serializeCustomTypeValue(values[0])), CostumeValue);
+    t.type(r.deserializeCustomTypeValue(r.serializeCustomTypeValue(values[1])), SoundValue);
+    t.type(r.deserializeCustomTypeValue(r.serializeCustomTypeValue(values[2])), ScriptValue);
+    t.type(r.deserializeCustomTypeValue(r.serializeCustomTypeValue(values[3])), VariableValue);
+    t.type(r.deserializeCustomTypeValue(r.serializeCustomTypeValue(values[4])), ListValue);
+    t.type(r.deserializeCustomTypeValue(r.serializeCustomTypeValue(values[5])), VectorValue);
+    t.type(r.deserializeCustomTypeValue(r.serializeCustomTypeValue(values[6])), PositionValue);
+    t.end();
+});
+
+test('variable and list values resolve dynamically by id', t => {
+    const r = new Runtime();
+    const target = {
+        variables: {}
+    };
+    const variable = new Variable('var-id', 'score', Variable.SCALAR_TYPE, false);
+    variable.value = 10;
+    const list = new Variable('list-id', 'items', Variable.LIST_TYPE, false);
+    list.value = ['a', 'b'];
+    target.variables[variable.id] = variable;
+    target.variables[list.id] = list;
+    r.targets = [target];
+
+    const variableValue = new VariableValue({variableId: 'var-id'}, r);
+    const listValue = new ListValue({listId: 'list-id'}, r);
+
+    t.equal(variableValue.toString(), '10');
+    t.equal(listValue.toString(), 'a, b');
+
+    variable.value = 25;
+    list.value = ['x', 'y', 'z'];
+
+    t.equal(variableValue.toString(), '25');
+    t.equal(listValue.toString(), 'x, y, z');
+    t.end();
+});
+
+test('RenderedTarget.toValue() converts to sprite custom type', t => {
+    const r = new Runtime();
+    const sprite = {
+        name: 'Sprite1',
+        costumes: []
+    };
+    const target = new RenderedTarget(sprite, r);
+    target.id = 'target-id';
+    target.isOriginal = false; // This is a clone
+    target.x = 42;
+    target.y = -9;
+    r.targets = [target];
+
+    const spriteValue = target.toValue();
+    t.equal(spriteValue.visualReportType, 'sprite');
+    t.equal(spriteValue.spriteId, 'target-id');
+    t.equal(spriteValue.snapshot.name, 'Sprite1');
+    t.equal(spriteValue.snapshot.isClone, true);
+    t.equal(spriteValue.toString(), 'Sprite1 (clone)', 'Clone shows (clone) indicator');
+    t.end();
+});
+
+test('normalizeBuiltInCustomTypeValue calls toValue() if present', t => {
+    const r = new Runtime();
+    const sprite = {
+        name: 'Sprite1',
+        costumes: []
+    };
+    const target = new RenderedTarget(sprite, r);
+    target.id = 'target-id';
+    target.isOriginal = true; // Not a clone
+    r.targets = [target];
+
+    const normalized = r.normalizeBuiltInCustomTypeValue(target);
+    t.equal(normalized.visualReportType, 'sprite');
+    t.equal(normalized.spriteId, 'target-id');
+    t.equal(normalized.toString(), 'Sprite1', 'Non-clone shows name only');
     t.end();
 });
 

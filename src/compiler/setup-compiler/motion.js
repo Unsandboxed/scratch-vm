@@ -117,6 +117,12 @@ module.exports = function (compilerData, {
         input: true,
         type: InputType.NUMBER_REAL
     });
+    compilerData.registerBlock('motion_position', function () {
+        return new IntermediateInput(this.ir_opcode, this.type);
+    }, `runtime.createBuiltInCustomTypeValue("position", [limitPrecision(target.x), limitPrecision(target.y)])`, {
+        input: true,
+        type: InputType.ANY
+    });
     compilerData.registerBlock('motion_rotationstyle', function () {
         return new IntermediateInput(this.ir_opcode, this.type);
     }, `target.rotationStyle`, {
