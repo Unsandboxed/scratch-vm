@@ -218,7 +218,7 @@ module.exports = function (compilerData, {
             } else if (Object.prototype.hasOwnProperty.call(runtime.spoofedProcedureParamValues, param)) {
                 return stg.createConstantInput(runtime.spoofedProcedureParamValues[param](2) ?? false, true);
             }
-            return stg.createConstantInput(0);
+            return new IntermediateInput('procedures.parameter_boolean', this.type, {name});
         }
         return new IntermediateInput(this.ir_opcode, this.type, {index});
         // eslint-disable-next-line no-unused-vars
@@ -228,6 +228,10 @@ module.exports = function (compilerData, {
         input: true,
         type: InputType.BOOLEAN
     });
+    // eslint-disable-next-line no-unused-vars
+    compilerData.registerCompileFn('procedures.parameter_boolean', function (_, block) {
+        return `(asBoolean(thread.getParam("${sanitize(block.inputs.name)}") ?? false))`;
+    });
     compilerData.registerBlock('argument_reporter_array', function (stg, block) {
         const name = block.fields.VALUE.value;
         const index = stg.script.arguments.lastIndexOf(name);
@@ -236,7 +240,7 @@ module.exports = function (compilerData, {
             if (Object.prototype.hasOwnProperty.call(runtime.spoofedProcedureParamValues, param)) {
                 return stg.createConstantInput(runtime.spoofedProcedureParamValues[param](3) ?? [], true);
             }
-            return stg.createConstantInput([]);
+            return new IntermediateInput('procedures.parameter_array', this.type, {name});
         }
         return new IntermediateInput(this.ir_opcode, this.type, {index});
         // eslint-disable-next-line no-unused-vars
@@ -246,6 +250,10 @@ module.exports = function (compilerData, {
         input: true,
         type: InputType.ARRAY
     });
+    // eslint-disable-next-line no-unused-vars
+    compilerData.registerCompileFn('procedures.parameter_array', function (_, block) {
+        return `(asArray(thread.getParam("${sanitize(block.inputs.name)}") ?? []))`;
+    });
     compilerData.registerBlock('argument_reporter_object', function (stg, block) {
         const name = block.fields.VALUE.value;
         const index = stg.script.arguments.lastIndexOf(name);
@@ -254,7 +262,7 @@ module.exports = function (compilerData, {
             if (Object.prototype.hasOwnProperty.call(runtime.spoofedProcedureParamValues, param)) {
                 return stg.createConstantInput(runtime.spoofedProcedureParamValues[param](4) ?? {}, true);
             }
-            return stg.createConstantInput({});
+            return new IntermediateInput('procedures.parameter_object', this.type, {name});
         }
         return new IntermediateInput(this.ir_opcode, this.type, {index});
         // eslint-disable-next-line no-unused-vars
@@ -262,6 +270,32 @@ module.exports = function (compilerData, {
         return `asObject(p${block.inputs.index}, false)`;
     }, {
         input: true,
+        type: InputType.OBJECT
+    });
+    // eslint-disable-next-line no-unused-vars
+    compilerData.registerCompileFn('procedures.parameter_object', function (_, block) {
+        return `(asObject(thread.getParam("${sanitize(block.inputs.name)}") ?? {}, false))`;
+    });
+    compilerData.registerBlock('argument_reporter_vector', function (stg, block) {
+        const name = block.fields.VALUE.value;
+        const index = stg.script.arguments.lastIndexOf(name);
+        if (index === -1) {
+            const param = name.toLowerCase();
+            if (Object.prototype.hasOwnProperty.call(runtime.spoofedProcedureParamValues, param)) {
+                return stg.createConstantInput(runtime.spoofedProcedureParamValues[param](3) ?? [0, 0], true);
+            }
+            return new IntermediateInput('procedures.parameter_vector', this.type, {name});
+        }
+        return new IntermediateInput(this.ir_opcode, this.type, {index});
+        // eslint-disable-next-line no-unused-vars
+    }, function (_, block) {
+        return `asArray(p${block.inputs.index})`;
+    }, {
+        input: true,
         type: InputType.ARRAY
+    });
+    // eslint-disable-next-line no-unused-vars
+    compilerData.registerCompileFn('procedures.parameter_vector', function (_, block) {
+        return `(asArray(thread.getParam("${sanitize(block.inputs.name)}") ?? [0, 0]))`;
     });
 };

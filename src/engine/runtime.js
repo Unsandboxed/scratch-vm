@@ -2333,6 +2333,27 @@ class Runtime extends RuntimeConstants {
             } else {
                 const mapShadow = (argTypeInfo && argTypeInfo.shadow) || null;
                 let resolvedShadow = mapShadow;
+
+                if (argInfo.type === ArgumentType.PARAMETER && typeof argInfo.blockType !== 'undefined' && argInfo.blockType !== null) {
+                    const requestedShape = String(argInfo.blockType).toLowerCase();
+                    if (requestedShape === String(BlockType.ARRAY).toLowerCase() || requestedShape === 'array') {
+                        resolvedShadow = {
+                            type: 'argument_reporter_array',
+                            fieldName: 'VALUE'
+                        };
+                    } else if (requestedShape === String(BlockType.OBJECT).toLowerCase() || requestedShape === 'object') {
+                        resolvedShadow = {
+                            type: 'argument_reporter_object',
+                            fieldName: 'VALUE'
+                        };
+                    } else if (requestedShape === String(BlockType.BOOLEAN).toLowerCase() || requestedShape === 'boolean') {
+                        resolvedShadow = {
+                            type: 'argument_reporter_boolean',
+                            fieldName: 'VALUE'
+                        };
+                    }
+                }
+
                 if (Object.prototype.hasOwnProperty.call(argInfo, 'shadow')) {
                     if (argInfo.shadow === null) {
                         resolvedShadow = null;
