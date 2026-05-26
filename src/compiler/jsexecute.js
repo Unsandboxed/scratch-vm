@@ -470,7 +470,7 @@ runtimeFunctions.distance = `const distance = menu => {
 
     let targetX = 0;
     let targetY = 0;
-    if (menu instanceof globalState.customTypes.VectorValue) {
+    if (menu instanceof globalState.customTypes.VectorValue || menu instanceof globalState.customTypes.PositionValue) {
         targetX = +menu.x || 0;
         targetY = +menu.y || 0;
     } else if (menu === '_mouse_') {

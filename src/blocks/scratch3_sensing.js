@@ -1,7 +1,7 @@
 const Cast = require('../util/cast');
 const Timer = require('../util/timer');
 const getMonitorIdForBlockWithArgs = require('../util/get-monitor-id');
-const {VectorValue} = require('../engine/custom-types');
+const {VectorValue, PositionValue} = require('../engine/custom-types');
 
 class Scratch3SensingBlocks {
     constructor (runtime) {
@@ -206,7 +206,7 @@ class Scratch3SensingBlocks {
 
         let targetX = 0;
         let targetY = 0;
-        if (args.DISTANCETOMENU instanceof VectorValue) {
+        if (args.DISTANCETOMENU instanceof VectorValue || args.DISTANCETOMENU instanceof PositionValue) {
             targetX = Cast.toNumber(args.DISTANCETOMENU.x);
             targetY = Cast.toNumber(args.DISTANCETOMENU.y);
         } else if (args.DISTANCETOMENU === '_mouse_') {

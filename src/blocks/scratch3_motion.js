@@ -1,7 +1,7 @@
 const Cast = require('../util/cast');
 const MathUtil = require('../util/math-util');
 const Timer = require('../util/timer');
-const {VectorValue} = require('../engine/custom-types');
+const {VectorValue, PositionValue} = require('../engine/custom-types');
 
 class Scratch3MotionBlocks {
     constructor (runtime) {
@@ -94,7 +94,7 @@ class Scratch3MotionBlocks {
     }
 
     _coerceVectorXY (value) {
-        if (!(value instanceof VectorValue)) return null;
+        if (!(value instanceof VectorValue || value instanceof PositionValue)) return null;
         return [Cast.toNumber(value.x), Cast.toNumber(value.y)];
     }
 
