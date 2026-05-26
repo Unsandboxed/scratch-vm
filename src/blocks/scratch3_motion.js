@@ -1,6 +1,7 @@
 const Cast = require('../util/cast');
 const MathUtil = require('../util/math-util');
 const Timer = require('../util/timer');
+const {VectorValue} = require('../engine/custom-types');
 
 class Scratch3MotionBlocks {
     constructor (runtime) {
@@ -92,7 +93,15 @@ class Scratch3MotionBlocks {
         util.target.setXY(util.target.x + dx, util.target.y + dy);
     }
 
+    _coerceVectorXY (value) {
+        if (!(value instanceof VectorValue)) return null;
+        return [Cast.toNumber(value.x), Cast.toNumber(value.y)];
+    }
+
     getTargetXY (targetName, util) {
+        const vectorXY = this._coerceVectorXY(targetName);
+        if (vectorXY) return vectorXY;
+
         let targetX = 0;
         let targetY = 0;
         if (targetName === '_mouse_') {
@@ -152,6 +161,15 @@ class Scratch3MotionBlocks {
     }
 
     pointTowards (args, util) {
+        const vectorXY = this._coerceVectorXY(args.TOWARDS);
+        if (vectorXY) {
+            const dx = vectorXY[0] - util.target.x;
+            const dy = vectorXY[1] - util.target.y;
+            const direction = 90 - MathUtil.radToDeg(Math.atan2(dy, dx));
+            util.target.setDirection(direction);
+            return;
+        }
+
         let targetX = 0;
         let targetY = 0;
         if (args.TOWARDS === '_mouse_') {

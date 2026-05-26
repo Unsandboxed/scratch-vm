@@ -12,6 +12,7 @@ const globalState = {
     Timer: require('../util/timer'),
     Cast: require('../util/cast'),
     Clone: require('../util/clone'),
+    customTypes: require('../engine/custom-types'),
     log: require('../util/log'),
     blockUtility: require('./compat-block-utility'),
     /** @type{import("../engine/thread")?} */
@@ -469,7 +470,10 @@ runtimeFunctions.distance = `const distance = menu => {
 
     let targetX = 0;
     let targetY = 0;
-    if (menu === '_mouse_') {
+    if (menu instanceof globalState.customTypes.VectorValue) {
+        targetX = +menu.x || 0;
+        targetY = +menu.y || 0;
+    } else if (menu === '_mouse_') {
         targetX = thread.target.runtime.ioDevices.mouse.getScratchX();
         targetY = thread.target.runtime.ioDevices.mouse.getScratchY();
     } else if (menu === '_camera_') {
