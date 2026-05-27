@@ -52,15 +52,12 @@ class AssetUtil {
         }
 
         if (ScratchStorage.isAssetLike(asset)) {
-            if (!asset.clean) {
-                throw new Error('Cannot clone a dirty asset.');
-            }
             return new ScratchStorage.Asset(
                 asset.assetType,
                 asset.assetId,
                 asset.dataFormat,
                 Clone.structured(asset.data),
-                true
+                Boolean(asset.clean)
             );
         }
 
