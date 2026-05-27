@@ -932,6 +932,8 @@ class VirtualMachine extends EventEmitter {
             if (!target.isStage) {
                 nextSpriteNumber += 1;
             }
+            const costumesFolder = `${targetFolder}/costumes`;
+            const soundsFolder = `${targetFolder}/sounds`;
 
             const costumes = target.sprite.costumes || [];
             for (let i = 0; i < costumes.length; i++) {
@@ -941,7 +943,7 @@ class VirtualMachine extends EventEmitter {
                     continue;
                 }
                 fileDescs.push({
-                    fileName: `${targetFolder}/${asset.assetId}.${asset.dataFormat}`,
+                    fileName: `${costumesFolder}/${asset.assetId}.${asset.dataFormat}`,
                     fileContent: asset.data
                 });
             }
@@ -954,7 +956,7 @@ class VirtualMachine extends EventEmitter {
                     continue;
                 }
                 fileDescs.push({
-                    fileName: `${targetFolder}/${asset.assetId}.${asset.dataFormat}`,
+                    fileName: `${soundsFolder}/${asset.assetId}.${asset.dataFormat}`,
                     fileContent: asset.data
                 });
             }

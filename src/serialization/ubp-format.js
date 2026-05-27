@@ -677,18 +677,20 @@ E.serializeTarget = function (target, extensions, runtime, {
     obj.currentCostume = target.currentCostume;
     const resolvedTargetFolder = typeof targetFolder === 'string' ? targetFolder :
         (obj.isStage ? 'sprites/stage' : 'sprites/sprite1');
+    const costumesFolder = `${resolvedTargetFolder}/costumes`;
+    const soundsFolder = `${resolvedTargetFolder}/sounds`;
     obj.costumes = target.costumes.map(costume => {
         const costumeToSerialize = costume.broken || costume;
         return E.serializeCostume(
             costume,
-            `${resolvedTargetFolder}/${costumeToSerialize.assetId}.${costumeToSerialize.dataFormat.toLowerCase()}`
+            `${costumesFolder}/${costumeToSerialize.assetId}.${costumeToSerialize.dataFormat.toLowerCase()}`
         );
     });
     obj.sounds = target.sounds.map(sound => {
         const soundToSerialize = sound.broken || sound;
         return E.serializeSound(
             sound,
-            `${resolvedTargetFolder}/${soundToSerialize.assetId}.${soundToSerialize.dataFormat.toLowerCase()}`
+            `${soundsFolder}/${soundToSerialize.assetId}.${soundToSerialize.dataFormat.toLowerCase()}`
         );
     });
     if (Object.prototype.hasOwnProperty.call(target, 'volume')) obj.volume = target.volume;
