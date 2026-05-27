@@ -109,6 +109,17 @@ E.primitiveOpcodeInfoMap = {
 // We don't enforce this limit, but Scratch does, so we need to handle it for compatibility.
 E.UPSTREAM_MAX_COMMENT_LENGTH = 8000;
 
+const SB3_ROTATION_STYLES = new Set(['all around', "don't rotate", 'left-right']);
+
+const toSb3RotationStyle = rotationStyle => {
+    if (SB3_ROTATION_STYLES.has(rotationStyle)) {
+        return rotationStyle;
+    }
+    // SB3 only supports three rotation styles. Unknown/custom styles are
+    // serialized lossily for compatibility.
+    return 'all around';
+};
+
 /**
  * Serializes primitives described above into a more compact format
  * @param {object} block the block to serialize
@@ -688,7 +699,7 @@ E.serializeTarget = function (target, extensions, runtime, {
         obj.size = target.size;
         obj.direction = target.direction;
         obj.draggable = target.draggable;
-        obj.rotationStyle = target.rotationStyle;
+        obj.rotationStyle = toSb3RotationStyle(target.rotationStyle);
     }
 
     // Add found extensions to the extensions object
