@@ -941,7 +941,7 @@ class VirtualMachine extends EventEmitter {
                     continue;
                 }
                 fileDescs.push({
-                    fileName: `${targetFolder}/costume${i + 1}.${asset.dataFormat}`,
+                    fileName: `${targetFolder}/${asset.assetId}.${asset.dataFormat}`,
                     fileContent: asset.data
                 });
             }
@@ -954,7 +954,7 @@ class VirtualMachine extends EventEmitter {
                     continue;
                 }
                 fileDescs.push({
-                    fileName: `${targetFolder}/sound${i + 1}.${asset.dataFormat}`,
+                    fileName: `${targetFolder}/${asset.assetId}.${asset.dataFormat}`,
                     fileContent: asset.data
                 });
             }

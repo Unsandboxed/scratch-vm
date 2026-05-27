@@ -677,14 +677,20 @@ E.serializeTarget = function (target, extensions, runtime, {
     obj.currentCostume = target.currentCostume;
     const resolvedTargetFolder = typeof targetFolder === 'string' ? targetFolder :
         (obj.isStage ? 'sprites/stage' : 'sprites/sprite1');
-    obj.costumes = target.costumes.map((costume, index) => E.serializeCostume(
-        costume,
-        `${resolvedTargetFolder}/costume${index + 1}.${(costume.broken || costume).dataFormat.toLowerCase()}`
-    ));
-    obj.sounds = target.sounds.map((sound, index) => E.serializeSound(
-        sound,
-        `${resolvedTargetFolder}/sound${index + 1}.${(sound.broken || sound).dataFormat.toLowerCase()}`
-    ));
+    obj.costumes = target.costumes.map(costume => {
+        const costumeToSerialize = costume.broken || costume;
+        return E.serializeCostume(
+            costume,
+            `${resolvedTargetFolder}/${costumeToSerialize.assetId}.${costumeToSerialize.dataFormat.toLowerCase()}`
+        );
+    });
+    obj.sounds = target.sounds.map(sound => {
+        const soundToSerialize = sound.broken || sound;
+        return E.serializeSound(
+            sound,
+            `${resolvedTargetFolder}/${soundToSerialize.assetId}.${soundToSerialize.dataFormat.toLowerCase()}`
+        );
+    });
     if (Object.prototype.hasOwnProperty.call(target, 'volume')) obj.volume = target.volume;
     if (Object.prototype.hasOwnProperty.call(target, 'layerOrder')) obj.layerOrder = target.layerOrder;
     if (obj.isStage) { // Only the stage should have these properties
