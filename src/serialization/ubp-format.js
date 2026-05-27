@@ -1,6 +1,6 @@
 /**
  * @fileoverview
- * An SB3 serializer and deserializer. Parses provided
+ * A UBP serializer and deserializer. Parses provided
  * JSON and then generates all needed scratch-vm runtime structures.
  */
 
@@ -19,6 +19,7 @@ const StringUtil = require('../util/string-util');
 const VariableUtil = require('../util/variable-util');
 const ReadonlyArray = require('../util/ReadonlyArray');
 const compress = require('./tw-compress-sb3');
+const {UBP_CURRENT_VERSION, resolveUBPProject} = require('./ubp');
 
 const {loadCostume} = require('../import/load-costume.js');
 const {loadSound} = require('../import/load-sound.js');
@@ -46,7 +47,7 @@ E.INPUT_BLOCK_NO_SHADOW = 2; // no shadow
 E.INPUT_DIFF_BLOCK_SHADOW = 3; // obscured shadow
 // There shouldn't be a case where block is null, but shadow is present...
 
-// Constants used during deserialization of an SB3 file
+// Constants used during deserialization of a UBP file
 E.CORE_EXTENSIONS = [
     'argument',
     'camera',
@@ -464,9 +465,10 @@ E.serializeStandaloneBlocks = (blocks, runtime) => {
 /**
  * Serialize the given costume.
  * @param {object} costume The costume to be serialized.
+ * @param {string=} ubpAssetPath Optional UBP asset path inside the project archive.
  * @return {object} A serialized representation of the costume.
  */
-E.serializeCostume = function (costume) {
+E.serializeCostume = function (costume, ubpAssetPath) {
     const obj = Object.create(null);
     obj.name = costume.name;
 
@@ -487,15 +489,20 @@ E.serializeCostume = function (costume) {
     obj.rotationCenterX = costumeToSerialize.rotationCenterX;
     obj.rotationCenterY = costumeToSerialize.rotationCenterY;
 
+    if (typeof ubpAssetPath === 'string') {
+        obj.ubpAssetPath = ubpAssetPath;
+    }
+
     return obj;
 };
 
 /**
  * Serialize the given sound.
  * @param {object} sound The sound to be serialized.
+ * @param {string=} ubpAssetPath Optional UBP asset path inside the project archive.
  * @return {object} A serialized representation of the sound.
  */
-E.serializeSound = function (sound) {
+E.serializeSound = function (sound, ubpAssetPath) {
     const obj = Object.create(null);
     obj.name = sound.name;
 
@@ -512,6 +519,9 @@ E.serializeSound = function (sound) {
     // but that change should be made carefully since it is very
     // pervasive
     obj.md5ext = soundToSerialize.md5;
+    if (typeof ubpAssetPath === 'string') {
+        obj.ubpAssetPath = ubpAssetPath;
+    }
     return obj;
 };
 
@@ -635,6 +645,7 @@ E.serializeFrames = function (frames, {
  * @return {object} A serialized representation of the given target.
  */
 E.serializeTarget = function (target, extensions, runtime, {
+    targetFolder = null,
     includeCustomTypes = false,
     includeListLockState = false,
     includeFrameLockState = false
@@ -664,8 +675,16 @@ E.serializeTarget = function (target, extensions, runtime, {
     }
 
     obj.currentCostume = target.currentCostume;
-    obj.costumes = target.costumes.map(E.serializeCostume);
-    obj.sounds = target.sounds.map(E.serializeSound);
+    const resolvedTargetFolder = typeof targetFolder === 'string' ? targetFolder :
+        (obj.isStage ? 'sprites/stage' : 'sprites/sprite1');
+    obj.costumes = target.costumes.map((costume, index) => E.serializeCostume(
+        costume,
+        `${resolvedTargetFolder}/costume${index + 1}.${(costume.broken || costume).dataFormat.toLowerCase()}`
+    ));
+    obj.sounds = target.sounds.map((sound, index) => E.serializeSound(
+        sound,
+        `${resolvedTargetFolder}/sound${index + 1}.${(sound.broken || sound).dataFormat.toLowerCase()}`
+    ));
     if (Object.prototype.hasOwnProperty.call(target, 'volume')) obj.volume = target.volume;
     if (Object.prototype.hasOwnProperty.call(target, 'layerOrder')) obj.layerOrder = target.layerOrder;
     if (obj.isStage) { // Only the stage should have these properties
@@ -797,11 +816,16 @@ E.serializeMonitors = function (monitors, runtime, extensions, {
  * @param {string=} targetId Optional target id if serializing only a single target
  * @param {object=} options Serialization options.
  * @param {boolean=} options.allowOptimization Whether to optimize serialized output.
+ * @param {'ubp'} options.format Output project format.
  * @return {object} Serialized runtime instance.
  */
 E.serialize = function (runtime, targetId, {
-    allowOptimization = true
+    allowOptimization = true,
+    format = 'ubp'
 } = {}) {
+    if (format !== 'ubp') {
+        throw new Error(`Unsupported project serialization format: ${format}`);
+    }
     // Fetch targets
     const obj = Object.create(null);
     // Create extension set to hold extension ids found while serializing targets
@@ -823,10 +847,21 @@ E.serialize = function (runtime, targetId, {
         });
     }
 
-    const serializedTargets = flattenedOriginalTargets.map(t => E.serializeTarget(t, extensions, runtime, {
-        includeCustomTypes: false,
-        includeListLockState: false,
-        includeFrameLockState: false
+    let nextSpriteNumber = 1;
+    const targetFolders = flattenedOriginalTargets.map(target => {
+        if (target.isStage) {
+            return 'sprites/stage';
+        }
+        const folder = `sprites/sprite${nextSpriteNumber}`;
+        nextSpriteNumber += 1;
+        return folder;
+    });
+
+    const serializedTargets = flattenedOriginalTargets.map((t, index) => E.serializeTarget(t, extensions, runtime, {
+        targetFolder: targetFolders[index],
+        includeCustomTypes: true,
+        includeListLockState: true,
+        includeFrameLockState: true
     }))
         .map((serialized, index) => {
             // can't serialize extensionStorage until the list of used extensions is fully known
@@ -836,10 +871,16 @@ E.serialize = function (runtime, targetId, {
                 extensions
             );
             if (targetExtensionStorage) {
-                serialized.extensionStorage = targetExtensionStorage;
+                serialized.extensionStorage =
+                    runtime && typeof runtime.serializeCustomTypeValueDeep === 'function' ?
+                        runtime.serializeCustomTypeValueDeep(targetExtensionStorage) :
+                        targetExtensionStorage;
             }
             const targetProjectStorage = target.store.unsafe$getProjectStorage();
-            serialized.projectStorage = targetProjectStorage;
+            serialized.projectStorage =
+                runtime && typeof runtime.serializeCustomTypeValueDeep === 'function' ?
+                    runtime.serializeCustomTypeValueDeep(targetProjectStorage) :
+                    targetProjectStorage;
             return serialized;
         });
 
@@ -863,16 +904,20 @@ E.serialize = function (runtime, targetId, {
 
     const globalExtensionStorage = E.serializeExtensionStorage(runtime.store.unsafe$getExtensionStorage(), extensions);
     if (globalExtensionStorage) {
-        obj.extensionStorage = globalExtensionStorage;
+        obj.extensionStorage = runtime && typeof runtime.serializeCustomTypeValueDeep === 'function' ?
+            runtime.serializeCustomTypeValueDeep(globalExtensionStorage) :
+            globalExtensionStorage;
     }
     const runtimeProjectStorage = runtime.store.unsafe$getProjectStorage();
-    obj.projectStorage = runtimeProjectStorage;
+    obj.projectStorage = runtime && typeof runtime.serializeCustomTypeValueDeep === 'function' ?
+        runtime.serializeCustomTypeValueDeep(runtimeProjectStorage) :
+        runtimeProjectStorage;
 
     obj.targets = serializedTargets;
 
     obj.monitors = E.serializeMonitors(runtime.getMonitorState(), runtime, extensions, {
-        includeCustomTypes: false,
-        includeListLockState: false
+        includeCustomTypes: true,
+        includeListLockState: true
     });
 
     obj.extensions = Array.from(extensions);
@@ -890,6 +935,7 @@ E.serialize = function (runtime, targetId, {
     meta.semver = '3.0.0';
     // TW: There isn't a good reason to put the full version number in the json, so we don't.
     meta.vm = '0.2.0';
+    meta.ubpVersion = UBP_CURRENT_VERSION;
     if (runtime.origin) {
         meta.origin = runtime.origin;
     }
@@ -1219,7 +1265,8 @@ E.parseScratchAssets = function (object, runtime, zip) {
         // we're always loading the 'sb3' representation of the costume
         // any translation that needs to happen will happen in the process
         // of building up the costume object into an sb3 format
-        return runtime.wrapAssetRequest(() => deserializeCostume(costume, runtime, zip)
+        const ubpAssetPath = typeof costumeSource.ubpAssetPath === 'string' ? costumeSource.ubpAssetPath : null;
+        return runtime.wrapAssetRequest(() => deserializeCostume(costume, runtime, zip, ubpAssetPath)
             .then(() => loadCostume(costumeMd5Ext, costume, runtime)));
         // Only attempt to load the costume after the deserialization
         // process has been completed
@@ -1244,7 +1291,8 @@ E.parseScratchAssets = function (object, runtime, zip) {
         // we're always loading the 'sb3' representation of the costume
         // any translation that needs to happen will happen in the process
         // of building up the costume object into an sb3 format
-        return runtime.wrapAssetRequest(() => deserializeSound(sound, runtime, zip)
+        const ubpAssetPath = typeof soundSource.ubpAssetPath === 'string' ? soundSource.ubpAssetPath : null;
+        return runtime.wrapAssetRequest(() => deserializeSound(sound, runtime, zip, ubpAssetPath)
             .then(() => loadSound(sound, runtime, assets.soundBank)));
         // Only attempt to load the sound after the deserialization
         // process has been completed.
@@ -1761,8 +1809,9 @@ E.applyCompatibilityOptions = runtime => {
  * @returns {Promise.<ImportedProject>} Promise that resolves to the list of targets after the project is deserialized
  */
 E.deserialize = async function (json, runtime, zip, isSingleSprite) {
-    const projectJSON = json;
-    const customTypesEnabled = false;
+    const resolvedProject = resolveUBPProject(json);
+    const projectJSON = resolvedProject.json;
+    const customTypesEnabled = resolvedProject.customTypesEnabled;
 
     await E.checkPlatformCompatibility(projectJSON, runtime);
 

@@ -629,7 +629,49 @@ class VirtualMachine extends EventEmitter {
     }
 
     /**
-     * Load a Scratch project from a .sb, .sb2, .sb3 or json string.
+     * Try parsing UBP input directly without scratch-parser.
+     * @param {string|ArrayBuffer|ArrayBufferView} input Input project payload.
+     * @returns {Promise<[object, JSZip|null] | null>} Parsed project JSON and optional zip, or null if not UBP.
+     */
+    async _tryParseUbpProjectInput (input) {
+        const {isUBPProject} = require('./serialization/ubp');
+
+        if (typeof input === 'string') {
+            try {
+                const parsed = JSON.parse(input);
+                if (parsed && isUBPProject(parsed)) {
+                    return [parsed, null];
+                }
+            } catch (e) {
+                // Not JSON; fall through.
+            }
+            return null;
+        }
+
+        if (input instanceof ArrayBuffer || ArrayBuffer.isView(input)) {
+            const zipInput = input instanceof ArrayBuffer ? input :
+                input.buffer.slice(input.byteOffset, input.byteOffset + input.byteLength);
+            try {
+                const zip = await JSZip.loadAsync(zipInput);
+                const projectFile = zip.file('project.json');
+                if (!projectFile) {
+                    return null;
+                }
+                const projectText = await projectFile.async('string');
+                const parsed = JSON.parse(projectText);
+                if (parsed && isUBPProject(parsed)) {
+                    return [parsed, zip];
+                }
+            } catch (e) {
+                // Not a UBP zip we can parse; fall through.
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Load a Scratch project from a .sb, .sb2, .sb3, .ubp, or json string.
      * @param {string | object} input A json string, object, or ArrayBuffer representing the project to load.
      * @return {!Promise} Promise that resolves after targets are installed.
      */
@@ -645,17 +687,24 @@ class VirtualMachine extends EventEmitter {
             input = JSON.stringify(input);
         }
 
-        const validationPromise = new Promise((resolve, reject) => {
-            const validate = require('scratch-parser');
-            // The second argument of false below indicates to the validator that the
-            // input should be parsed/validated as an entire project (and not a single sprite)
-            validate(input, false, (error, res) => {
-                if (error) {
-                    return reject(error);
+        const parsedProjectPromise = this._tryParseUbpProjectInput(input)
+            .then(parsedUbp => {
+                if (parsedUbp) {
+                    return parsedUbp;
                 }
-                resolve(res);
-            });
-        })
+
+                return new Promise((resolve, reject) => {
+                    const validate = require('scratch-parser');
+                    // The second argument of false below indicates to the validator that the
+                    // input should be parsed/validated as an entire project (and not a single sprite)
+                    validate(input, false, (error, res) => {
+                        if (error) {
+                            return reject(error);
+                        }
+                        resolve(res);
+                    });
+                });
+            })
             .catch(error => {
                 const {SB1File, ValidationError} = require('scratch-sb1-converter');
 
@@ -682,7 +731,7 @@ class VirtualMachine extends EventEmitter {
                 return Promise.reject(error);
             });
 
-        return validationPromise
+        return parsedProjectPromise
             .then(validatedInput => this.deserializeProject(validatedInput[0], validatedInput[1]))
             .then(() => this.runtime.handleProjectLoaded())
             .catch(error => {
@@ -721,8 +770,9 @@ class VirtualMachine extends EventEmitter {
     /**
      * @returns {JSZip} JSZip zip object representing the sb3.
      */
-    _saveProjectZip () {
-        const projectJson = this.toJSON();
+    _saveProjectZip (serializationOptions) {
+        const projectJson = this.toJSON(undefined, serializationOptions);
+        const format = serializationOptions && serializationOptions.format;
 
         // TODO want to eventually move zip creation out of here, and perhaps
         // into scratch-storage
@@ -730,7 +780,8 @@ class VirtualMachine extends EventEmitter {
 
         // Put everything in a zip file
         zip.file('project.json', projectJson);
-        this._addFileDescsToZip(this.serializeAssets(), zip);
+        const assetDescs = format === 'ubp' ? this.serializeUbpAssets() : this.serializeAssets();
+        this._addFileDescsToZip(assetDescs, zip);
 
         // Use a fixed modification date for the files in the zip instead of letting JSZip use the
         // current time to avoid a very small metadata leak and make zipping deterministic. The magic
@@ -765,10 +816,22 @@ class VirtualMachine extends EventEmitter {
      * @returns {Promise<unknown>} Compressed sb3 file in a type determined by the type argument.
      */
     saveProjectSb3 (type) {
-        return this._saveProjectZip().generateAsync({
+        return this._saveProjectZip({format: 'sb3'}).generateAsync({
             // Don't configure compression here. _saveProjectZip() will set it for each file.
             type: type || 'blob',
             mimeType: 'application/x.scratch.sb3'
+        });
+    }
+
+    /**
+     * @param {JSZip.OutputType} [type] JSZip output type. Defaults to 'blob'.
+     * @returns {Promise<unknown>} Compressed UBP file in a type determined by the type argument.
+     */
+    saveProjectUbp (type) {
+        return this._saveProjectZip({format: 'ubp'}).generateAsync({
+            // Don't configure compression here. _saveProjectZip() will set it for each file.
+            type: type || 'blob',
+            mimeType: 'application/x.unsandboxed-ubp'
         });
     }
 
@@ -778,9 +841,21 @@ class VirtualMachine extends EventEmitter {
      * See: https://stuk.github.io/jszip/documentation/api_streamhelper.html
      */
     saveProjectSb3Stream (type) {
-        return this._saveProjectZip().generateInternalStream({
+        return this._saveProjectZip({format: 'sb3'}).generateInternalStream({
             type: type || 'arraybuffer',
             mimeType: 'application/x.scratch.sb3',
+            compression: 'DEFLATE'
+        });
+    }
+
+    /**
+     * @param {JSZip.OutputType} [type] JSZip output type. Defaults to 'arraybuffer'.
+     * @returns {StreamHelper} JSZip StreamHelper object generating the compressed UBP file.
+     */
+    saveProjectUbpStream (type) {
+        return this._saveProjectZip({format: 'ubp'}).generateInternalStream({
+            type: type || 'arraybuffer',
+            mimeType: 'application/x.unsandboxed-ubp',
             compression: 'DEFLATE'
         });
     }
@@ -791,13 +866,14 @@ class VirtualMachine extends EventEmitter {
      * manipulating them (except project.json, which is created by this function).
      * @returns {Record<string, Uint8Array>} Map of file name to the raw data for that file.
      */
-    saveProjectSb3DontZip () {
-        const projectJson = this.toJSON();
+    saveProjectSb3DontZip ({format = 'sb3'} = {}) {
+        const projectJson = this.toJSON(undefined, {format});
+        const assetDescs = format === 'ubp' ? this.serializeUbpAssets() : this.serializeAssets();
 
         const files = {
             'project.json': (new _TextEncoder()).encode(projectJson)
         };
-        for (const fileDesc of this.serializeAssets()) {
+        for (const fileDesc of assetDescs) {
             files[fileDesc.fileName] = fileDesc.fileContent;
         }
 
@@ -834,6 +910,63 @@ class VirtualMachine extends EventEmitter {
         return [
             ...costumeDescs,
             ...soundDescs,
+            ...fontDescs
+        ];
+    }
+
+    /**
+     * @param {string} targetId Optional ID of target to export
+     * @returns {Array<{fileName: string; fileContent: Uint8Array;}>} list of file descs in UBP folder layout
+     */
+    serializeUbpAssets (targetId) {
+        const targets = targetId ? [this.runtime.getTargetById(targetId)] : this.runtime.targets.filter(target => target.isOriginal);
+        const fileDescs = [];
+        let nextSpriteNumber = 1;
+
+        for (const target of targets) {
+            if (!target || !target.sprite) {
+                continue;
+            }
+
+            const targetFolder = target.isStage ? 'sprites/stage' : `sprites/sprite${nextSpriteNumber}`;
+            if (!target.isStage) {
+                nextSpriteNumber += 1;
+            }
+
+            const costumes = target.sprite.costumes || [];
+            for (let i = 0; i < costumes.length; i++) {
+                const costume = costumes[i];
+                const asset = costume && (costume.broken ? costume.broken.asset : costume.asset);
+                if (!asset) {
+                    continue;
+                }
+                fileDescs.push({
+                    fileName: `${targetFolder}/costume${i + 1}.${asset.dataFormat}`,
+                    fileContent: asset.data
+                });
+            }
+
+            const sounds = target.sprite.sounds || [];
+            for (let i = 0; i < sounds.length; i++) {
+                const sound = sounds[i];
+                const asset = sound && (sound.broken ? sound.broken.asset : sound.asset);
+                if (!asset) {
+                    continue;
+                }
+                fileDescs.push({
+                    fileName: `${targetFolder}/sound${i + 1}.${asset.dataFormat}`,
+                    fileContent: asset.data
+                });
+            }
+        }
+
+        const fontDescs = this.runtime.fontManager.serializeAssets().map(asset => ({
+            fileName: `fonts/${asset.assetId}.${asset.dataFormat}`,
+            fileContent: asset.data
+        }));
+
+        return [
+            ...fileDescs,
             ...fontDescs
         ];
     }
@@ -882,6 +1015,12 @@ class VirtualMachine extends EventEmitter {
      * @return {string} Serialized state of the runtime.
      */
     toJSON (optTargetId, serializationOptions) {
+        const format = serializationOptions && serializationOptions.format;
+        if (format === 'ubp') {
+            const ubp = require('./serialization/ubp-format');
+            const ubpSerializationOptions = Object.assign({}, serializationOptions, {format: 'ubp'});
+            return StringUtil.stringify(ubp.serialize(this.runtime, optTargetId, ubpSerializationOptions));
+        }
         const sb3 = require('./serialization/sb3');
         return StringUtil.stringify(sb3.serialize(this.runtime, optTargetId, serializationOptions));
     }
@@ -913,6 +1052,12 @@ class VirtualMachine extends EventEmitter {
         }
         const runtime = this.runtime;
         const deserializePromise = function () {
+            const {isUBPProject} = require('./serialization/ubp');
+            if (isUBPProject(projectJSON)) {
+                const ubp = require('./serialization/ubp-format');
+                return ubp.deserialize(projectJSON, runtime, zip);
+            }
+
             const projectVersion = projectJSON.projectVersion;
             if (projectVersion === 2) {
                 const sb2 = require('./serialization/sb2');
