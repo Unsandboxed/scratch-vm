@@ -3632,6 +3632,10 @@ class Runtime extends RuntimeConstants {
      * Queue monitor blocks to sequencer to be run.
      */
     _pushMonitors () {
+        if (this.targets.length === 0) {
+            // Project is not loaded yet, but monitors might be. Don't try to start anything.
+            return;
+        }
         this.monitorBlocks.runAllMonitored(this);
     }
 
