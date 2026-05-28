@@ -135,7 +135,7 @@ const RuntimeInternals = {
                 type: 'math_position',
                 fieldName: 'POS'
             },
-            check: ['Vector', 'Array', 'String']
+            check: ['Position', 'Array', 'String']
         };
         map[ArgumentType.OBJECT] = {
             check: 'Object'

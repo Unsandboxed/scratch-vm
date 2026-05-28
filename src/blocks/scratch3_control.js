@@ -300,9 +300,14 @@ class Scratch3ControlBlocks {
             if (util && typeof util.resolveTarget === 'function') {
                 cloneTarget = util.resolveTarget(cloneOption);
             } else {
-                cloneTarget = this.runtime.getTargetById(cloneOption?.spriteId) ||
+                const optionAsObject = cloneOption && typeof cloneOption === 'object' ? cloneOption : null;
+                cloneTarget =
+                    this.runtime.getTargetById(optionAsObject?.targetId) ||
+                    this.runtime.getTargetById(optionAsObject?.spriteId) ||
+                    this.runtime.getTargetById(optionAsObject?.id) ||
+                    this.runtime.getTargetById(optionAsObject?._liveTarget?.id) ||
                     this.runtime.getTargetById(Cast.toString(cloneOption)) ||
-                    this.runtime.getSpriteTargetByName(Cast.toString(cloneOption));
+                    this.runtime.getSpriteTargetByName(optionAsObject?.name || Cast.toString(cloneOption));
             }
         }
 

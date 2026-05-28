@@ -75,7 +75,7 @@ module.exports = function (compilerData, {
             jsg.source += '}\n';
             return;
         }
-        jsg.source += `runtime.ext_scratch3_control._createClone(${jsg.descendInput(block.inputs.target)}, target, globalState.blockUtility);\n`;
+        jsg.source += `runtime.ext_scratch3_control._createClone(${jsg.descendInput(block.inputs.target)}, target);\n`;
     }, {
         input: false
     });

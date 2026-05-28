@@ -233,6 +233,70 @@ test('ifElseExtends fallback without mutation', t => {
     t.end();
 });
 
+test('_createClone resolves targetId without util', t => {
+    const calls = [];
+    const cloneTarget = {
+        makeClone: () => ({
+            goBehindOther: other => calls.push(['goBehindOther', other])
+        })
+    };
+    const runtime = {
+        on: () => {},
+        getTargetById: id => {
+            calls.push(['getTargetById', id]);
+            return id === 'target-id' ? cloneTarget : null;
+        },
+        getSpriteTargetByName: name => {
+            calls.push(['getSpriteTargetByName', name]);
+            return null;
+        },
+        addTarget: clone => calls.push(['addTarget', clone])
+    };
+
+    const c = new Control(runtime);
+    c._createClone({targetId: 'target-id'}, {id: 'self-target'});
+
+    t.same(calls[0], ['getTargetById', 'target-id']);
+    t.equal(calls[1][0], 'addTarget');
+    t.same(calls[2], ['goBehindOther', cloneTarget]);
+    t.end();
+});
+
+test('_createClone resolves sprite name without util', t => {
+    const calls = [];
+    const cloneTarget = {
+        makeClone: () => ({
+            goBehindOther: other => calls.push(['goBehindOther', other])
+        })
+    };
+    const runtime = {
+        on: () => {},
+        getTargetById: id => {
+            calls.push(['getTargetById', id]);
+            return null;
+        },
+        getSpriteTargetByName: name => {
+            calls.push(['getSpriteTargetByName', name]);
+            return name === 'Sprite1' ? cloneTarget : null;
+        },
+        addTarget: clone => calls.push(['addTarget', clone])
+    };
+
+    const c = new Control(runtime);
+    c._createClone('Sprite1', {id: 'self-target'});
+
+    const sawSpriteIdLookup = calls.some(call => call[0] === 'getTargetById' && call[1] === 'Sprite1');
+    const sawSpriteNameLookup = calls.some(call => call[0] === 'getSpriteTargetByName' && call[1] === 'Sprite1');
+    const sawAddTarget = calls.some(call => call[0] === 'addTarget');
+    const sawGoBehind = calls.some(call => call[0] === 'goBehindOther' && call[1] === cloneTarget);
+
+    t.ok(sawSpriteIdLookup);
+    t.ok(sawSpriteNameLookup);
+    t.ok(sawAddTarget);
+    t.ok(sawGoBehind);
+    t.end();
+});
+
 test('switchCaseExtends', t => {
     const rt = new Runtime();
     const c = new Control(rt);
