@@ -437,6 +437,17 @@ class ExtensionManager {
             return extensionInfo;
         }
 
+        const normalizeProvidedEntry = entry => {
+            const value = String(entry).trim();
+            if (!value) {
+                return null;
+            }
+            if (value === '---') {
+                return '---';
+            }
+            return value;
+        };
+
         const providedOpcodes = new Set();
         const providedOpcodeTargets = new Map();
         for (const targetId of Object.keys(extensionInfo.provides)) {
@@ -446,7 +457,11 @@ class ExtensionManager {
             }
 
             for (const opcode of opcodes) {
-                const normalizedOpcode = String(opcode);
+                const normalizedOpcode = normalizeProvidedEntry(opcode);
+                if (!normalizedOpcode || normalizedOpcode === '---') {
+                    continue;
+                }
+
                 providedOpcodes.add(normalizedOpcode);
                 if (!providedOpcodeTargets.has(normalizedOpcode)) {
                     providedOpcodeTargets.set(normalizedOpcode, []);
@@ -523,12 +538,43 @@ class ExtensionManager {
             return extensionInfo;
         }
 
+        const normalizeProvidedEntry = entry => {
+            const value = String(entry).trim();
+            if (!value) {
+                return null;
+            }
+            if (value === '---') {
+                return '---';
+            }
+            return value;
+        };
+
         const merged = Object.assign({}, extensionInfo, {
             blocks: Array.isArray(extensionInfo.blocks) ? extensionInfo.blocks.slice() : [],
             menus: Object.assign({}, extensionInfo.menus || {})
         });
 
-        let insertedAny = false;
+        const pushSeparator = blocks => {
+            if (blocks.length > 0 && blocks[blocks.length - 1] !== '---') {
+                blocks.push('---');
+            }
+        };
+
+        const normalizeSeparators = blocks => {
+            const normalized = [];
+            for (const block of blocks) {
+                if (block === '---') {
+                    if (normalized.length === 0 || normalized[normalized.length - 1] === '---') {
+                        continue;
+                    }
+                }
+                normalized.push(block);
+            }
+            while (normalized.length > 0 && normalized[normalized.length - 1] === '---') {
+                normalized.pop();
+            }
+            return normalized;
+        };
 
         for (const [providerId, providerService] of this._loadedExtensions.entries()) {
             if (providerId === extensionInfo.id) {
@@ -553,9 +599,21 @@ class ExtensionManager {
             }
 
             const providerBlocks = providerInfo.blocks || [];
+            const providerSection = [];
+            const sectionExtendedOpcodes = new Set();
 
             for (const providedOpcode of providedOpcodes) {
-                const blockOpcode = String(providedOpcode);
+                const normalizedProvidedEntry = normalizeProvidedEntry(providedOpcode);
+                if (!normalizedProvidedEntry) {
+                    continue;
+                }
+
+                if (normalizedProvidedEntry === '---') {
+                    providerSection.push('---');
+                    continue;
+                }
+
+                const blockOpcode = normalizedProvidedEntry;
                 const providedExtendedOpcode = `${providerId}_${blockOpcode}`;
 
                 const alreadyInTarget = merged.blocks.some(block =>
@@ -563,7 +621,7 @@ class ExtensionManager {
                     typeof block === 'object' &&
                     block.extendedOpcode === providedExtendedOpcode
                 );
-                if (alreadyInTarget) {
+                if (alreadyInTarget || sectionExtendedOpcodes.has(providedExtendedOpcode)) {
                     continue;
                 }
 
@@ -589,15 +647,26 @@ class ExtensionManager {
                     }
                 );
 
-                if (!insertedAny) {
-                    if (merged.blocks.length > 0 && merged.blocks[merged.blocks.length - 1] !== '---') {
-                        merged.blocks.push('---');
-                    }
-                    insertedAny = true;
-                }
-
-                merged.blocks.push(providedBlock);
+                providerSection.push(providedBlock);
+                sectionExtendedOpcodes.add(providedExtendedOpcode);
             }
+
+            const normalizedSection = normalizeSeparators(providerSection);
+            if (normalizedSection.length === 0) {
+                continue;
+            }
+
+            const providerName = String(maybeFormatMessage(providerInfo.name || providerId)).trim() || providerId;
+            const providerLabel = {
+                blockType: BlockType.LABEL,
+                text: `Provided by ${providerName}`,
+                webClass: 'providedByLabel',
+                labelIcon: 'arrow'
+            };
+
+            pushSeparator(merged.blocks);
+            merged.blocks.push(providerLabel);
+            merged.blocks.push(...normalizedSection);
         }
 
         return merged;

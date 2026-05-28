@@ -2126,9 +2126,23 @@ class Runtime extends RuntimeConstants {
      * @private
      */
     _convertLabelForScratchBlocks (blockInfo) {
+        const labelAttrs = [`text="${xmlEscape(blockInfo.text)}"`];
+
+        if (typeof blockInfo.webClass === 'string' && blockInfo.webClass.trim()) {
+            labelAttrs.push(`web-class="${xmlEscape(blockInfo.webClass.trim())}"`);
+        }
+
+        if (typeof blockInfo.categoryLabel === 'boolean') {
+            labelAttrs.push(`category-label="${blockInfo.categoryLabel ? 'true' : 'false'}"`);
+        }
+
+        if (typeof blockInfo.labelIcon === 'string' && blockInfo.labelIcon.trim()) {
+            labelAttrs.push(`label-icon="${xmlEscape(blockInfo.labelIcon.trim())}"`);
+        }
+
         return {
             info: blockInfo,
-            xml: `<label text="${xmlEscape(blockInfo.text)}"></label>`
+            xml: `<label ${labelAttrs.join(' ')}></label>`
         };
     }
 
