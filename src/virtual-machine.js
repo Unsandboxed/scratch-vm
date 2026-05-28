@@ -54,7 +54,7 @@ const BLUR_EFFECT_INFO = {
         const sampleScale = 1.0 + (0.24 * blurScale);
         const kernelRadius = 3.5;
         return {
-            texels: kernelRadius * sampleScale
+            texels: (kernelRadius * sampleScale) + 2
         };
     },
     fragmentUniforms: [

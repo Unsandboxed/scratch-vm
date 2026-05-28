@@ -364,6 +364,7 @@ class ExtensionManager {
             this._requiredBlockProviders.delete(info.id);
             this._refreshRequiredBlockConsumers(info.id);
             this._refreshProvidedBlockTargets(info.id);
+            this._refreshProvidedBlockSourcesForTarget(info.id);
             this._finishedLoadingExtensionScript();
         });
     }
@@ -437,6 +438,7 @@ class ExtensionManager {
         }
 
         const providedOpcodes = new Set();
+        const providedOpcodeTargets = new Map();
         for (const targetId of Object.keys(extensionInfo.provides)) {
             const opcodes = extensionInfo.provides[targetId];
             if (!Array.isArray(opcodes)) {
@@ -444,12 +446,38 @@ class ExtensionManager {
             }
 
             for (const opcode of opcodes) {
-                providedOpcodes.add(String(opcode));
+                const normalizedOpcode = String(opcode);
+                providedOpcodes.add(normalizedOpcode);
+                if (!providedOpcodeTargets.has(normalizedOpcode)) {
+                    providedOpcodeTargets.set(normalizedOpcode, []);
+                }
+                providedOpcodeTargets.get(normalizedOpcode).push(targetId);
             }
         }
 
         if (providedOpcodes.size === 0 || !Array.isArray(extensionInfo.blocks)) {
             return extensionInfo;
+        }
+
+        const targetColorSources = new Map();
+        for (const targetIdList of providedOpcodeTargets.values()) {
+            for (const targetId of targetIdList) {
+                if (targetColorSources.has(targetId)) {
+                    continue;
+                }
+
+                const targetService = this._loadedExtensions.get(targetId);
+                if (!targetService) {
+                    continue;
+                }
+
+                try {
+                    const targetInfo = this._prepareExtensionInfo(targetService, dispatch.callSync(targetService, 'getInfo'));
+                    targetColorSources.set(targetId, targetInfo);
+                } catch (e) {
+                    log.warn(`Failed to inspect provided target metadata from ${targetId}: ${e.message}`);
+                }
+            }
         }
 
         const nextBlocks = extensionInfo.blocks.map(blockInfo => {
@@ -461,9 +489,28 @@ class ExtensionManager {
                 return blockInfo;
             }
 
-            return Object.assign({}, blockInfo, {
+            const nextInfo = Object.assign({}, blockInfo, {
                 hideFromPalette: true
             });
+
+            const targetIds = providedOpcodeTargets.get(String(blockInfo.opcode)) || [];
+            for (const targetId of targetIds) {
+                const colorSourceInfo = targetColorSources.get(targetId);
+                if (!colorSourceInfo) {
+                    continue;
+                }
+
+                const resolvedColors = this._resolveRequiredBlockColors(blockInfo, colorSourceInfo);
+                if (resolvedColors) {
+                    nextInfo.color1 = resolvedColors.color1;
+                    nextInfo.color2 = resolvedColors.color2;
+                    nextInfo.color3 = resolvedColors.color3;
+                    nextInfo.color4 = resolvedColors.color4;
+                }
+                break;
+            }
+
+            return nextInfo;
         });
 
         return Object.assign({}, extensionInfo, {
@@ -686,6 +733,30 @@ class ExtensionManager {
             .catch(e => {
                 log.warn(`Failed to refresh provided block targets for ${providerId}: ${e.message}`);
             });
+    }
+
+    _refreshProvidedBlockSourcesForTarget (targetId) {
+        for (const [providerId, providerService] of this._loadedExtensions.entries()) {
+            if (providerId === targetId) {
+                continue;
+            }
+
+            dispatch.call(providerService, 'getInfo')
+                .then(info => {
+                    if (!info || !info.provides || typeof info.provides !== 'object') {
+                        return;
+                    }
+
+                    if (!Object.prototype.hasOwnProperty.call(info.provides, targetId)) {
+                        return;
+                    }
+
+                    return this.refreshBlocks(providerId);
+                })
+                .catch(e => {
+                    log.warn(`Failed to refresh provided block source ${providerId} for target ${targetId}: ${e.message}`);
+                });
+        }
     }
 
     _getRequiredBlockProvider (providerId) {

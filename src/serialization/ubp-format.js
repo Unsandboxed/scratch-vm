@@ -374,7 +374,7 @@ E.serializeBlocks = function (blocks, runtime) {
     const extensionIDs = new Set();
     for (const blockID in blocks) {
         if (!Object.prototype.hasOwnProperty.call(blocks, blockID)) continue;
-        obj[blockID] = E.serializeBlock(blocks[blockID], blocks);
+        obj[blockID] = E.serializeBlock(blocks[blockID]);
         const extensionID = E.getExtensionIdForOpcode(blocks[blockID].opcode, runtime);
         if (extensionID) {
             extensionIDs.add(extensionID);
