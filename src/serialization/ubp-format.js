@@ -1613,9 +1613,21 @@ E.deserializeMonitor = function (monitorData, runtime, targets, extensions, cust
     // by name in the given list of targets and update the monitor's targetId
     // to match the sprite's id.
     if (monitorData.spriteName) {
-        const filteredTargets = targets.filter(t => t.sprite.name === monitorData.spriteName);
-        if (filteredTargets && filteredTargets.length > 0) {
-            monitorData.targetId = filteredTargets[0].id;
+        // Prefer an existing targetId if present; spriteName may be stale after renames.
+        let spriteTarget = null;
+        if (monitorData.targetId) {
+            spriteTarget = targets.find(t => t.id === monitorData.targetId && !t.isStage) || null;
+        }
+
+        if (!spriteTarget) {
+            const filteredTargets = targets.filter(t => !t.isStage && t.sprite && t.sprite.name === monitorData.spriteName);
+            if (filteredTargets && filteredTargets.length > 0) {
+                spriteTarget = filteredTargets[0];
+            }
+        }
+
+        if (spriteTarget) {
+            monitorData.targetId = spriteTarget.id;
         } else {
             log.warn(`Tried to deserialize sprite specific monitor ${
                 monitorData.opcode} but could not find sprite ${monitorData.spriteName}.`);
