@@ -60,21 +60,10 @@ module.exports = function (compilerData, {
     });
     compilerData.registerBlock('control_create_clone_of', function (stg, block) {
         const targetInput = stg.descendInputOfBlock(block, 'CLONE_OPTION');
-        if (targetInput.opcode === InputOpcode.CONSTANT && targetInput.isConstant('_myself_')) {
-            return new IntermediateStackBlock('control_create_clone_of_myself');
-        }
         return new IntermediateStackBlock(this.ir_opcode, {
             target: targetInput
         });
     }, function (jsg, block) {
-        if (block.opcode === 'control_create_clone_of_myself') {
-            jsg.source += 'const newClone = target.makeClone();\n';
-            jsg.source += 'if (newClone) {\n';
-            jsg.source += '  runtime.addTarget(newClone);\n';
-            jsg.source += '  newClone.goBehindOther(target);\n';
-            jsg.source += '}\n';
-            return;
-        }
         jsg.source += `runtime.ext_scratch3_control._createClone(${jsg.descendInput(block.inputs.target)}, target);\n`;
     }, {
         input: false

@@ -128,14 +128,14 @@ const RuntimeInternals = {
                 type: 'math_vector2',
                 fieldName: 'VEC'
             },
-            check: ['Vector', 'Array', 'String']
+            check: ['Vector', 'Position', 'Array', 'String']
         };
         map[ArgumentType.POSITION] = {
             shadow: {
                 type: 'math_position',
                 fieldName: 'POS'
             },
-            check: ['Position', 'Array', 'String']
+            check: ['Position', 'Vector', 'Array', 'String']
         };
         map[ArgumentType.OBJECT] = {
             check: 'Object'

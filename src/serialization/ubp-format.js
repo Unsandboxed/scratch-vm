@@ -1613,6 +1613,10 @@ E.deserializeMonitor = function (monitorData, runtime, targets, extensions, cust
     // by name in the given list of targets and update the monitor's targetId
     // to match the sprite's id.
     if (monitorData.spriteName) {
+        const isVariableMonitor = monitorData.opcode === 'data_variable' ||
+            monitorData.opcode === 'data_listcontents' ||
+            monitorData.opcode === 'data_listarraycontents';
+
         // Prefer an existing targetId if present; spriteName may be stale after renames.
         let spriteTarget = null;
         if (monitorData.targetId) {
@@ -1626,9 +1630,21 @@ E.deserializeMonitor = function (monitorData, runtime, targets, extensions, cust
             }
         }
 
+        // If name lookup fails, try to recover variable/list monitor owner from monitor variable id.
+        if (!spriteTarget && isVariableMonitor && monitorData.id) {
+            spriteTarget = targets.find(t =>
+                !t.isStage && t.variables && Object.prototype.hasOwnProperty.call(t.variables, monitorData.id)
+            ) || null;
+        }
+
         if (spriteTarget) {
             monitorData.targetId = spriteTarget.id;
         } else {
+            // Stale sprite variable/list monitors are common in renamed/deleted sprite projects.
+            // Skip warning for these to keep project loading clean.
+            if (isVariableMonitor) {
+                return;
+            }
             log.warn(`Tried to deserialize sprite specific monitor ${
                 monitorData.opcode} but could not find sprite ${monitorData.spriteName}.`);
         }
