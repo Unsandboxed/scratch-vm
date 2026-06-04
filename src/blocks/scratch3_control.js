@@ -315,12 +315,16 @@ class Scratch3ControlBlocks {
         if (!cloneTarget) return;
 
         // Create clone
-        const newClone = cloneTarget.makeClone();
+        const newClone = cloneTarget.makeClone({deferCloneStartHats: true});
         if (newClone) {
             this.runtime.addTarget(newClone);
 
             // Place behind the original target.
             newClone.goBehindOther(cloneTarget);
+
+            // Start clone hats only after the clone is registered with runtime
+            // so startup scripts run against a fully-initialized target.
+            newClone.startAsClone();
         }
     }
 

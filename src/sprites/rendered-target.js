@@ -173,18 +173,49 @@ class RenderedTarget extends Target {
     }
 
     /**
+     * Start clone hats for this target.
+     */
+    startAsClone () {
+        if (!this.isOriginal) {
+            const startedThreads = this.runtime.startHats('control_start_as_clone', null, this) || [];
+            const sequencer = this.runtime.sequencer;
+
+            // Clone startup scripts should execute immediately once clone creation is complete.
+            // Run each started thread until it naturally yields/waits or finishes.
+            if (sequencer && typeof sequencer.stepThread === 'function') {
+                for (const thread of startedThreads) {
+                    if (!thread || thread.status === Thread.STATUS_PAUSED) continue;
+
+                    let safety = 0;
+                    while (this.runtime.isActiveThread(thread) && thread.status !== Thread.STATUS_PAUSED && safety < 256) {
+                        // YIELD_TICK normally resumes on the next sequencer tick.
+                        // For clone startup, resume immediately so startup work can finish this frame.
+                        if (thread.status === Thread.STATUS_YIELD_TICK) {
+                            thread.setStatus(Thread.STATUS_RUNNING);
+                        } else if (this.runtime.isWaitingThread(thread)) {
+                            break;
+                        }
+
+                        sequencer.stepThread(thread);
+                        safety++;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Create a drawable with the this.renderer.
      * @param {boolean} layerGroup The layer group this drawable should be added to
+     * @param {object=} options Optional drawable initialization options.
+     * @param {boolean=} options.deferCloneStartHats If true, do not auto-start clone hats.
      */
-    initDrawable (layerGroup) {
+    initDrawable (layerGroup, options = {}) {
         if (this.renderer) {
             this.drawableID = this.renderer.createDrawable(layerGroup);
         }
-        // If we're a clone, start the hats.
-        if (!this.isOriginal) {
-            this.runtime.startHats(
-                'control_start_as_clone', null, this
-            );
+        if (!options.deferCloneStartHats) {
+            this.startAsClone();
         }
     }
 
@@ -1039,9 +1070,11 @@ class RenderedTarget extends Target {
     /**
      * Make a clone, copying any run-time properties.
      * If we've hit the global clone limit, returns null.
+     * @param {object=} options Optional clone options.
+     * @param {boolean=} options.deferCloneStartHats If true, clone hats are not auto-started.
      * @return {RenderedTarget} New clone.
      */
-    makeClone () {
+    makeClone (options = {}) {
         if (!this.runtime.clonesAvailable() || this.isStage) {
             return null; // Hit max clone limit, or this is the stage.
         }
@@ -1060,7 +1093,9 @@ class RenderedTarget extends Target {
         newClone.tags = Clone.simple(this.tags);
         newClone.variables = this.duplicateVariables();
         newClone._edgeActivatedHatValues = Clone.simple(this._edgeActivatedHatValues);
-        newClone.initDrawable(StageLayering.SPRITE_LAYER);
+        newClone.initDrawable(StageLayering.SPRITE_LAYER, {
+            deferCloneStartHats: !!options.deferCloneStartHats
+        });
         newClone.updateAllDrawableProperties();
         return newClone;
     }

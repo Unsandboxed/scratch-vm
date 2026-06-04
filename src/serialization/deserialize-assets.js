@@ -3,6 +3,45 @@ const log = require('../util/log');
 
 const E = {};
 
+const _normalizeZipPath = path => {
+    if (typeof path !== 'string') return '';
+    return path
+        .trim()
+        .replace(/\\/g, '/')
+        .replace(/^\.?\//, '');
+};
+
+const _escapeRegExp = string => String(string).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const _findZipFile = (zip, fileNames) => {
+    const seen = new Set();
+    const normalizedCandidates = [];
+
+    for (const fileName of fileNames) {
+        const normalized = _normalizeZipPath(fileName);
+        if (!normalized || seen.has(normalized)) continue;
+        seen.add(normalized);
+        normalizedCandidates.push(normalized);
+    }
+
+    for (const normalized of normalizedCandidates) {
+        let matched = zip.file(normalized);
+        if (matched) return matched;
+
+        // Match the normalized path case-insensitively in case the archive casing differs.
+        matched = zip.file(new RegExp(`^${_escapeRegExp(normalized)}$`, 'i'))[0];
+        if (matched) return matched;
+
+        // Last resort: match by basename in any folder.
+        const fileBaseName = normalized.split('/').pop();
+        if (!fileBaseName) continue;
+        matched = zip.file(new RegExp(`(^|.*/)${_escapeRegExp(fileBaseName)}$`, 'i'))[0];
+        if (matched) return matched;
+    }
+
+    return null;
+};
+
 /**
  * Deserializes sound from file into storage cache so that it can
  * be loaded into the runtime.
@@ -17,7 +56,9 @@ const E = {};
  * occurred.
  */
 E.deserializeSound = function (sound, runtime, zip, assetFileName) {
-    const fileName = assetFileName ? assetFileName : sound.md5;
+    const defaultFileName = sound.md5;
+    const fileCandidates = [assetFileName, defaultFileName];
+    const fileName = _normalizeZipPath(assetFileName) || _normalizeZipPath(defaultFileName);
     const storage = runtime.storage;
     if (!storage) {
         log.warn('No storage module present; cannot load sound asset: ', fileName);
@@ -28,12 +69,7 @@ E.deserializeSound = function (sound, runtime, zip, assetFileName) {
         return Promise.resolve(null);
     }
 
-    let soundFile = zip.file(fileName);
-    if (!soundFile) {
-        // look for assetfile in a flat list of files, or in a folder
-        const fileMatch = new RegExp(`^([^/]*/)?${fileName}$`);
-        soundFile = zip.file(fileMatch)[0]; // use first matching file
-    }
+    const soundFile = _findZipFile(zip, fileCandidates);
 
     if (!soundFile) {
         log.error(`Could not find sound file associated with the ${sound.name} sound.`);
@@ -79,8 +115,9 @@ E.deserializeSound = function (sound, runtime, zip, assetFileName) {
 E.deserializeCostume = function (costume, runtime, zip, assetFileName, textLayerFileName) {
     const storage = runtime.storage;
     const assetId = costume.assetId;
-    const fileName = assetFileName ? assetFileName :
-        `${assetId}.${costume.dataFormat}`;
+    const defaultFileName = `${assetId}.${costume.dataFormat}`;
+    const fileCandidates = [assetFileName, defaultFileName];
+    const fileName = _normalizeZipPath(assetFileName) || _normalizeZipPath(defaultFileName);
 
     if (!storage) {
         log.warn('No storage module present; cannot load costume asset: ', fileName);
@@ -108,12 +145,7 @@ E.deserializeCostume = function (costume, runtime, zip, assetFileName, textLayer
         return Promise.resolve(null);
     }
 
-    let costumeFile = zip.file(fileName);
-    if (!costumeFile) {
-        // look for assetfile in a flat list of files, or in a folder
-        const fileMatch = new RegExp(`^([^/]*/)?${fileName}$`);
-        costumeFile = zip.file(fileMatch)[0]; // use the first matched file
-    }
+    const costumeFile = _findZipFile(zip, fileCandidates);
 
     if (!costumeFile) {
         log.error(`Could not find costume file associated with the ${costume.name} costume.`);

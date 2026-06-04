@@ -825,10 +825,48 @@ class Blocks {
 
 
             // Update block value
-            if (!block.fields[args.name]) return;
+            if (!block.fields[args.name]) {
+                const isDynamicExtensionField =
+                    block.mutation &&
+                    block.mutation.blockInfo &&
+                    block.mutation.blockInfo.isDynamic &&
+                    block.mutation.blockInfo.arguments &&
+                    block.mutation.blockInfo.arguments[args.name];
+
+                if (!isDynamicExtensionField) {
+                    return;
+                }
+
+                block.fields[args.name] = {
+                    name: args.name,
+                    value: args.value
+                };
+            }
             if (typeof block.fields[args.name].variableType === 'undefined') {
                 // Changing the value in a dropdown
                 block.fields[args.name].value = args.value;
+
+                // Dynamic extension blocks serialize layout/state through mutation.blockInfo
+                // rather than normal field XML, so mirror field changes into that payload.
+                if (
+                    block.mutation &&
+                    block.mutation.blockInfo &&
+                    block.mutation.blockInfo.isDynamic &&
+                    block.mutation.blockInfo.arguments &&
+                    block.mutation.blockInfo.arguments[args.name]
+                ) {
+                    block.mutation.blockInfo.arguments[args.name].defaultValue = args.value;
+
+                    const terminalField = block.mutation.blockInfo.dynamicTerminalField;
+                    if (terminalField && terminalField === args.name) {
+                        const terminalValues = Array.isArray(block.mutation.blockInfo.terminalValues) ?
+                            block.mutation.blockInfo.terminalValues : [];
+                        const normalizedValue = String(args.value).trim().toLowerCase();
+                        block.mutation.blockInfo.isTerminal = terminalValues
+                            .map(value => String(value).trim().toLowerCase())
+                            .includes(normalizedValue);
+                    }
+                }
 
                 // The selected item in the sensing of block menu needs to change based on the
                 // selected target.  Set it to the first item in the menu list.

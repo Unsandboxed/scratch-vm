@@ -3,6 +3,7 @@ const VirtualMachine = require('../../src/virtual-machine');
 const RenderedTarget = require('../../src/sprites/rendered-target');
 const Sprite = require('../../src/sprites/sprite');
 const Variable = require('../../src/engine/variable');
+const JSZip = require('@turbowarp/jszip');
 
 test('emitTargetsUpdate targetList is lazy', t => {
     const vm = new VirtualMachine();
@@ -89,5 +90,74 @@ test('convertToPackagedRuntime forwards to runtime', t => {
         t.pass();
     };
     vm.convertToPackagedRuntime();
+    t.end();
+});
+
+test('legacy extended sb3 json is parsed directly', async t => {
+    const vm = new VirtualMachine();
+    const legacyProject = {
+        projectVersion: 3,
+        targets: [],
+        monitors: [],
+        extensions: [],
+        meta: {
+            semver: '3.0.0'
+        },
+        extensionStorage: {
+            test: {
+                enabled: true
+            }
+        },
+        projectStorage: {
+            key: 'value'
+        }
+    };
+
+    const parsed = await vm._tryParseExtendedSb3ProjectInput(JSON.stringify(legacyProject));
+
+    t.ok(parsed);
+    t.equal(parsed[0].projectVersion, 3);
+    t.same(parsed[0].projectStorage, legacyProject.projectStorage);
+    t.equal(parsed[1], null);
+    t.end();
+});
+
+test('legacy extended sb3 zip is parsed directly', async t => {
+    const vm = new VirtualMachine();
+    const legacyProject = {
+        projectVersion: 3,
+        targets: [],
+        monitors: [],
+        extensions: [],
+        meta: {
+            semver: '3.0.0'
+        },
+        extensionStorage: {
+            legacy: {
+                mode: 'on'
+            }
+        }
+    };
+
+    const zip = new JSZip();
+    zip.file('project.json', JSON.stringify(legacyProject));
+    const zipBuffer = await zip.generateAsync({type: 'arraybuffer'});
+
+    const parsed = await vm._tryParseExtendedSb3ProjectInput(zipBuffer);
+
+    t.ok(parsed);
+    t.equal(parsed[0].projectVersion, 3);
+    t.equal(parsed[0].extensionStorage.legacy.mode, 'on');
+    t.ok(parsed[1]);
+    t.type(parsed[1].file('project.json'), 'object');
+    t.end();
+});
+
+test('non-sb3 json does not parse as extended sb3', async t => {
+    const vm = new VirtualMachine();
+
+    const parsed = await vm._tryParseExtendedSb3ProjectInput(JSON.stringify({projectVersion: 2}));
+
+    t.equal(parsed, null);
     t.end();
 });

@@ -271,6 +271,7 @@ class JSGenerator {
                     const _frame = new Frame(false, node.breakable);
                     _frame.isIterable = node.iterable;
                     _frame.isCompat = true;
+                    this.source += `try {\n`;
                     if (node.isInline) {
                         _frame.isReturnable = true;
                         const substackReturn = this.localVariables.next();
@@ -283,6 +284,9 @@ class JSGenerator {
                     } else {
                         this.source += this.descendStackForSource(node.substacks[index], _frame);
                     }
+                    this.source += `} catch (e) {\n`;
+                    this.source += `if (!e || !e.__usbBranchStop) throw e;\n`;
+                    this.source += `}\n`;
                     this.source += `break;\n`;
                     this.source += `}\n`; // close case
                 }

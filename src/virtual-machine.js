@@ -671,6 +671,48 @@ class VirtualMachine extends EventEmitter {
     }
 
     /**
+     * Try parsing SB3 input directly without scratch-parser.
+     * This allows loading legacy Unsandboxed SB3 files that include extra
+     * project.json fields unsupported by strict SB3 validation.
+     * @param {string|ArrayBuffer|ArrayBufferView} input Input project payload.
+     * @returns {Promise<[object, JSZip|null] | null>} Parsed project JSON and optional zip, or null if not SB3.
+     */
+    async _tryParseExtendedSb3ProjectInput (input) {
+        if (typeof input === 'string') {
+            try {
+                const parsed = JSON.parse(input);
+                if (parsed && parsed.projectVersion === 3) {
+                    return [parsed, null];
+                }
+            } catch (e) {
+                // Not JSON; fall through.
+            }
+            return null;
+        }
+
+        if (input instanceof ArrayBuffer || ArrayBuffer.isView(input)) {
+            const zipInput = input instanceof ArrayBuffer ? input :
+                input.buffer.slice(input.byteOffset, input.byteOffset + input.byteLength);
+            try {
+                const zip = await JSZip.loadAsync(zipInput);
+                const projectFile = zip.file('project.json');
+                if (!projectFile) {
+                    return null;
+                }
+                const projectText = await projectFile.async('string');
+                const parsed = JSON.parse(projectText);
+                if (parsed && parsed.projectVersion === 3) {
+                    return [parsed, zip];
+                }
+            } catch (e) {
+                // Not an SB3 zip we can parse; fall through.
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Load a Scratch project from a .sb, .sb2, .sb3, .ubp, or json string.
      * @param {string | object} input A json string, object, or ArrayBuffer representing the project to load.
      * @return {!Promise} Promise that resolves after targets are installed.
@@ -699,7 +741,17 @@ class VirtualMachine extends EventEmitter {
                     // input should be parsed/validated as an entire project (and not a single sprite)
                     validate(input, false, (error, res) => {
                         if (error) {
-                            return reject(error);
+                            return this._tryParseExtendedSb3ProjectInput(input)
+                                .then(parsedSb3 => {
+                                    if (parsedSb3) {
+                                        resolve(parsedSb3);
+                                        return;
+                                    }
+                                    reject(error);
+                                })
+                                .catch(() => {
+                                    reject(error);
+                                });
                         }
                         resolve(res);
                     });
