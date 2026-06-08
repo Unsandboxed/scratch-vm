@@ -220,6 +220,27 @@ test('serialize and deserialize target tags in sb3', t => {
         });
 });
 
+test('sb3 serialize strips optional list locked state', t => {
+    const vm = new VirtualMachine();
+    return vm.loadProject(readFileToBuffer(exampleProjectPath))
+        .then(() => {
+            const withLockedList = sb3.serialize(vm.runtime);
+            const serializedStage = withLockedList.targets.find(target => target.isStage);
+            serializedStage.lists['locked-list-id'] = ['Locked List', [1, 2, 3], true];
+
+            const runtime = new Runtime();
+            return sb3.deserialize(JSON.parse(JSON.stringify(withLockedList)), runtime, null, false)
+                .then(({targets}) => {
+                    runtime.targets = targets;
+                    const roundTripped = sb3.serialize(runtime);
+                    const roundTrippedStage = roundTripped.targets.find(target => target.isStage);
+                    t.same(roundTrippedStage.lists['locked-list-id'], ['Locked List', [1, 2, 3]]);
+                    t.equal(roundTrippedStage.lists['locked-list-id'].length, 2);
+                    t.end();
+                });
+        });
+});
+
 test('serializing and deserializing sb3 preserves sprite layer order', t => {
     const vm = new VirtualMachine();
     vm.attachRenderer(new FakeRenderer());
