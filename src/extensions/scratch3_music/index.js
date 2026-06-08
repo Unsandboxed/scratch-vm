@@ -92,6 +92,7 @@ class Scratch3MusicBlocks {
         this._playNoteForPicker = this._playNoteForPicker.bind(this);
         this.runtime.on('PLAY_NOTE', this._playNoteForPicker);
 
+        this._stopAllPlayers = this._stopAllPlayers.bind(this);
         this.runtime.on(RuntimeConstants.STOP_ALL_SOUNDS, this._stopAllPlayers);
     }
 
