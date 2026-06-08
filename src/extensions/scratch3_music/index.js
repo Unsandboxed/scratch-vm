@@ -733,8 +733,12 @@ class Scratch3MusicBlocks {
     _stopAllPlayers (instr) {
         if (instr) {
             for (const player of instr) {
-                if (!player || !player.stop) continue;
-                (player.stopImmediately || player.stop)();
+                if (!player) continue;
+                if (typeof player.stopImmediately === 'function') {
+                    player.stopImmediately();
+                } else if (typeof player.stop === 'function') {
+                    player.stop();
+                }
             }
             return;
         }
